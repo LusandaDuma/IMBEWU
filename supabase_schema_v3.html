@@ -1,0 +1,406 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Anthropic Sans",sans-serif;font-size:13px;color:var(--color-text-primary)}
+.wrap{padding:14px 8px;display:flex;flex-direction:column;gap:18px}
+.section{display:flex;flex-direction:column;gap:8px}
+.section-head{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;margin-bottom:2px}
+.section-head .stitle{font-size:12px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.section-head .sdesc{font-size:11px;opacity:.75;margin-left:4px}
+.section-head::after{content:'';flex:1;height:1px;background:currentColor;opacity:.18}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.tbl{border-radius:9px;overflow:hidden;flex:1;min-width:170px;border:1.5px solid}
+.th{padding:8px 12px 7px;font-size:12px;font-weight:500;letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+.th .icon{width:14px;height:14px;border-radius:3px;flex-shrink:0;opacity:.9}
+.tbody{}
+.f{display:flex;align-items:flex-start;gap:5px;padding:4px 12px;border-top:1px solid rgba(0,0,0,.07);font-size:11.5px;line-height:1.4}
+.fn{flex:1;color:var(--color-text-primary);font-weight:400}
+.ft{color:var(--color-text-tertiary);font-size:10.5px;text-align:right;white-space:nowrap;padding-top:1px}
+.b{font-size:9px;font-weight:500;border-radius:3px;padding:1.5px 5px;flex-shrink:0;white-space:nowrap;margin-top:1px}
+.note-row{font-size:10.5px;color:var(--color-text-tertiary);padding:5px 12px 6px;font-style:italic;border-top:1px solid rgba(0,0,0,.07);line-height:1.4}
+
+.pk{background:#FFF3B0;color:#7A5500}
+.fk{background:#D6EEFF;color:#004E8A}
+.uq{background:#E8F5E9;color:#1B5E20}
+.en{background:#EDE7F6;color:#4A148C}
+
+/* Section themes */
+.s-auth .section-head{background:#f3e8ff;color:#6d28d9}
+.s-auth .tbl{border-color:#c4b5fd}
+.s-auth .th{background:#7c3aed;color:#fff}
+.s-auth .f{border-top-color:#ede9fe}
+
+.s-id .section-head{background:#f1f5f9;color:#475569}
+.s-id .tbl{border-color:#c5c3bb}
+.s-id .th{background:#475569;color:#fff}
+.s-id .f{border-top-color:rgba(0,0,0,.06)}
+
+.s-class .section-head{background:#eff6ff;color:#1d4ed8}
+.s-class .tbl{border-color:#93c5fd}
+.s-class .th{background:#1d4ed8;color:#fff}
+.s-class .f{border-top-color:#dbeafe}
+
+.s-course .section-head{background:#ecfdf5;color:#065f46}
+.s-course .tbl{border-color:#6ee7b7}
+.s-course .th{background:#065f46;color:#fff}
+.s-course .f{border-top-color:#d1fae5}
+
+.s-quiz .section-head{background:#faf5ff;color:#6b21a8}
+.s-quiz .tbl{border-color:#d8b4fe}
+.s-quiz .th{background:#6b21a8;color:#fff}
+.s-quiz .f{border-top-color:#f3e8ff}
+
+.s-badge .section-head{background:#fffbeb;color:#92400e}
+.s-badge .tbl{border-color:#fcd34d}
+.s-badge .th{background:#92400e;color:#fff}
+.s-badge .f{border-top-color:#fef3c7}
+
+/* notes section */
+.notes-wrap{display:flex;flex-direction:column;gap:14px;padding:4px 2px}
+.note-block{border-radius:9px;border:1.5px solid var(--color-border-tertiary);overflow:hidden}
+.note-head{padding:7px 12px;font-size:11.5px;font-weight:500;background:var(--color-background-secondary);border-bottom:1px solid var(--color-border-tertiary)}
+.note-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.note-item{font-size:11.5px;line-height:1.5;color:var(--color-text-secondary);display:flex;gap:8px}
+.note-item::before{content:'→';color:var(--color-text-tertiary);flex-shrink:0}
+.enum-grid{display:flex;flex-direction:column;gap:4px}
+.enum-row{display:flex;align-items:flex-start;gap:8px;font-size:11.5px}
+.enum-key{font-weight:500;color:var(--color-text-primary);min-width:110px;flex-shrink:0;font-family:monospace;font-size:11px;background:var(--color-background-secondary);padding:1px 6px;border-radius:4px;border:1px solid var(--color-border-tertiary)}
+.enum-val{color:var(--color-text-secondary);line-height:1.5}
+.flow-step{display:flex;gap:10px;align-items:flex-start;font-size:11.5px;line-height:1.5;color:var(--color-text-secondary)}
+.step-num{background:#6b21a8;color:#fff;border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;margin-top:1px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;padding:2px 2px 6px}
+.li{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)}
+
+@media(prefers-color-scheme:dark){
+  .f{border-top-color:rgba(255,255,255,.07)!important}
+  .note-row{border-top-color:rgba(255,255,255,.07)}
+  .pk{background:#3d2e00;color:#f5c842}
+  .fk{background:#002440;color:#6ec6ff}
+  .uq{background:#0a2010;color:#7ee8a0}
+  .en{background:#1a0a38;color:#c4a8ff}
+  .s-auth .section-head{background:#2d1b4e;color:#c4b5fd}
+  .s-id .section-head{background:#1e2a38;color:#94a3b8}
+  .s-class .section-head{background:#1e2a4a;color:#93c5fd}
+  .s-course .section-head{background:#0a2a1e;color:#6ee7b7}
+  .s-quiz .section-head{background:#1e1030;color:#d8b4fe}
+  .s-badge .section-head{background:#2a1e08;color:#fcd34d}
+}
+</style>
+<div class="wrap">
+
+<div class="legend">
+  <span class="li"><span class="b pk">PK</span> primary key</span>
+  <span class="li"><span class="b fk">FK</span> foreign key</span>
+  <span class="li"><span class="b uq">UQ</span> unique constraint</span>
+  <span class="li"><span class="b en">EN</span> enum / check</span>
+</div>
+
+<!-- AUTH -->
+<div class="section s-auth">
+  <div class="section-head"><span class="stitle">Supabase auth</span><span class="sdesc">managed automatically — never touch directly</span></div>
+  <div class="row">
+    <div class="tbl" style="max-width:300px">
+      <div class="th">auth.users</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="fn">email</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">phone</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Supabase owns this. All other tables reference auth.users.id. Never store email or created_at again elsewhere.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IDENTITY & BILLING -->
+<div class="section s-id">
+  <div class="section-head"><span class="stitle">Identity &amp; billing</span><span class="sdesc">who the user is, what plan they're on</span></div>
+  <div class="row">
+    <div class="tbl">
+      <div class="th">profiles</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="b fk">FK</span><span class="fn">id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="fn">first_name</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">last_name</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="b en">EN</span><span class="fn">role</span><span class="ft">admin | coordinator | independent | student</span></div>
+        <div class="f"><span class="fn">language</span><span class="ft">text default 'en'</span></div>
+        <div class="f"><span class="fn">is_active</span><span class="ft">bool default true</span></div>
+        <div class="f"><span class="fn">last_login</span><span class="ft">timestamptz</span></div>
+        <div class="f"><span class="fn">updated_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">1-to-1 with auth.users. Created automatically via trigger on signup. role determines the entire user experience.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">subscriptions</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="b uq">UQ</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="b en">EN</span><span class="fn">plan</span><span class="ft">coordinator | enterprise</span></div>
+        <div class="f"><span class="fn">student_slots</span><span class="ft">int default 20</span></div>
+        <div class="f"><span class="fn">is_active</span><span class="ft">bool default true</span></div>
+        <div class="f"><span class="fn">expires_at</span><span class="ft">timestamptz</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Only coordinators have a row here. student_slots = 20 for R199/mo plan, unlimited for enterprise. UQ on user_id = one active plan per coordinator.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLASSES & ENROLMENT -->
+<div class="section s-class">
+  <div class="section-head"><span class="stitle">Classes &amp; enrolment</span><span class="sdesc">coordinator-managed groups — students with join_code, independents skip this entirely</span></div>
+  <div class="row">
+    <div class="tbl">
+      <div class="th">classes</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">course_id</span><span class="ft">uuid → courses</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">created_by</span><span class="ft">uuid → auth.users (coordinator)</span></div>
+        <div class="f"><span class="fn">name</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="b uq">UQ</span><span class="fn">join_code</span><span class="ft">text (6-char, auto-generated)</span></div>
+        <div class="f"><span class="fn">is_active</span><span class="ft">bool default true</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">One course can have many classes (e.g. "Maize Farming — Group A", "Group B"). join_code is what students type to enrol.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">class_members</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">class_id</span><span class="ft">uuid → classes</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="b en">EN</span><span class="fn">role</span><span class="ft">coordinator | student</span></div>
+        <div class="f"><span class="b uq">UQ</span><span class="fn">(class_id, user_id)</span><span class="ft">composite unique</span></div>
+        <div class="f"><span class="fn">joined_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Single table for both coordinators and students in a class. Composite UQ prevents duplicate membership. A coordinator can manage multiple classes; a student can be in multiple classes.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COURSES & LEARNING -->
+<div class="section s-course">
+  <div class="section-head"><span class="stitle">Courses &amp; learning</span><span class="sdesc">content created by admin, consumed by all learner roles</span></div>
+  <div class="row">
+    <div class="tbl">
+      <div class="th">courses</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">created_by</span><span class="ft">uuid → auth.users (admin)</span></div>
+        <div class="f"><span class="fn">title</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">description</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">offline_url</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">is_published</span><span class="ft">bool default false</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="f"><span class="fn">updated_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Admin loads courses. is_published = false means only admins can see it. Classes attach to published courses.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">lessons</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">course_id</span><span class="ft">uuid → courses</span></div>
+        <div class="f"><span class="fn">order_index</span><span class="ft">int not null</span></div>
+        <div class="f"><span class="fn">title</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">description</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">content</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">duration_mins</span><span class="ft">int</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="f"><span class="fn">updated_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Ordered within a course by order_index. No progress stored here — progress is always per-student in lesson_progress.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">lesson_progress</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">lesson_id</span><span class="ft">uuid → lessons</span></div>
+        <div class="f"><span class="b uq">UQ</span><span class="fn">(user_id, lesson_id)</span><span class="ft">composite unique</span></div>
+        <div class="f"><span class="fn">pct_complete</span><span class="ft">int default 0</span></div>
+        <div class="f"><span class="fn">is_completed</span><span class="ft">bool default false</span></div>
+        <div class="f"><span class="fn">completed_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Used by all learner roles: student, independent. Upserted on every progress update — never duplicated. Coordinator reads this to track their class.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- course_enrolments for independents -->
+  <div class="row">
+    <div class="tbl" style="max-width:340px">
+      <div class="th">course_enrolments</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">course_id</span><span class="ft">uuid → courses</span></div>
+        <div class="f"><span class="b uq">UQ</span><span class="fn">(user_id, course_id)</span><span class="ft">composite unique</span></div>
+        <div class="f"><span class="b en">EN</span><span class="fn">enrolment_type</span><span class="ft">independent | class_based</span></div>
+        <div class="f"><span class="fn">enrolled_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Independent learners enrol directly here (no class). Class-based students also get a row here (enrolment_type = class_based) when they join a class, so course-level queries are always simple — just filter this table.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- QUIZZES & ASSESSMENTS -->
+<div class="section s-quiz">
+  <div class="section-head"><span class="stitle">Quizzes &amp; assessments</span><span class="sdesc">per-lesson quizzes with full attempt tracking</span></div>
+  <div class="row">
+    <div class="tbl">
+      <div class="th">quizzes</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">lesson_id</span><span class="ft">uuid → lessons</span></div>
+        <div class="f"><span class="fn">title</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">pass_score</span><span class="ft">int default 70</span></div>
+        <div class="f"><span class="fn">max_attempts</span><span class="ft">int default 3</span></div>
+        <div class="f"><span class="fn">due_date</span><span class="ft">date</span></div>
+        <div class="f"><span class="fn">created_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">One quiz per lesson. pass_score is a percentage (0–100). max_attempts prevents unlimited retries.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">questions</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">quiz_id</span><span class="ft">uuid → quizzes</span></div>
+        <div class="f"><span class="fn">text</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="b en">EN</span><span class="fn">type</span><span class="ft">mcq | true_false | short_answer</span></div>
+        <div class="f"><span class="fn">order_index</span><span class="ft">int not null</span></div>
+        <div class="note-row">type determines how options are rendered. true_false always has exactly 2 options. short_answer has no options — graded manually or by keyword match.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">question_options</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">question_id</span><span class="ft">uuid → questions</span></div>
+        <div class="f"><span class="fn">text</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">is_correct</span><span class="ft">bool not null</span></div>
+        <div class="f"><span class="fn">order_index</span><span class="ft">int</span></div>
+        <div class="note-row">Works for mcq and true_false. short_answer questions have no rows here. Never expose is_correct to the student client — check server-side only.</div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="tbl">
+      <div class="th">quiz_attempts</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">quiz_id</span><span class="ft">uuid → quizzes</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="fn">score</span><span class="ft">int</span></div>
+        <div class="f"><span class="fn">passed</span><span class="ft">bool</span></div>
+        <div class="f"><span class="fn">attempt_number</span><span class="ft">int not null</span></div>
+        <div class="f"><span class="fn">attempted_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">attempt_number increments per user per quiz. Check attempt_number &lt; quizzes.max_attempts before allowing a new attempt.</div>
+      </div>
+    </div>
+    <div class="tbl">
+      <div class="th">attempt_answers</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">attempt_id</span><span class="ft">uuid → quiz_attempts</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">question_id</span><span class="ft">uuid → questions</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">option_id</span><span class="ft">uuid → question_options (nullable)</span></div>
+        <div class="f"><span class="fn">text_answer</span><span class="ft">text (for short_answer)</span></div>
+        <div class="f"><span class="fn">is_correct</span><span class="ft">bool</span></div>
+        <div class="note-row">option_id is null for short_answer questions; text_answer is null for mcq/true_false. is_correct is computed at submission and stored for reporting.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BADGES -->
+<div class="section s-badge">
+  <div class="section-head"><span class="stitle">Badges &amp; achievements</span><span class="sdesc">awarded on course completion</span></div>
+  <div class="row">
+    <div class="tbl" style="max-width:260px">
+      <div class="th">badges</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">course_id</span><span class="ft">uuid → courses</span></div>
+        <div class="f"><span class="fn">name</span><span class="ft">text not null</span></div>
+        <div class="f"><span class="fn">icon_url</span><span class="ft">text</span></div>
+        <div class="f"><span class="fn">criteria</span><span class="ft">text</span></div>
+      </div>
+    </div>
+    <div class="tbl" style="max-width:300px">
+      <div class="th">student_badges</div>
+      <div class="tbody">
+        <div class="f"><span class="b pk">PK</span><span class="fn">id</span><span class="ft">uuid</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">user_id</span><span class="ft">uuid → auth.users</span></div>
+        <div class="f"><span class="b fk">FK</span><span class="fn">badge_id</span><span class="ft">uuid → badges</span></div>
+        <div class="f"><span class="b uq">UQ</span><span class="fn">(user_id, badge_id)</span><span class="ft">composite unique</span></div>
+        <div class="f"><span class="fn">awarded_at</span><span class="ft">timestamptz</span></div>
+        <div class="note-row">Badge is awarded when all lessons completed + all quizzes passed for that course. UQ prevents duplicate awards.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTES, ENUMS, FLOW -->
+<div style="border-top:2px solid var(--color-border-tertiary);margin-top:4px;padding-top:16px;display:flex;flex-direction:column;gap:14px">
+
+  <div class="note-block">
+    <div class="note-head">Enums (check constraints in Postgres)</div>
+    <div class="note-body">
+      <div class="enum-grid">
+        <div class="enum-row"><span class="enum-key">profiles.role</span><span class="enum-val"><strong>admin</strong> — loads content, manages courses/lessons/quizzes. <strong>coordinator</strong> — creates classes, tracks student progress, needs subscription. <strong>independent</strong> — self-paced learner, no class, enrols directly on a course. <strong>student</strong> — joins a class via join_code, progress tracked by coordinator.</span></div>
+        <div class="enum-row"><span class="enum-key">subscriptions.plan</span><span class="enum-val"><strong>coordinator</strong> — R199/mo, 20 student slots. <strong>enterprise</strong> — custom pricing, unlimited coordinators + students, white-label.</span></div>
+        <div class="enum-row"><span class="enum-key">class_members.role</span><span class="enum-val"><strong>coordinator</strong> — can view progress of all students in the class. <strong>student</strong> — can only see their own progress.</span></div>
+        <div class="enum-row"><span class="enum-key">course_enrolments .enrolment_type</span><span class="enum-val"><strong>independent</strong> — user enrolled themselves directly on the course. <strong>class_based</strong> — user was enrolled via a class join. Both types share the same lesson_progress table.</span></div>
+        <div class="enum-row"><span class="enum-key">questions.type</span><span class="enum-val"><strong>mcq</strong> — multiple choice, one correct option. <strong>true_false</strong> — always exactly 2 options in question_options. <strong>short_answer</strong> — free text, no options, answer stored in attempt_answers.text_answer.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-block">
+    <div class="note-head">Role flows — how each user type moves through the system</div>
+    <div class="note-body">
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Admin</div>
+      <div class="flow-step"><span class="step-num">1</span>Signs up → profile created with role = admin</div>
+      <div class="flow-step"><span class="step-num">2</span>Creates courses, adds lessons with content, attaches a quiz to each lesson</div>
+      <div class="flow-step"><span class="step-num">3</span>Sets is_published = true → course becomes available to all roles</div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Coordinator</div>
+      <div class="flow-step"><span class="step-num">1</span>Signs up → profile role = coordinator, subscription row created (R199/mo, 20 slots)</div>
+      <div class="flow-step"><span class="step-num">2</span>Creates a class linked to a published course → join_code auto-generated</div>
+      <div class="flow-step"><span class="step-num">3</span>Shares join_code with up to 20 students (slot count enforced by subscription.student_slots)</div>
+      <div class="flow-step"><span class="step-num">4</span>Monitors lesson_progress and quiz_attempts for all students in their classes</div>
+      <div class="flow-step"><span class="step-num">5</span>Can manage multiple classes across different courses simultaneously</div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Student (class-based)</div>
+      <div class="flow-step"><span class="step-num">1</span>Signs up → profile role = student</div>
+      <div class="flow-step"><span class="step-num">2</span>Enters join_code → row added to class_members + course_enrolments (type = class_based)</div>
+      <div class="flow-step"><span class="step-num">3</span>Works through lessons in order → lesson_progress upserted per lesson</div>
+      <div class="flow-step"><span class="step-num">4</span>Completes quiz after each lesson → quiz_attempt + attempt_answers recorded</div>
+      <div class="flow-step"><span class="step-num">5</span>All lessons done + all quizzes passed → badge awarded in student_badges</div>
+      <div class="flow-step"><span class="step-num">6</span>Can be in multiple classes (e.g. two different courses with two different coordinators)</div>
+      <div style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);margin:8px 0 4px;text-transform:uppercase;letter-spacing:.05em">Independent learner</div>
+      <div class="flow-step"><span class="step-num">1</span>Signs up → profile role = independent</div>
+      <div class="flow-step"><span class="step-num">2</span>Browses published courses → enrols directly via course_enrolments (type = independent)</div>
+      <div class="flow-step"><span class="step-num">3</span>No class, no coordinator, no join_code needed</div>
+      <div class="flow-step"><span class="step-num">4</span>Self-paced: works through lessons and quizzes at their own speed</div>
+      <div class="flow-step"><span class="step-num">5</span>Same lesson_progress and quiz_attempts tables as students — no separate tracking needed</div>
+      <div class="flow-step"><span class="step-num">6</span>Badge awarded on completion, same as student path</div>
+    </div>
+  </div>
+
+  <div class="note-block">
+    <div class="note-head">Key design decisions &amp; scalability notes</div>
+    <div class="note-body">
+      <div class="note-item">auth.users is never duplicated. Email, phone, and created_at live there only. All tables FK to auth.users.id.</div>
+      <div class="note-item">profiles.role is the single gate for RLS policies — one check per request, no joins needed to determine what a user can see.</div>
+      <div class="note-item">course_enrolments is the universal enrolment table. Querying "what courses is this user in" is always one table regardless of role — filter by user_id.</div>
+      <div class="note-item">lesson_progress uses an upsert pattern (INSERT ... ON CONFLICT DO UPDATE). Never insert a duplicate row — always upsert on (user_id, lesson_id).</div>
+      <div class="note-item">class_members.role is separate from profiles.role — a coordinator is always a coordinator (profile), but inside a specific class they can also be listed as a student if they want to take the course themselves.</div>
+      <div class="note-item">attempt_answers.option_id is nullable to support short_answer questions without a separate table.</div>
+      <div class="note-item">subscription.student_slots enforced at the application layer (or a Postgres trigger) when a new student joins via join_code — count class_members where class.created_by = coordinator and compare to slots.</div>
+      <div class="note-item">All timestamps use timestamptz (timezone-aware). Never use plain timestamp in Supabase — it stores without timezone and causes bugs across regions.</div>
+      <div class="note-item">updated_at columns should be maintained by a Supabase trigger: moddatetime extension or a custom trigger on each table that sets updated_at = now() before update.</div>
+      <div class="note-item">Supabase Storage (not this schema) should hold lesson media files and badge icons — store only the URL in lessons.content or badges.icon_url.</div>
+    </div>
+  </div>
+
+</div>
+</div>
