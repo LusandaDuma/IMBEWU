@@ -84,7 +84,7 @@ export function LessonRow({
   }
 
   return (
-    <View testID={testID} pointerEvents="none">
+    <View testID={testID} style={{ pointerEvents: 'none' }}>
       {row}
     </View>
   );

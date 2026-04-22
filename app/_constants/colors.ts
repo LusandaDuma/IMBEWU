@@ -127,13 +127,13 @@ export const darkTheme = {
 export default {
   light: lightTheme,
   dark: darkTheme,
-  
+
   // Commonly used across app
   primary: primaryColors,
   slate: slateColors,
   secondary: secondaryColors,
   status: statusColors,
-  
+
   // Direct access to dark theme as default
   text: darkTheme.text,
   background: darkTheme.background,

@@ -152,6 +152,12 @@ export default function LoginScreen() {
                 rightIcon={isLoading ? undefined : ArrowRight}
               />
 
+              <Link href="/auth/forgot-password" asChild>
+                <TouchableOpacity className="self-center mt-4 px-3 py-1.5">
+                  <Text className="text-primary-300 text-sm">Forgot password?</Text>
+                </TouchableOpacity>
+              </Link>
+
               <View className="flex-row justify-center mt-8 flex-wrap">
                 <Text className="text-slate-400 text-sm">No account yet? </Text>
                 <Link href="/auth/signup" asChild>

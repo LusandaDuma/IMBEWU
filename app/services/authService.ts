@@ -132,3 +132,20 @@ export async function refreshSession(): Promise<ServiceResult<Session>> {
     return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
   }
 }
+
+/**
+ * Send a password reset email for the provided account.
+ */
+export async function requestPasswordReset(email: string): Promise<ServiceResult<true>> {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+    if (error) {
+      return { data: null, error: mapAuthError(error.message) };
+    }
+
+    return { data: true, error: null };
+  } catch (error) {
+    return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
+  }
+}

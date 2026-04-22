@@ -2,8 +2,6 @@
  * @fileoverview Role guard hook for role-protected screens.
  */
 
-import { Redirect } from 'expo-router';
-
 import type { UserRole } from '@/types';
 import { useAuthStore } from '@/store/auth';
 
@@ -11,16 +9,16 @@ export function requireRole(allowedRoles: UserRole[]) {
   const { role, isLoading } = useAuthStore();
 
   if (isLoading) {
-    return { isReady: false, redirect: null };
+    return { isReady: false, redirectTo: null as string | null };
   }
 
   if (!role) {
-    return { isReady: false, redirect: <Redirect href="/auth/login" /> };
+    return { isReady: false, redirectTo: '/auth/login' };
   }
 
   if (!allowedRoles.includes(role)) {
-    return { isReady: false, redirect: <Redirect href="/" /> };
+    return { isReady: false, redirectTo: '/' };
   }
 
-  return { isReady: true, redirect: null };
+  return { isReady: true, redirectTo: null as string | null };
 }

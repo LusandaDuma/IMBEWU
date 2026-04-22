@@ -201,7 +201,7 @@ alter table student_badges enable row level security;
 -- Profiles: users can read own profile, admin reads all
 create policy "users read own profile" on profiles for select using (auth.uid() = id);
 create policy "admin reads all profiles" on profiles for select using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  coalesce(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin'
 );
 create policy "users update own profile" on profiles for update using (auth.uid() = id);
 
@@ -210,7 +210,7 @@ create policy "published courses visible to all" on courses for select using (
   is_published = true and auth.uid() is not null
 );
 create policy "admin manages courses" on courses for all using (
-  exists (select 1 from profiles where id = auth.uid() and role = 'admin')
+  coalesce(auth.jwt() -> 'user_metadata' ->> 'role', '') = 'admin'
 );
 
 -- Lesson progress: users only see own progress
