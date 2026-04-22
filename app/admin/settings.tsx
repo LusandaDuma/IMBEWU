@@ -2,7 +2,7 @@
  * @fileoverview Admin settings screen
  */
 
-import { signOut } from '@/services/supabase';
+import { signOut } from '@/services/authService';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { Bell, ChevronRight, Database, LogOut, Shield } from 'lucide-react-nativ
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function AdminSettingsScreen() {
-  const { user, logout } = useAuthStore();
+  const { profile, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -50,7 +50,7 @@ export default function AdminSettingsScreen() {
             <Shield size={40} color="white" />
           </View>
           <Text className="text-xl font-bold text-earth-800">
-            {user?.first_name} {user?.last_name}
+            {profile?.first_name} {profile?.last_name}
           </Text>
           <Text className="text-earth-500 capitalize">Administrator</Text>
         </View>

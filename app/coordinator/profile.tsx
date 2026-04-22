@@ -2,7 +2,7 @@
  * @fileoverview Coordinator profile screen
  */
 
-import { signOut } from '@/services/supabase';
+import { signOut } from '@/services/authService';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { ChevronRight, Crown, LogOut, Mail, User } from 'lucide-react-native';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function CoordinatorProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { profile, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -48,13 +48,13 @@ export default function CoordinatorProfileScreen() {
         <View className="items-center py-8">
           <View className="w-24 h-24 rounded-full bg-accent-600 items-center justify-center mb-4">
             <Text className="text-3xl font-bold text-white">
-              {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+              {profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}
             </Text>
           </View>
           <Text className="text-xl font-bold text-earth-800">
-            {user?.first_name} {user?.last_name}
+            {profile?.first_name} {profile?.last_name}
           </Text>
-          <Text className="text-earth-500 capitalize">{user?.role}</Text>
+          <Text className="text-earth-500 capitalize">{profile?.role}</Text>
           <View className="mt-3 bg-accent-100 px-3 py-1 rounded-full">
             <Text className="text-accent-700 text-sm font-medium">R199 Plan</Text>
           </View>

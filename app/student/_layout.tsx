@@ -7,13 +7,13 @@ import { Redirect, Tabs } from 'expo-router';
 import { Award, BookOpen, GraduationCap, User } from 'lucide-react-native';
 
 export default function StudentLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  if (user?.role !== 'student') {
+  if (role !== 'student') {
     return <Redirect href="/" />;
   }
 

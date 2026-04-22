@@ -2,7 +2,7 @@
  * @fileoverview Independent learner profile screen
  */
 
-import { signOut } from '@/services/supabase';
+import { signOut } from '@/services/authService';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,7 @@ import { ChevronRight, LogOut, Mail, Settings, User } from 'lucide-react-native'
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function IndependentProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { profile, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -48,13 +48,13 @@ export default function IndependentProfileScreen() {
         <View className="items-center py-8">
           <View className="w-24 h-24 rounded-full bg-primary-600 items-center justify-center mb-4">
             <Text className="text-3xl font-bold text-white">
-              {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+              {profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}
             </Text>
           </View>
           <Text className="text-xl font-bold text-earth-800">
-            {user?.first_name} {user?.last_name}
+            {profile?.first_name} {profile?.last_name}
           </Text>
-          <Text className="text-earth-500 capitalize">{user?.role} Learner</Text>
+          <Text className="text-earth-500 capitalize">{profile?.role} Learner</Text>
         </View>
 
         <View className="px-5">

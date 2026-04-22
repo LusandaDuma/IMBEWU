@@ -3,7 +3,7 @@
  */
 
 import { Button, FormField } from '@/components/shared';
-import { signUpWithEmail } from '@/services/supabase';
+import { signUp } from '@/services/authService';
 import { signupSchema } from '@/validators';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
@@ -67,18 +67,10 @@ export default function SignupScreen() {
       });
       setIsLoading(true);
 
-      const { data, error } = await signUpWithEmail(
-        validated.email,
-        validated.password,
-        {
-          first_name: validated.firstName,
-          last_name: validated.lastName,
-          role: validated.role,
-        }
-      );
+      const { error } = await signUp(validated.email, validated.password, validated.firstName, validated.lastName, validated.role);
 
       if (error) {
-        Alert.alert('Signup failed', error.message);
+        Alert.alert('Signup failed', error);
         return;
       }
 

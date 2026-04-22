@@ -7,13 +7,13 @@ import { Redirect, Tabs } from 'expo-router';
 import { BarChart3, BookOpen, User, Users } from 'lucide-react-native';
 
 export default function CoordinatorLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  if (user?.role !== 'coordinator') {
+  if (role !== 'coordinator') {
     return <Redirect href="/" />;
   }
 

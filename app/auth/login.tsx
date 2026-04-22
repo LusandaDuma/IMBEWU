@@ -3,7 +3,8 @@
  */
 
 import { AlertBanner, Button, FormField } from '@/components/shared';
-import { getProfile, signInWithEmail } from '@/services/supabase';
+import { signIn } from '@/services/authService';
+import { getProfile } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { loginSchema } from '@/validators';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,7 +24,7 @@ export default function LoginScreen() {
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const router = useRouter();
-  const { setUser } = useAuthStore();
+  const { setAuth } = useAuthStore();
 
   const handleLogin = async () => {
     try {
@@ -32,16 +33,21 @@ export default function LoginScreen() {
       const validated = loginSchema.parse({ email, password });
       setIsLoading(true);
 
-      const { data, error } = await signInWithEmail(validated.email, validated.password);
+      const { data: session, error } = await signIn(validated.email, validated.password);
 
       if (error) {
-        setBanner('We could not sign you in. Check your email and password, then try again.');
+        setBanner(error);
         return;
       }
 
-      if (data.user) {
-        const profile = await getProfile(data.user.id);
-        setUser(profile);
+      if (session?.user) {
+        const profile = await getProfile(session.user.id);
+        if (!profile) {
+          setBanner('Your account profile could not be loaded. Please try again.');
+          return;
+        }
+
+        setAuth({ user: session.user, profile, session });
         router.replace('/');
       }
     } catch (err) {

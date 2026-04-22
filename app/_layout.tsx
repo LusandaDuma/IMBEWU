@@ -5,7 +5,8 @@
 import 'react-native-reanimated';
 import '../global.css';
 
-import { getCurrentUser, getProfile, supabase } from '@/services/supabase';
+import { getSession } from '@/services/authService';
+import { getProfile, supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,7 +27,7 @@ const queryClient = new QueryClient({
 });
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { setUser, setLoading } = useAuthStore();
+  const { setAuth, clearAuth, setLoading } = useAuthStore();
   const [isReady, setIsReady] = useState(false);
   const isMountedRef = useRef(false);
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -42,29 +43,34 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function initAuth() {
       try {
-        const user = await getCurrentUser();
-        if (isMountedRef.current) {
-          if (user) {
-            const profile = await getProfile(user.id);
-            setUser(profile);
-          } else {
-            setLoading(false);
+        const { data: session } = await getSession();
+
+        if (!isMountedRef.current) return;
+
+        if (session?.user) {
+          const profile = await getProfile(session.user.id);
+          if (profile && isMountedRef.current) {
+            setAuth({ user: session.user, profile, session });
+            return;
           }
         }
+
+        clearAuth();
       } catch (error) {
         console.error('Auth initialization error:', error);
         if (isMountedRef.current) {
-          setLoading(false);
+          clearAuth();
         }
       } finally {
         if (isMountedRef.current) {
+          setLoading(false);
           setIsReady(true);
         }
       }
     }
 
     initAuth();
-  }, [setUser, setLoading]);
+  }, [setAuth, clearAuth, setLoading]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
@@ -72,16 +78,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (session?.user) {
         const profile = await getProfile(session.user.id);
-        if (isMountedRef.current) {
-          setUser(profile);
+        if (profile && isMountedRef.current) {
+          setAuth({ user: session.user, profile, session });
         }
       } else {
-        setUser(null);
+        clearAuth();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [setUser]);
+  }, [setAuth, clearAuth]);
 
   useEffect(() => {
     if (!isReady) {

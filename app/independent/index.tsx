@@ -14,7 +14,7 @@ import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function IndependentDashboard() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
   const router = useRouter();
 
   const { data: enrolments = [], isLoading, refetch } = useQuery<(CourseEnrolment & { courses: Course })[]>({
@@ -29,7 +29,7 @@ export default function IndependentDashboard() {
     <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScreenHeader
-          title={`Hello, ${user?.first_name ?? 'Learner'}`}
+          title={`Hello, ${profile?.first_name ?? 'Learner'}`}
           subtitle="Your self-paced workspace — courses, progress, and achievements."
           variant="light"
         />

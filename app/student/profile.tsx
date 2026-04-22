@@ -6,11 +6,11 @@ import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { User, Mail, LogOut, Sprout, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/auth';
-import { signOut } from '@/services/supabase';
+import { signOut } from '@/services/authService';
 import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { profile, logout } = useAuthStore();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -47,13 +47,13 @@ export default function ProfileScreen() {
         <View className="items-center py-8">
           <View className="w-24 h-24 rounded-full bg-primary-600 items-center justify-center mb-4">
             <Text className="text-3xl font-bold text-white">
-              {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+              {profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}
             </Text>
           </View>
           <Text className="text-xl font-bold text-white">
-            {user?.first_name} {user?.last_name}
+            {profile?.first_name} {profile?.last_name}
           </Text>
-          <Text className="text-slate-400 capitalize">{user?.role}</Text>
+          <Text className="text-slate-400 capitalize">{profile?.role}</Text>
         </View>
 
         <View className="px-5">

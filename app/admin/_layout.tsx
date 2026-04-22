@@ -7,13 +7,13 @@ import { Redirect, Tabs } from 'expo-router';
 import { BookOpen, LayoutDashboard, Settings, Users } from 'lucide-react-native';
 
 export default function AdminLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  if (user?.role !== 'admin') {
+  if (role !== 'admin') {
     return <Redirect href="/" />;
   }
 

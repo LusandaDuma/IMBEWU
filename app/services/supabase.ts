@@ -19,47 +19,13 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
+  throw new Error('Missing Supabase environment variables. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://izqnihdzkirynwlxcysn.supabase.co',
-  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6cW5paGR6a2lyeW53bHhjeXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1NDA0NTYsImV4cCI6MjA5MDExNjQ1Nn0.pJTLiitHnpgHZfEOWd4VFLpmZ7_KOkCfTRWplTCf4jY'
+  supabaseUrl,
+  supabaseAnonKey
 );
-
-// Auth services
-export async function signInWithEmail(email: string, password: string) {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  return { data, error };
-}
-
-export async function signUpWithEmail(email: string, password: string, userData: {
-  first_name: string;
-  last_name: string;
-  role: string;
-}) {
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: userData,
-    },
-  });
-  return { data, error };
-}
-
-export async function signOut() {
-  const { error } = await supabase.auth.signOut();
-  return { error };
-}
-
-export async function getCurrentUser() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
 
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase

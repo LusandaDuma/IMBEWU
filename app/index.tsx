@@ -12,7 +12,7 @@ import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Text, View } from 'react-native';
 
 export default function Index() {
-  const { user, isAuthenticated, isLoading } = useAuthStore();
+  const { profile, isAuthenticated, isLoading } = useAuthStore();
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
@@ -71,8 +71,8 @@ export default function Index() {
     );
   }
 
-  if (isAuthenticated && user) {
-    return <Redirect href={getHomeHrefForRole(user.role)} />;
+  if (isAuthenticated && profile) {
+    return <Redirect href={getHomeHrefForRole(profile.role)} />;
   }
 
   return <PublicCatalogHome />;

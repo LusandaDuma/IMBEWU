@@ -7,13 +7,13 @@ import { Redirect, Tabs } from 'expo-router';
 import { Award, BookOpen, Compass, User } from 'lucide-react-native';
 
 export default function IndependentLayout() {
-  const { user, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }
 
-  if (user?.role !== 'independent') {
+  if (role !== 'independent') {
     return <Redirect href="/" />;
   }
 
