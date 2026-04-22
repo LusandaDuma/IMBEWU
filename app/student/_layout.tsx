@@ -2,12 +2,9 @@
  * @fileoverview Student layout with bottom tabs
  */
 
-import { Tabs } from 'expo-router';
-import { BookOpen, GraduationCap, User, Award } from 'lucide-react-native';
-import { View, Text } from 'react-native';
 import { useAuthStore } from '@/store/auth';
-import { useEffect } from 'react';
-import { Redirect } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
+import { Award, BookOpen, GraduationCap, User } from 'lucide-react-native';
 
 export default function StudentLayout() {
   const { user, isAuthenticated } = useAuthStore();
@@ -72,6 +69,8 @@ export default function StudentLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="course/[id]" options={{ href: null }} />
+      <Tabs.Screen name="lesson/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

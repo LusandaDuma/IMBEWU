@@ -1,120 +1,123 @@
 /**
- * @fileoverview Coordinator dashboard - manage classes
+ * @fileoverview Coordinator LMS — classes, join codes, roster entry.
  */
 
-import { createClass, getClassesByCoordinator } from '@/services/supabase';
+import { Button, EmptyState, ScreenHeader } from '@/components/shared';
+import { getClassesByCoordinator } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Class } from '@/types';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Calendar, ChevronRight, Copy, Plus, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CoordinatorDashboard() {
   const { user } = useAuthStore();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
 
   const { data: classes = [], isLoading, refetch } = useQuery<Class[]>({
     queryKey: ['coordinator-classes', user?.id],
-    queryFn: () => user ? getClassesByCoordinator(user.id) : Promise.resolve([]),
+    queryFn: () => (user ? getClassesByCoordinator(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
 
-  const createClassMutation = useMutation({
-    mutationFn: createClass,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['coordinator-classes'] });
-      setShowCreate(false);
-      Alert.alert('Success', 'Class created successfully!');
-    },
-  });
-
   const handleCopyCode = (code: string) => {
-    Alert.alert('Copied!', `Join code "${code}" copied to clipboard`);
+    Alert.alert('Join code', code);
   };
-
-  const renderClassCard = ({ item }: { item: Class }) => (
-    <TouchableOpacity
-      onPress={() => router.push({ pathname: '/coordinator/class/[id]', params: { id: item.id } })}
-      className="bg-slate-800 rounded-2xl p-4 shadow-lg mb-4 border border-slate-700"
-      style={{ elevation: 2 }}
-    >
-      <View className="flex-row justify-between items-start">
-        <View className="flex-1">
-          <Text className="text-lg font-bold text-white">{item.name}</Text>
-          <Text className="text-primary-400 text-sm mt-1">Course ID: {item.course_id}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => handleCopyCode(item.join_code)}
-          className="bg-accent-100 px-3 py-2 rounded-lg flex-row items-center"
-        >
-          <Text className="text-accent-700 font-semibold mr-2">{item.join_code}</Text>
-          <Copy size={14} color="#d97706" />
-        </TouchableOpacity>
-      </View>
-
-      <View className="flex-row items-center mt-4 pt-4 border-t border-earth-100">
-        <View className="flex-row items-center">
-          <Calendar size={16} color="#78716c" />
-          <Text className="text-earth-500 text-sm ml-2">
-            {new Date(item.start_date).toLocaleDateString()}
-          </Text>
-        </View>
-        <View className="flex-row items-center ml-6">
-          <Users size={16} color="#78716c" />
-          <Text className="text-earth-500 text-sm ml-2">Students</Text>
-        </View>
-        <View className="flex-1" />
-        <ChevronRight size={20} color="#16a34a" />
-      </View>
-    </TouchableOpacity>
-  );
 
   return (
     <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
-      <View className="pt-14 px-5 pb-4 flex-row justify-between items-center">
-        <View>
-          <Text className="text-2xl font-bold text-earth-800">My Classes</Text>
-          <Text className="text-earth-500">Manage your student groups</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => setShowCreate(true)}
-          className="w-12 h-12 rounded-full bg-primary-600 items-center justify-center shadow-md"
-        >
-          <Plus size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={classes}
-        keyExtractor={(item) => item.id}
-        renderItem={renderClassCard}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#16a34a" />
-        }
-        ListEmptyComponent={
-          <View className="items-center justify-center py-12">
-            <View className="w-20 h-20 rounded-full bg-earth-100 items-center justify-center mb-4">
-              <Users size={36} color="#a8a29e" />
-            </View>
-            <Text className="text-earth-700 font-medium mb-2">No classes yet</Text>
-            <Text className="text-earth-500 text-center px-8">
-              Create your first class to start managing students
-            </Text>
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <ScreenHeader
+          title="My classes"
+          subtitle="Create cohorts, share join codes, and monitor learner progress."
+          variant="light"
+          rightSlot={
             <TouchableOpacity
               onPress={() => setShowCreate(true)}
-              className="mt-4 bg-primary-600 px-6 py-3 rounded-xl"
+              className="w-12 h-12 rounded-full bg-primary-600/95 items-center justify-center"
+              style={{ elevation: 3 }}
             >
-              <Text className="text-white font-semibold">Create Class</Text>
+              <Plus size={24} color="white" />
             </TouchableOpacity>
+          }
+        />
+
+        <FlatList
+          data={classes}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#16a34a" />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon={Users}
+              title="No classes yet"
+              description="Create a class to link learners to a published course and track their journey."
+              actionLabel="Create class"
+              onAction={() => setShowCreate(true)}
+              variant="light"
+            />
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() =>
+                router.push({ pathname: '/coordinator/class/[id]', params: { id: item.id } })
+              }
+              activeOpacity={0.9}
+              className="bg-white/75 rounded-3xl p-5 mb-4"
+              style={{ elevation: 1 }}
+            >
+              <View className="flex-row justify-between items-start">
+                <View className="flex-1 min-w-0 pr-2">
+                  <Text className="text-lg font-light text-earth-900 tracking-tight" numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text className="text-primary-700 text-xs font-semibold mt-1 uppercase tracking-wide">
+                    Course · {item.course_id.slice(0, 8)}…
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleCopyCode(item.join_code)}
+                  className="bg-accent-500/12 px-3 py-2 rounded-full flex-row items-center"
+                >
+                  <Text className="text-accent-800 font-bold mr-2">{item.join_code}</Text>
+                  <Copy size={14} color="#b45309" />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-row items-center mt-5 pt-1">
+                <Calendar size={16} color="#78716c" />
+                <Text className="text-earth-500 text-sm ml-2 font-medium">
+                  Starts {new Date(item.start_date).toLocaleDateString()}
+                </Text>
+                <View className="flex-1" />
+                <View className="flex-row items-center">
+                  <Users size={16} color="#78716c" />
+                  <Text className="text-earth-500 text-sm ml-1.5 font-medium">Roster</Text>
+                </View>
+                <ChevronRight size={20} color="#16a34a" style={{ marginLeft: 8 }} />
+              </View>
+            </TouchableOpacity>
+          )}
+        />
+      </SafeAreaView>
+
+      {showCreate ? (
+        <View className="absolute inset-0 bg-black/40 justify-end">
+          <View className="bg-white/95 rounded-t-[28px] p-7">
+            <Text className="text-lg font-bold text-earth-900 mb-1">Create class</Text>
+            <Text className="text-earth-500 text-sm mb-4">
+              Full class builder will link to your catalogue course and generate a join code.
+            </Text>
+            <Button label="Close" variant="outline" onPress={() => setShowCreate(false)} fullWidth />
           </View>
-        }
-      />
+        </View>
+      ) : null}
     </LinearGradient>
   );
 }

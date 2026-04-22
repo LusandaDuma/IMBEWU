@@ -24,6 +24,7 @@
       "package": "com.imbewu.agrolearn"
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [

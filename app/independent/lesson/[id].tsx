@@ -1,5 +1,5 @@
 /**
- * @fileoverview Lesson reader — progress, content, completion (LMS).
+ * @fileoverview Independent learner lesson reader (same LMS flow as student).
  */
 
 import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function LessonScreen() {
+export default function IndependentLessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const router = useRouter();
@@ -46,11 +46,11 @@ export default function LessonScreen() {
     <View className="flex-1 bg-earth-50">
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LinearGradient colors={['#f0fdf4', '#ffffff']}>
+      <LinearGradient colors={['#ecfeff', '#ffffff']}>
         <SafeAreaView edges={['top']}>
           <ScreenHeader
             title={lesson?.title ?? 'Lesson'}
-            subtitle="Read, reflect, then mark complete to unlock the next step."
+            subtitle="Self-paced module — save progress as you go."
             variant="light"
             onBack={() => router.back()}
           />
@@ -72,15 +72,13 @@ export default function LessonScreen() {
         <View className="bg-white/80 rounded-3xl p-6 mb-6">
           <Text className="text-xl font-light text-earth-900 mb-3 tracking-tight">{lesson?.title}</Text>
           <Text className="text-earth-600 leading-7 text-base font-light">
-            {lesson?.content || 'No lesson body yet. Your instructor will add reading or video notes here.'}
+            {lesson?.content || 'No lesson body yet.'}
           </Text>
         </View>
 
         {lesson?.description ? (
-          <View className="bg-primary-500/8 rounded-3xl p-6 mb-8">
-            <Text className="text-xs font-medium text-primary-900/80 uppercase tracking-[0.2em] mb-3">
-              Summary
-            </Text>
+          <View className="bg-cyan-500/8 rounded-3xl p-6 mb-8">
+            <Text className="text-xs font-medium text-cyan-900/85 uppercase tracking-[0.2em] mb-3">Summary</Text>
             <Text className="text-earth-700 leading-6 text-sm font-light">{lesson.description}</Text>
           </View>
         ) : null}
@@ -88,7 +86,7 @@ export default function LessonScreen() {
         <Button
           label="Mark as complete"
           onPress={handleComplete}
-          variant="primary"
+          variant="accent"
           size="lg"
           fullWidth
           leftIcon={CheckCircle}

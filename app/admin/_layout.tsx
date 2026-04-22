@@ -2,10 +2,9 @@
  * @fileoverview Admin layout with bottom tabs
  */
 
-import { Tabs } from 'expo-router';
-import { LayoutDashboard, BookOpen, Users, Settings } from 'lucide-react-native';
-import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { Redirect, Tabs } from 'expo-router';
+import { BookOpen, LayoutDashboard, Settings, Users } from 'lucide-react-native';
 
 export default function AdminLayout() {
   const { user, isAuthenticated } = useAuthStore();

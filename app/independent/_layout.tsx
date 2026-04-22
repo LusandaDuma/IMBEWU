@@ -13,7 +13,7 @@ export default function IndependentLayout() {
     return <Redirect href="/auth/login" />;
   }
 
-  if (user?.role !== 'independent_grower') {
+  if (user?.role !== 'independent') {
     return <Redirect href="/" />;
   }
 
@@ -69,6 +69,8 @@ export default function IndependentLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="course/[id]" options={{ href: null }} />
+      <Tabs.Screen name="lesson/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

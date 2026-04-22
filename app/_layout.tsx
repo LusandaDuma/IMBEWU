@@ -2,6 +2,9 @@
  * @fileoverview Root layout with providers
  */
 
+import 'react-native-reanimated';
+import '../global.css';
+
 import { getCurrentUser, getProfile, supabase } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
@@ -151,6 +154,9 @@ export default function RootLayout() {
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="course" />
+            <Stack.Screen name="fieldwise" />
+            <Stack.Screen name="nolwazi" />
             <Stack.Screen name="auth" />
             <Stack.Screen name="student" />
             <Stack.Screen name="coordinator" />

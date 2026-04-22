@@ -2,10 +2,9 @@
  * @fileoverview Coordinator layout with bottom tabs
  */
 
-import { Tabs } from 'expo-router';
-import { BookOpen, Users, BarChart3, User } from 'lucide-react-native';
-import { Redirect } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
+import { Redirect, Tabs } from 'expo-router';
+import { BarChart3, BookOpen, User, Users } from 'lucide-react-native';
 
 export default function CoordinatorLayout() {
   const { user, isAuthenticated } = useAuthStore();

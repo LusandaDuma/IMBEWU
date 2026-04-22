@@ -1,15 +1,17 @@
 /**
- * @fileoverview Modern Login screen with enhanced UI/UX
+ * @fileoverview LMS sign-in — shared form components, slate + primary palette.
  */
 
-import { signInWithEmail } from '@/services/supabase';
+import { AlertBanner, Button, FormField } from '@/components/shared';
+import { getProfile, signInWithEmail } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { loginSchema } from '@/validators';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Sprout } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 export default function LoginScreen() {
@@ -19,24 +21,25 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const [banner, setBanner] = useState<string | null>(null);
   const router = useRouter();
   const { setUser } = useAuthStore();
 
   const handleLogin = async () => {
     try {
       setErrors({});
+      setBanner(null);
       const validated = loginSchema.parse({ email, password });
       setIsLoading(true);
 
       const { data, error } = await signInWithEmail(validated.email, validated.password);
 
       if (error) {
-        Alert.alert('Login Failed', error.message);
+        setBanner('We could not sign you in. Check your email and password, then try again.');
         return;
       }
 
       if (data.user) {
-        const { getProfile } = await import('@/services/supabase');
         const profile = await getProfile(data.user.id);
         setUser(profile);
         router.replace('/');
@@ -46,9 +49,7 @@ export default function LoginScreen() {
         const fieldErrors: Record<string, string> = {};
         err.issues.forEach((issue) => {
           const pathKey = issue.path[0]?.toString();
-          if (pathKey) {
-            fieldErrors[pathKey] = issue.message;
-          }
+          if (pathKey) fieldErrors[pathKey] = issue.message;
         });
         setErrors(fieldErrors);
       }
@@ -56,51 +57,6 @@ export default function LoginScreen() {
       setIsLoading(false);
     }
   };
-
-  const InputField = ({ 
-    icon: Icon, 
-    placeholder, 
-    value, 
-    onChangeText, 
-    error,
-    fieldName,
-    secureTextEntry = false,
-    rightIcon: RightIcon = null,
-    onRightIconPress = null,
-    keyboardType = 'default',
-  }: any) => (
-    <View className="mb-4">
-      <View 
-        className={`flex-row items-center rounded-2xl px-5 py-4 transition-all ${
-          focusedInput === fieldName
-            ? 'bg-primary-50 border-2 border-primary-600'
-            : 'bg-slate-50 border-2 border-transparent'
-        }`}
-      >
-        <Icon size={22} color={focusedInput === fieldName ? '#16a34a' : '#94a3b8'} />
-        <TextInput
-          className="flex-1 ml-4 text-slate-800 text-base"
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setFocusedInput(fieldName)}
-          onBlur={() => setFocusedInput(null)}
-          secureTextEntry={secureTextEntry}
-          keyboardType={keyboardType}
-          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-          placeholderTextColor="#cbd5e1"
-        />
-        {RightIcon && (
-          <TouchableOpacity onPress={onRightIconPress}>
-            <RightIcon size={22} color="#94a3b8" />
-          </TouchableOpacity>
-        )}
-      </View>
-      {error && (
-        <Text className="text-red-500 text-sm mt-2 ml-1 font-medium">{error}</Text>
-      )}
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView
@@ -113,78 +69,106 @@ export default function LoginScreen() {
         end={{ x: 1, y: 1 }}
         className="flex-1"
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View className="items-center mb-12">
-            <View className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center mb-6 shadow-2xl">
-              <Sprout size={40} color="white" strokeWidth={1.5} />
-            </View>
-            <Text className="text-4xl font-bold text-white mb-2">Welcome Back</Text>
-            <Text className="text-slate-300 text-center text-base">Continue your learning journey</Text>
-          </View>
-
-          {/* Form Card */}
-          <View className="bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700">
-            {/* Email Field */}
-            <InputField
-              icon={Mail}
-              placeholder="Email Address"
-              value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-              fieldName="email"
-              keyboardType="email-address"
-            />
-
-            {/* Password Field */}
-            <InputField
-              icon={Lock}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              error={errors.password}
-              fieldName="password"
-              secureTextEntry={!showPassword}
-              RightIcon={showPassword ? EyeOff : Eye}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-            />
-
-            {/* Sign In Button */}
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={isLoading}
-              className={`rounded-2xl py-4 items-center shadow-lg transition-all flex-row justify-center gap-2 ${
-                isLoading 
-                  ? 'bg-primary-400 shadow-primary-400/50' 
-                  : 'bg-gradient-to-r from-primary-500 to-primary-600 shadow-primary-600/50'
-              }`}
-            >
-              <Text className="text-white font-bold text-lg">
-                {isLoading ? 'Signing In...' : 'Sign In'}
+        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 32,
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="items-center mb-10">
+              <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-7">
+                <Sprout size={44} color="white" strokeWidth={1.25} />
+              </View>
+              <Text className="text-3xl font-light text-white mb-2 text-center tracking-tight">Welcome back</Text>
+              <Text className="text-slate-400/95 text-center text-base leading-6 max-w-xs font-light">
+                Sign in to continue courses, lessons, and progress on Imbewu.
               </Text>
-              {!isLoading && <ArrowRight size={20} color="white" />}
-            </TouchableOpacity>
+            </View>
 
-            {/* Sign Up Link */}
-            <View className="flex-row justify-center mt-6">
-              <Text className="text-slate-400">Don't have an account? </Text>
-              <Link href="/auth/signup" asChild>
-                <TouchableOpacity>
-                  <Text className="text-primary-400 font-semibold">Sign Up</Text>
+            <View className="rounded-[28px] p-8 bg-white/6">
+              {banner ? (
+                <AlertBanner
+                  message={banner}
+                  variant="error"
+                  onDismiss={() => setBanner(null)}
+                />
+              ) : null}
+
+              <FormField
+                appearance="dark"
+                leftIcon={Mail}
+                placeholder="Email address"
+                value={email}
+                onChangeText={setEmail}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                focused={focusedInput === 'email'}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
+              />
+
+              <FormField
+                appearance="dark"
+                leftIcon={Lock}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                error={errors.password}
+                secureTextEntry={!showPassword}
+                focused={focusedInput === 'password'}
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
+                endSlot={
+                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
+                    {showPassword ? (
+                      <EyeOff size={22} color="#94a3b8" />
+                    ) : (
+                      <Eye size={22} color="#94a3b8" />
+                    )}
+                  </TouchableOpacity>
+                }
+              />
+
+              <Button
+                label={isLoading ? 'Signing in…' : 'Sign in'}
+                onPress={handleLogin}
+                isLoading={isLoading}
+                disabled={isLoading}
+                variant="primary"
+                size="lg"
+                fullWidth
+                rightIcon={isLoading ? undefined : ArrowRight}
+              />
+
+              <View className="flex-row justify-center mt-8 flex-wrap">
+                <Text className="text-slate-400 text-sm">No account yet? </Text>
+                <Link href="/auth/signup" asChild>
+                  <TouchableOpacity>
+                    <Text className="text-primary-400 font-semibold text-sm">Create one</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+
+              <Link href="/nolwazi" asChild>
+                <TouchableOpacity className="mt-5 self-center px-4 py-2 rounded-full bg-white/8 active:bg-white/12">
+                  <Text className="text-slate-300 text-sm font-light text-center">
+                    Questions about the app? Chat with <Text className="text-primary-400 font-medium">Nolwazi</Text>
+                  </Text>
                 </TouchableOpacity>
               </Link>
             </View>
-          </View>
 
-          {/* Footer Text */}
-          <Text className="text-slate-500 text-center text-xs mt-8">
-            Secure login with encryption
-          </Text>
-        </ScrollView>
+            <Text className="text-slate-600 text-center text-xs mt-8 leading-5 px-4">
+              Encrypted session · Agricultural learning platform
+            </Text>
+          </ScrollView>
+        </SafeAreaView>
       </LinearGradient>
     </KeyboardAvoidingView>
   );

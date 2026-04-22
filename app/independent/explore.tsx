@@ -1,7 +1,8 @@
 /**
- * @fileoverview Explore courses for independent learners
+ * @fileoverview Independent course catalogue — search, filters, enrolment.
  */
 
+import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
 import { enrollInCourse, getCourses } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course } from '@/types';
@@ -10,7 +11,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Filter, Search, Sprout, Star } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const categories = ['All', 'Farming', 'Livestock', 'Technology', 'Business'];
 
@@ -27,77 +29,51 @@ export default function ExploreScreen() {
   });
 
   const enrollMutation = useMutation({
-    mutationFn: (courseId: string) => 
+    mutationFn: (courseId: string) =>
       user ? enrollInCourse(user.id, courseId, 'independent') : Promise.resolve(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['independent-enrolments'] });
-      Alert.alert('Success', 'You have been enrolled in the course!');
+      Alert.alert('Enrolled', 'Open the course from your Learn tab to begin.');
     },
+    onError: () => Alert.alert('Enrolment failed', 'Try again shortly.'),
   });
 
-  const filteredCourses = courses.filter(course =>
-    (course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredCourses = courses.filter((course) => {
+    const matchesText =
+      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.description.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesText) return false;
+    if (selectedCategory === 'All') return true;
+    return (
+      course.title.toLowerCase().includes(selectedCategory.toLowerCase()) ||
+      course.description.toLowerCase().includes(selectedCategory.toLowerCase())
+    );
+  });
 
-  const renderCourseCard = ({ item }: { item: Course }) => (
-    <TouchableOpacity
-      onPress={() => router.push({ pathname: '/independent/course/[id]', params: { id: item.id } }) }
-      className="bg-slate-800 rounded-2xl overflow-hidden shadow-lg mb-4 border border-slate-700"
-      style={{ elevation: 2 }}
-    >
-      <View className="h-32 bg-primary-600 items-center justify-center">
-        <Sprout size={48} color="white" />
-      </View>
-      <View className="p-4">
-        <Text className="text-lg font-bold text-earth-800" numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text className="text-earth-500 text-sm mt-1" numberOfLines={2}>
-          {item.description}
-        </Text>
-        <View className="flex-row items-center mt-3">
-          <View className="flex-row items-center">
-            <Star size={14} color="#fbbf24" fill="#fbbf24" />
-            <Text className="text-earth-600 text-sm ml-1">4.8</Text>
+  const listHeader = (
+    <View>
+      <ScreenHeader
+        title="Explore catalogue"
+        subtitle="Search published courses and enrol in one tap."
+        variant="light"
+      />
+      <View className="px-5 mb-3">
+        <View className="flex-row items-center">
+          <View className="flex-1">
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search by title, skill, or topic…"
+              icon={Search}
+              variant="light"
+            />
           </View>
-          <View className="flex-1" />
-          <TouchableOpacity
-            onPress={() => enrollMutation.mutate(item.id)}
-            disabled={enrollMutation.isPending}
-            className="bg-cyan-600 px-4 py-2 rounded-lg"
-          >
-            <Text className="text-white font-semibold text-sm">Enroll</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-
-  return (
-    <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
-      <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-earth-800">Explore</Text>
-        <Text className="text-earth-500">Find your next learning adventure</Text>
-      </View>
-
-      <View className="px-5 mb-4">
-        <View className="flex-row items-center bg-white rounded-xl px-4 py-3 shadow-sm">
-          <Search size={20} color="#78716c" />
-          <TextInput
-            className="flex-1 ml-3 text-earth-800"
-            placeholder="Search courses..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#a8a29e"
-          />
-          <TouchableOpacity>
+            <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-white/80 items-center justify-center">
             <Filter size={20} color="#78716c" />
           </TouchableOpacity>
         </View>
       </View>
-
-      <View className="px-5 mb-4">
+      <View className="px-5 mb-5">
         <FlatList
           horizontal
           data={categories}
@@ -106,33 +82,76 @@ export default function ExploreScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               onPress={() => setSelectedCategory(item)}
-              className={`px-4 py-2 rounded-full mr-2 ${
-                selectedCategory === item ? 'bg-cyan-600' : 'bg-white'
-              }`}
+              activeOpacity={0.88}
+                className={`px-4 py-2.5 rounded-full mr-2 ${
+                  selectedCategory === item ? 'bg-cyan-600/95' : 'bg-white/75'
+                }`}
               style={{ elevation: selectedCategory === item ? 2 : 0 }}
             >
-              <Text className={selectedCategory === item ? 'text-white' : 'text-earth-600'}>
+              <Text
+                className={`text-sm font-semibold ${
+                  selectedCategory === item ? 'text-white' : 'text-earth-600'
+                }`}
+              >
                 {item}
               </Text>
             </TouchableOpacity>
           )}
         />
       </View>
+    </View>
+  );
 
-      <FlatList
-        data={filteredCourses}
-        keyExtractor={(item) => item.id}
-        renderItem={renderCourseCard}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#0891b2" />
-        }
-        ListEmptyComponent={
-          <View className="items-center justify-center py-8">
-            <Text className="text-earth-500">No courses found</Text>
-          </View>
-        }
-      />
+  return (
+    <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <FlatList
+          data={filteredCourses}
+          keyExtractor={(item) => item.id}
+          ListHeaderComponent={listHeader}
+          contentContainerStyle={{ paddingBottom: 28 }}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#0891b2" />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon={Sprout}
+              title="No courses found"
+              description="Try another search or category, or pull to refresh."
+              variant="light"
+            />
+          }
+          renderItem={({ item }) => (
+            <View className="px-5">
+              <CourseCard
+                title={item.title}
+                description={item.description}
+                placeholderIcon={Sprout}
+                variant="elevated"
+                onPress={() =>
+                  router.push({ pathname: '/independent/course/[id]', params: { id: item.id } })
+                }
+                footer={
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-row items-center">
+                      <Star size={14} color="#fbbf24" fill="#fbbf24" />
+                      <Text className="text-earth-600 text-sm ml-1 font-medium">4.8</Text>
+                    </View>
+                    <Button
+                      label={enrollMutation.isPending ? '…' : 'Enrol'}
+                      onPress={() => enrollMutation.mutate(item.id)}
+                      variant="accent"
+                      size="sm"
+                      isLoading={enrollMutation.isPending}
+                      disabled={enrollMutation.isPending}
+                    />
+                  </View>
+                }
+              />
+            </View>
+          )}
+        />
+      </SafeAreaView>
     </LinearGradient>
   );
 }

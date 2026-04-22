@@ -1,22 +1,15 @@
 /**
- * @fileoverview Landing page - redirects based on auth status with modern loading state
+ * @fileoverview App entry — guests see the public course catalog; signed-in users go to their dashboard.
  */
 
+import { PublicCatalogHome } from '@/components/screens/PublicCatalogHome';
+import { getHomeHrefForRole } from '@/constants/routing';
 import { useAuthStore } from '@/store/auth';
-import type { UserRole } from '@/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
 import { Sprout } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
 import { ActivityIndicator, Animated, Text, View } from 'react-native';
-
-const roleRoutes: Record<UserRole, string> = {
-  admin: '/admin',
-  coordinator: '/coordinator',
-  student: '/student',
-  independent_grower: '/independent_grower',
-  program_coordinator: '/program_coordinator',
-};
 
 export default function Index() {
   const { user, isAuthenticated, isLoading } = useAuthStore();
@@ -58,51 +51,29 @@ export default function Index() {
             ]}
             className="items-center"
           >
-            <View className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center mb-6 shadow-2xl">
+            <View className="w-24 h-24 rounded-3xl bg-primary-600/95 items-center justify-center mb-6">
               <Sprout size={48} color="white" strokeWidth={1.5} />
             </View>
 
-            <Text className="text-3xl font-bold text-white mb-2">Imbewu</Text>
-            <Text className="text-slate-300 text-center text-base mb-12 max-w-xs">
+            <Text className="text-3xl font-light text-white mb-2">Imbewu</Text>
+            <Text className="text-slate-400 text-center text-base mb-12 max-w-xs font-light">
               Loading your learning experience
             </Text>
 
             <ActivityIndicator size="large" color="#16a34a" />
-
-            <View className="flex-row mt-8 gap-2">
-              <View
-                className="w-2 h-2 rounded-full bg-primary-500"
-                style={{
-                  opacity: 0.5,
-                }}
-              />
-              <View
-                className="w-2 h-2 rounded-full bg-primary-500"
-                style={{
-                  opacity: 0.5,
-                }}
-              />
-              <View
-                className="w-2 h-2 rounded-full bg-primary-500"
-                style={{
-                  opacity: 0.5,
-                }}
-              />
-            </View>
           </Animated.View>
 
-          <Text className="absolute bottom-12 text-slate-500 text-xs text-center max-w-xs">
-            Connecting to your personalized learning path...
+          <Text className="absolute bottom-12 text-slate-600 text-xs text-center max-w-xs font-light px-6">
+            Catalogue opens for everyone — sign in only when you enrol or learn
           </Text>
         </View>
       </LinearGradient>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Redirect href="/auth/login" />;
+  if (isAuthenticated && user) {
+    return <Redirect href={getHomeHrefForRole(user.role)} />;
   }
 
-  const route = user ? roleRoutes[user.role] : '/auth/login';
-  return <Redirect href={route as any} />;
+  return <PublicCatalogHome />;
 }

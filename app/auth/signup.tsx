@@ -1,41 +1,45 @@
 /**
- * @fileoverview Modern Signup screen with enhanced UI/UX
+ * @fileoverview LMS registration — role-aware signup (student | independent | coordinator).
  */
 
+import { Button, FormField } from '@/components/shared';
 import { signUpWithEmail } from '@/services/supabase';
 import { signupSchema } from '@/validators';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { BookOpen, Briefcase, Eye, EyeOff, Lock, Mail, Sprout, User } from 'lucide-react-native';
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
+type SignupRole = 'student' | 'independent' | 'coordinator';
+
 interface RoleOption {
-  id: 'student' | 'independent_grower' | 'program_coordinator';
+  id: SignupRole;
   label: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }
 
 const ROLE_OPTIONS: RoleOption[] = [
   {
     id: 'student',
     label: 'Student',
-    description: 'Learning in a program',
-    icon: <BookOpen size={24} color="white" />,
+    description: 'Join a class with a join code',
+    icon: <BookOpen size={22} color="white" />,
   },
   {
-    id: 'independent_grower',
-    label: 'Independent Grower',
-    description: 'Self-directed learning',
-    icon: <Sprout size={24} color="white" />,
+    id: 'independent',
+    label: 'Independent learner',
+    description: 'Self-paced courses, no class required',
+    icon: <Sprout size={22} color="white" />,
   },
   {
-    id: 'program_coordinator',
+    id: 'coordinator',
     label: 'Coordinator',
-    description: 'Program admin',
-    icon: <Briefcase size={24} color="white" />,
+    description: 'Run classes and track learner progress',
+    icon: <Briefcase size={22} color="white" />,
   },
 ];
 
@@ -44,7 +48,7 @@ export default function SignupScreen() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'student' | 'independent_grower' | 'program_coordinator'>('student');
+  const [role, setRole] = useState<SignupRole>('student');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -74,23 +78,19 @@ export default function SignupScreen() {
       );
 
       if (error) {
-        Alert.alert('Signup Failed', error.message);
+        Alert.alert('Signup failed', error.message);
         return;
       }
 
-      Alert.alert(
-        'Account Created',
-        'Please check your email to verify your account.',
-        [{ text: 'OK', onPress: () => router.replace('/auth/login') }]
-      );
+      Alert.alert('Account created', 'Check your email to verify your account.', [
+        { text: 'OK', onPress: () => router.replace('/auth/login') },
+      ]);
     } catch (err) {
       if (err instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
         err.issues.forEach((issue) => {
           const pathKey = issue.path[0]?.toString();
-          if (pathKey) {
-            fieldErrors[pathKey] = issue.message;
-          }
+          if (pathKey) fieldErrors[pathKey] = issue.message;
         });
         setErrors(fieldErrors);
       }
@@ -99,200 +99,170 @@ export default function SignupScreen() {
     }
   };
 
-  const InputField = ({ 
-    icon: Icon, 
-    placeholder, 
-    value, 
-    onChangeText, 
-    error,
-    fieldName,
-    secureTextEntry = false,
-    rightIcon: RightIcon = null,
-    onRightIconPress = null,
-    keyboardType = 'default',
-  }: any) => (
-    <View className="mb-4">
-      <View 
-        className={`flex-row items-center rounded-2xl px-5 py-4 transition-all ${
-          focusedInput === fieldName
-            ? 'bg-primary-50 border-2 border-primary-600'
-            : 'bg-slate-50 border-2 border-transparent'
-        }`}
-      >
-        <Icon size={22} color={focusedInput === fieldName ? '#16a34a' : '#94a3b8'} />
-        <TextInput
-          className="flex-1 ml-4 text-slate-800 text-base"
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setFocusedInput(fieldName)}
-          onBlur={() => setFocusedInput(null)}
-          secureTextEntry={secureTextEntry}
-          keyboardType={keyboardType}
-          autoCapitalize={keyboardType === 'email-address' ? 'none' : 'sentences'}
-          placeholderTextColor="#cbd5e1"
-        />
-        {RightIcon && (
-          <TouchableOpacity onPress={onRightIconPress}>
-            <RightIcon size={22} color="#94a3b8" />
-          </TouchableOpacity>
-        )}
-      </View>
-      {error && (
-        <Text className="text-red-500 text-sm mt-2 ml-1 font-medium">{error}</Text>
-      )}
-    </View>
-  );
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-    >
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
       <LinearGradient
         colors={['#0f172a', '#1e293b', '#0f172a']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="flex-1"
       >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View className="items-center mb-10">
-            <View className="w-20 h-20 rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center mb-6 shadow-2xl">
-              <Sprout size={40} color="white" strokeWidth={1.5} />
-            </View>
-            <Text className="text-4xl font-bold text-white mb-2">Join Imbewu</Text>
-            <Text className="text-slate-300 text-center text-base">Transform your learning journey</Text>
-          </View>
-
-          {/* Form Card */}
-          <View className="bg-slate-800 rounded-3xl p-8 shadow-2xl border border-slate-700">
-            {/* Name Fields */}
-            <View className="flex-row gap-3 mb-2">
-              <View className="flex-1">
-                <InputField
-                  icon={User}
-                  placeholder="First Name"
-                  value={firstName}
-                  onChangeText={setFirstName}
-                  error={errors.firstName}
-                  fieldName="firstName"
-                />
+        <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+          <ScrollView
+            contentContainerStyle={{
+              paddingHorizontal: 24,
+              paddingVertical: 28,
+              paddingBottom: 48,
+            }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="items-center mb-8">
+              <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-6">
+                <Sprout size={44} color="white" strokeWidth={1.25} />
               </View>
-              <View className="flex-1">
-                <InputField
-                  icon={User}
-                  placeholder="Last Name"
-                  value={lastName}
-                  onChangeText={setLastName}
-                  error={errors.lastName}
-                  fieldName="lastName"
-                />
-              </View>
-            </View>
-
-            {/* Email Field */}
-            <InputField
-              icon={Mail}
-              placeholder="Email Address"
-              value={email}
-              onChangeText={setEmail}
-              error={errors.email}
-              fieldName="email"
-              keyboardType="email-address"
-            />
-
-            {/* Password Field */}
-            <InputField
-              icon={Lock}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              error={errors.password}
-              fieldName="password"
-              secureTextEntry={!showPassword}
-              RightIcon={showPassword ? EyeOff : Eye}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-            />
-
-            {/* Role Selection */}
-            <View className="mt-8 mb-8">
-              <Text className="text-white font-semibold text-lg mb-4">I am a:</Text>
-              <View className="gap-3">
-                {ROLE_OPTIONS.map((roleOption) => (
-                  <TouchableOpacity
-                    key={roleOption.id}
-                    onPress={() => setRole(roleOption.id)}
-                    className={`flex-row items-center rounded-2xl p-4 border-2 transition-all ${
-                      role === roleOption.id
-                        ? 'bg-primary-600 border-primary-500 shadow-lg shadow-primary-500/50'
-                        : 'bg-slate-700 border-slate-600'
-                    }`}
-                  >
-                    <View 
-                      className={`w-12 h-12 rounded-xl items-center justify-center ${
-                        role === roleOption.id ? 'bg-primary-700' : 'bg-slate-600'
-                      }`}
-                    >
-                      {roleOption.icon}
-                    </View>
-                    <View className="ml-4 flex-1">
-                      <Text className={`font-semibold text-base ${
-                        role === roleOption.id ? 'text-white' : 'text-slate-100'
-                      }`}>
-                        {roleOption.label}
-                      </Text>
-                      <Text className={`text-sm mt-1 ${
-                        role === roleOption.id ? 'text-primary-100' : 'text-slate-400'
-                      }`}>
-                        {roleOption.description}
-                      </Text>
-                    </View>
-                    {role === roleOption.id && (
-                      <View className="w-6 h-6 rounded-full bg-white items-center justify-center">
-                        <View className="w-3 h-3 rounded-full bg-primary-600" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Create Account Button */}
-            <TouchableOpacity
-              onPress={handleSignup}
-              disabled={isLoading}
-              className={`rounded-2xl py-4 items-center shadow-lg transition-all ${
-                isLoading 
-                  ? 'bg-primary-400 shadow-primary-400/50' 
-                  : 'bg-gradient-to-r from-primary-500 to-primary-600 shadow-primary-600/50'
-              }`}
-            >
-              <Text className="text-white font-bold text-lg">
-                {isLoading ? 'Creating Account...' : 'Create Account'}
+              <Text className="text-3xl font-light text-white mb-2 text-center tracking-tight">Create your account</Text>
+              <Text className="text-slate-400/95 text-center text-base leading-6 max-w-sm font-light">
+                Join Imbewu to access courses, lessons, quizzes, and certificates of progress.
               </Text>
-            </TouchableOpacity>
-
-            {/* Sign In Link */}
-            <View className="flex-row justify-center mt-6">
-              <Text className="text-slate-400">Already have an account? </Text>
-              <Link href="/auth/login" asChild>
-                <TouchableOpacity>
-                  <Text className="text-primary-400 font-semibold">Sign In</Text>
-                </TouchableOpacity>
-              </Link>
             </View>
-          </View>
 
-          {/* Footer Text */}
-          <Text className="text-slate-500 text-center text-xs mt-8">
-            By signing up, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </ScrollView>
+            <View className="rounded-[28px] p-8 bg-white/6">
+              <View className="flex-row gap-3 mb-1">
+                <View className="flex-1">
+                  <FormField
+                    appearance="dark"
+                    leftIcon={User}
+                    placeholder="First name"
+                    value={firstName}
+                    onChangeText={setFirstName}
+                    error={errors.firstName}
+                    focused={focusedInput === 'firstName'}
+                    onFocus={() => setFocusedInput('firstName')}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+                <View className="flex-1">
+                  <FormField
+                    appearance="dark"
+                    leftIcon={User}
+                    placeholder="Last name"
+                    value={lastName}
+                    onChangeText={setLastName}
+                    error={errors.lastName}
+                    focused={focusedInput === 'lastName'}
+                    onFocus={() => setFocusedInput('lastName')}
+                    onBlur={() => setFocusedInput(null)}
+                  />
+                </View>
+              </View>
+
+              <FormField
+                appearance="dark"
+                leftIcon={Mail}
+                placeholder="Email address"
+                value={email}
+                onChangeText={setEmail}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                focused={focusedInput === 'email'}
+                onFocus={() => setFocusedInput('email')}
+                onBlur={() => setFocusedInput(null)}
+              />
+
+              <FormField
+                appearance="dark"
+                leftIcon={Lock}
+                placeholder="Password"
+                value={password}
+                onChangeText={setPassword}
+                error={errors.password}
+                secureTextEntry={!showPassword}
+                focused={focusedInput === 'password'}
+                onFocus={() => setFocusedInput('password')}
+                onBlur={() => setFocusedInput(null)}
+                endSlot={
+                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
+                    {showPassword ? <EyeOff size={22} color="#94a3b8" /> : <Eye size={22} color="#94a3b8" />}
+                  </TouchableOpacity>
+                }
+              />
+
+              <View className="mt-2 mb-6">
+                <Text className="text-slate-300 font-semibold text-sm mb-3 tracking-wide uppercase">
+                  I am a
+                </Text>
+                <View className="gap-3">
+                  {ROLE_OPTIONS.map((roleOption) => {
+                    const selected = role === roleOption.id;
+                    return (
+                      <TouchableOpacity
+                        key={roleOption.id}
+                        onPress={() => setRole(roleOption.id)}
+                        activeOpacity={0.88}
+                        className={`flex-row items-center rounded-3xl p-4 ${
+                          selected ? 'bg-primary-600/35' : 'bg-white/5'
+                        }`}
+                      >
+                        <View
+                          className={`w-12 h-12 rounded-2xl items-center justify-center ${
+                            selected ? 'bg-primary-600/50' : 'bg-white/8'
+                          }`}
+                        >
+                          {roleOption.icon}
+                        </View>
+                        <View className="ml-4 flex-1 min-w-0">
+                          <Text
+                            className={`font-semibold text-base ${selected ? 'text-white' : 'text-slate-100'}`}
+                          >
+                            {roleOption.label}
+                          </Text>
+                          <Text
+                            className={`text-sm mt-1 leading-5 ${selected ? 'text-primary-100' : 'text-slate-400'}`}
+                          >
+                            {roleOption.description}
+                          </Text>
+                        </View>
+                        {selected ? (
+                          <View className="w-6 h-6 rounded-full bg-white items-center justify-center ml-2">
+                            <View className="w-2.5 h-2.5 rounded-full bg-primary-600" />
+                          </View>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                {errors.role ? (
+                  <Text className="text-red-400 text-sm mt-2 font-medium">{errors.role}</Text>
+                ) : null}
+              </View>
+
+              <Button
+                label={isLoading ? 'Creating account…' : 'Create account'}
+                onPress={handleSignup}
+                isLoading={isLoading}
+                disabled={isLoading}
+                variant="primary"
+                size="lg"
+                fullWidth
+              />
+
+              <View className="flex-row justify-center mt-8 flex-wrap">
+                <Text className="text-slate-400 text-sm">Already learning here? </Text>
+                <Link href="/auth/login" asChild>
+                  <TouchableOpacity>
+                    <Text className="text-primary-400 font-semibold text-sm">Sign in</Text>
+                  </TouchableOpacity>
+                </Link>
+              </View>
+            </View>
+
+            <Text className="text-slate-600 text-center text-xs mt-8 leading-5 px-2">
+              By continuing you agree to the platform terms and privacy practices.
+            </Text>
+          </ScrollView>
+        </SafeAreaView>
       </LinearGradient>
     </KeyboardAvoidingView>
   );

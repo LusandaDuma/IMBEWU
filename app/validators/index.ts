@@ -14,7 +14,8 @@ export const signupSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['student', 'independent']),
+  /** Must match `profiles.role` in Supabase. */
+  role: z.enum(['student', 'independent', 'coordinator']),
 });
 
 export const courseSchema = z.object({

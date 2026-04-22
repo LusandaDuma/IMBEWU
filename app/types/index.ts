@@ -2,7 +2,8 @@
  * @fileoverview Core type definitions for AgroLearn
  */
 
-export type UserRole = 'admin' | 'coordinator' | 'student' | 'independent_grower' | 'program_coordinator';
+/** Matches `profiles.role` check constraint in Supabase (see migrations). */
+export type UserRole = 'admin' | 'coordinator' | 'student' | 'independent';
 
 export interface Profile {
   id: string;
