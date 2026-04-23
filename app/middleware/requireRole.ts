@@ -17,7 +17,7 @@ export function requireRole(allowedRoles: UserRole[]) {
   }
 
   if (!allowedRoles.includes(role)) {
-    return { isReady: false, redirectTo: '/' };
+    throw new Error('Unauthorized');
   }
 
   return { isReady: true, redirectTo: null as string | null };

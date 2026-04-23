@@ -6,7 +6,8 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { getSession } from '@/services/authService';
-import { getProfile, supabase } from '@/services/supabase';
+import { getProfile } from '@/services/profileService';
+import supabase from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -48,7 +49,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isMountedRef.current) return;
 
         if (session?.user) {
-          const profile = await getProfile(session.user.id);
+          const { data: profile } = await getProfile(session.user.id);
           if (profile && isMountedRef.current) {
             setAuth({ user: session.user, profile, session });
             return;
@@ -77,7 +78,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!isMountedRef.current) return;
       
       if (session?.user) {
-        const profile = await getProfile(session.user.id);
+        const { data: profile } = await getProfile(session.user.id);
         if (profile && isMountedRef.current) {
           setAuth({ user: session.user, profile, session });
         }

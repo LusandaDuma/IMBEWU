@@ -3,19 +3,19 @@
  */
 
 import { z } from 'zod';
-
-export const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+export { loginSchema, registerSchema } from './authSchemas';
+export type { LoginFormData, RegisterFormData } from './authSchemas';
 
 export const signupSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  /** Must match `profiles.role` in Supabase. */
-  role: z.enum(['student', 'independent', 'coordinator']),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must include at least one uppercase letter')
+    .regex(/[0-9]/, 'Password must include at least one number'),
+  role: z.enum(['student', 'independent']),
 });
 
 export const courseSchema = z.object({
@@ -44,7 +44,6 @@ export const quizAnswerSchema = z.object({
   textAnswer: z.string().optional(),
 });
 
-export type LoginFormData = z.infer<typeof loginSchema>;
 export type SignupFormData = z.infer<typeof signupSchema>;
 export type CourseFormData = z.infer<typeof courseSchema>;
 export type LessonFormData = z.infer<typeof lessonSchema>;

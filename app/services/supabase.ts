@@ -22,10 +22,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-export const supabase = createClient(
+const supabase = createClient(
   supabaseUrl,
   supabaseAnonKey
 );
+export { supabase };
+export default supabase;
 
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase

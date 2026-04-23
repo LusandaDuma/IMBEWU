@@ -4,64 +4,64 @@
 
 import { AlertBanner, Button, FormField } from '@/components/shared';
 import { signIn } from '@/services/authService';
-import { getProfile } from '@/services/supabase';
+import { getProfile } from '@/services/profileService';
 import { useAuthStore } from '@/store/auth';
-import { loginSchema } from '@/validators';
+import { loginSchema, type LoginFormData } from '@/validators/authSchemas';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Sprout } from 'lucide-react-native';
 import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { z } from 'zod';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
   const router = useRouter();
   const { setAuth } = useAuthStore();
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const handleLogin = async () => {
-    try {
-      setErrors({});
-      setBanner(null);
-      const validated = loginSchema.parse({ email, password });
-      setIsLoading(true);
+  const onSubmit = async (values: LoginFormData) => {
+    setBanner(null);
+    setIsLoading(true);
 
-      const { data: session, error } = await signIn(validated.email, validated.password);
+    const { data: session, error } = await signIn(values.email, values.password);
 
-      if (error) {
-        setBanner(error);
+    if (error) {
+      setBanner(error);
+      setIsLoading(false);
+      return;
+    }
+
+    if (session?.user) {
+      const { data: profile } = await getProfile(session.user.id);
+      if (!profile) {
+        setBanner('Your account profile could not be loaded. Please try again.');
+        setIsLoading(false);
         return;
       }
 
-      if (session?.user) {
-        const profile = await getProfile(session.user.id);
-        if (!profile) {
-          setBanner('Your account profile could not be loaded. Please try again.');
-          return;
-        }
-
-        setAuth({ user: session.user, profile, session });
-        router.replace('/');
-      }
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const fieldErrors: Record<string, string> = {};
-        err.issues.forEach((issue) => {
-          const pathKey = issue.path[0]?.toString();
-          if (pathKey) fieldErrors[pathKey] = issue.message;
-        });
-        setErrors(fieldErrors);
-      }
-    } finally {
       setIsLoading(false);
+      setAuth({ user: session.user, profile, session });
+      router.replace('/');
+      return;
     }
+
+    setIsLoading(false);
   };
 
   return (
@@ -105,45 +105,63 @@ export default function LoginScreen() {
                 />
               ) : null}
 
-              <FormField
-                appearance="dark"
-                leftIcon={Mail}
-                placeholder="Email address"
-                value={email}
-                onChangeText={setEmail}
-                error={errors.email}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                focused={focusedInput === 'email'}
-                onFocus={() => setFocusedInput('email')}
-                onBlur={() => setFocusedInput(null)}
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <FormField
+                    appearance="dark"
+                    leftIcon={Mail}
+                    placeholder="Email address"
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.email?.message}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    focused={focusedInput === 'email'}
+                    onFocus={() => setFocusedInput('email')}
+                    onBlur={() => {
+                      setFocusedInput(null);
+                      onBlur();
+                    }}
+                  />
+                )}
               />
 
-              <FormField
-                appearance="dark"
-                leftIcon={Lock}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                error={errors.password}
-                secureTextEntry={!showPassword}
-                focused={focusedInput === 'password'}
-                onFocus={() => setFocusedInput('password')}
-                onBlur={() => setFocusedInput(null)}
-                endSlot={
-                  <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
-                    {showPassword ? (
-                      <EyeOff size={22} color="#94a3b8" />
-                    ) : (
-                      <Eye size={22} color="#94a3b8" />
-                    )}
-                  </TouchableOpacity>
-                }
+              <Controller
+                control={control}
+                name="password"
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <FormField
+                    appearance="dark"
+                    leftIcon={Lock}
+                    placeholder="Password"
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.password?.message}
+                    secureTextEntry={!showPassword}
+                    focused={focusedInput === 'password'}
+                    onFocus={() => setFocusedInput('password')}
+                    onBlur={() => {
+                      setFocusedInput(null);
+                      onBlur();
+                    }}
+                    endSlot={
+                      <TouchableOpacity onPress={() => setShowPassword((v) => !v)} hitSlop={10}>
+                        {showPassword ? (
+                          <EyeOff size={22} color="#94a3b8" />
+                        ) : (
+                          <Eye size={22} color="#94a3b8" />
+                        )}
+                      </TouchableOpacity>
+                    }
+                  />
+                )}
               />
 
               <Button
                 label={isLoading ? 'Signing in…' : 'Sign in'}
-                onPress={handleLogin}
+                onPress={handleSubmit(onSubmit)}
                 isLoading={isLoading}
                 disabled={isLoading}
                 variant="primary"
@@ -160,7 +178,7 @@ export default function LoginScreen() {
 
               <View className="flex-row justify-center mt-8 flex-wrap">
                 <Text className="text-slate-400 text-sm">No account yet? </Text>
-                <Link href="/auth/signup" asChild>
+                <Link href="/auth/register" asChild>
                   <TouchableOpacity>
                     <Text className="text-primary-400 font-semibold text-sm">Create one</Text>
                   </TouchableOpacity>

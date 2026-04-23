@@ -14,8 +14,9 @@ interface ServiceResult<T> {
   error: string | null;
 }
 
-function mapAuthError(message?: string): string {
+function mapAuthError(message?: string, code?: string): string {
   const normalized = message?.toLowerCase() ?? '';
+  const raw = message?.trim() || 'Unknown authentication error';
 
   if (normalized.includes('invalid login credentials')) {
     return AUTH_ERROR_MESSAGES.INVALID_CREDENTIALS;
@@ -27,6 +28,15 @@ function mapAuthError(message?: string): string {
 
   if (normalized.includes('network') || normalized.includes('failed to fetch')) {
     return AUTH_ERROR_MESSAGES.NETWORK;
+  }
+
+  if (normalized.includes('database error saving new user')) {
+    return `Signup failed: ${raw}`;
+  }
+
+  // Keep real backend reason available during debugging.
+  if (__DEV__) {
+    return code ? `${AUTH_ERROR_MESSAGES.UNKNOWN} [${code}] ${raw}` : `${AUTH_ERROR_MESSAGES.UNKNOWN} ${raw}`;
   }
 
   return AUTH_ERROR_MESSAGES.UNKNOWN;
@@ -56,12 +66,22 @@ export async function signUp(
     });
 
     if (error) {
-      return { data: null, error: mapAuthError(error.message) };
+      console.error('[authService.signUp] Supabase signUp error:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        name: error.name,
+      });
+      return { data: null, error: mapAuthError(error.message, error.code) };
     }
 
     return { data: data.session, error: null };
   } catch (error) {
-    return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
+    console.error('[authService.signUp] Unexpected exception:', error);
+    return {
+      data: null,
+      error: mapAuthError(error instanceof Error ? error.message : undefined),
+    };
   }
 }
 
@@ -73,12 +93,22 @@ export async function signIn(email: string, password: string): Promise<ServiceRe
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      return { data: null, error: mapAuthError(error.message) };
+      console.error('[authService.signIn] Supabase signIn error:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        name: error.name,
+      });
+      return { data: null, error: mapAuthError(error.message, error.code) };
     }
 
     return { data: data.session, error: null };
   } catch (error) {
-    return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
+    console.error('[authService.signIn] Unexpected exception:', error);
+    return {
+      data: null,
+      error: mapAuthError(error instanceof Error ? error.message : undefined),
+    };
   }
 }
 
@@ -90,12 +120,22 @@ export async function signOut(): Promise<ServiceResult<true>> {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      return { data: null, error: mapAuthError(error.message) };
+      console.error('[authService.signOut] Supabase signOut error:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        name: error.name,
+      });
+      return { data: null, error: mapAuthError(error.message, error.code) };
     }
 
     return { data: true, error: null };
   } catch (error) {
-    return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
+    console.error('[authService.signOut] Unexpected exception:', error);
+    return {
+      data: null,
+      error: mapAuthError(error instanceof Error ? error.message : undefined),
+    };
   }
 }
 
@@ -107,12 +147,22 @@ export async function getSession(): Promise<ServiceResult<Session>> {
     const { data, error } = await supabase.auth.getSession();
 
     if (error) {
-      return { data: null, error: mapAuthError(error.message) };
+      console.error('[authService.getSession] Supabase getSession error:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        name: error.name,
+      });
+      return { data: null, error: mapAuthError(error.message, error.code) };
     }
 
     return { data: data.session, error: null };
   } catch (error) {
-    return { data: null, error: mapAuthError(error instanceof Error ? error.message : undefined) };
+    console.error('[authService.getSession] Unexpected exception:', error);
+    return {
+      data: null,
+      error: mapAuthError(error instanceof Error ? error.message : undefined),
+    };
   }
 }
 
