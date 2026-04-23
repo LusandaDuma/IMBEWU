@@ -137,6 +137,50 @@ Updated: shared components above + auth cards + student/independent/coordinator/
 - **Navigation:** **`/nolwazi`** registered in root `app/_layout.tsx`. **Guest catalogue** (`PublicCatalogHome`) — message icon; **`app/auth/login.tsx`** — “Chat with Nolwazi”. **`/fieldwise`** remains as a **redirect** to `/nolwazi` for old links.
 - **Security note:** `EXPO_PUBLIC_*` keys ship in the client bundle; treat the Gemini key as public-exposed (quotas, abuse). Prefer a backend proxy for production if you need to hide keys.
 
+### 4.7 Supabase migration + seed stabilization (April 2026)
+
+This phase focused on getting the linked Supabase project into a reliable non-empty state and ensuring first-load catalogue reads work for guests.
+
+- Added and applied seed migrations under `supabase/migrations/`:
+  - `20260423110000_seed_courses_content.sql`
+  - `20260423113000_seed_courses_on_first_user.sql`
+  - `20260423121500_bootstrap_auth_and_seed_content.sql`
+  - `20260423123000_seed_verification_rpc.sql`
+  - `20260423130000_allow_public_published_courses.sql`
+- Seeded baseline LMS data (idempotent upsert approach):
+  - `courses` (4), `lessons` (12), `quizzes` (12), `questions` (12), `question_options` (24), `badges` (4)
+- Added helper RPC `public.get_seed_data_counts()` for quick verification of row counts.
+- Updated RLS so `is_published = true` courses are selectable by guests; this unblocks the public catalogue on `/`.
+
+### 4.8 Feature 4 implementation — course/lesson/progress/enrolment services
+
+Implemented the milestone Feature 4 architecture with service-first Supabase access and React Query hooks:
+
+- New services:
+  - `app/services/courseService.ts`
+  - `app/services/lessonService.ts`
+  - `app/services/progressService.ts`
+  - `app/services/enrolmentService.ts`
+- New hooks:
+  - `app/hooks/useCourse.ts` (`useCourses`, `useCourse`, `useProgress`)
+- `components/screens/PublicCatalogHome.tsx` now uses `useCourses()` instead of direct legacy querying.
+- Query constraints followed:
+  - no `select('*')` in new Feature 4 service queries
+  - nested selects for related entities where required
+  - upsert pattern for lesson progress with `onConflict: 'user_id,lesson_id'`
+
+### 4.9 Web bundling/runtime hardening
+
+Two runtime blockers were addressed:
+
+- JSX parser crash in `requireRole.ts` (caused by JSX in a `.ts` middleware file in prior state) was resolved by keeping middleware return values plain objects (`redirectTo` strings).
+- Local startup mismatch due to Bun-dependent scripts on a machine without Bun:
+  - `package.json` scripts were switched from `bunx rork ...` to standard Expo commands:
+    - `start`: `expo start --tunnel`
+    - `start-web`: `expo start --web`
+    - `start-web-dev`: `expo start --web -c`
+  - This stabilized web startup with `npm` and reduced cache-related bundling confusion.
+
 ---
 
 ## 5. How to run locally
@@ -165,4 +209,4 @@ Updated: shared components above + auth cards + student/independent/coordinator/
 | `PROJECT_STATUS.md` (this file) | Snapshot of implementation + change history |
 | `README.md` | Project readme (update if you add setup badges or links) |
 
-*Last updated to include the Nolwazi / Gemini LMS assistant, env vars, and routes, in addition to routing, NativeWind, shared UI, and the luxury UI pass.*
+*Last updated to include Supabase seed/migration stabilization, Feature 4 service-layer implementation, and web startup hardening in addition to earlier routing, NativeWind, shared UI, and Nolwazi work.*

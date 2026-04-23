@@ -3,9 +3,7 @@
  */
 
 import { Button, CourseCard, SearchBar } from '@/components/shared';
-import { getCourses } from '@/services/supabase';
-import type { Course } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useCourses } from '@/hooks/useCourse';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { MessageCircle, Search, Sprout } from 'lucide-react-native';
@@ -28,11 +26,7 @@ export function PublicCatalogHome() {
   const router = useRouter();
   const [q, setQ] = useState('');
 
-  const { data: courses = [], isLoading, refetch } = useQuery({
-    queryKey: ['public-catalog-courses'],
-    queryFn: getCourses,
-    staleTime: 60_000,
-  });
+  const { data: courses = [], isLoading, refetch } = useCourses();
 
   const filtered = courses.filter(
     (c) =>
@@ -92,7 +86,7 @@ export function PublicCatalogHome() {
               </Text>
             </View>
           }
-          renderItem={({ item }: { item: Course }) => (
+          renderItem={({ item }) => (
             <CourseCard
               title={item.title}
               description={item.description}
