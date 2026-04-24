@@ -162,7 +162,7 @@ export default function RootLayout() {
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
-            <Stack.Screen name="course" />
+            <Stack.Screen name="course/[id]" />
             <Stack.Screen name="fieldwise" />
             <Stack.Screen name="nolwazi" />
             <Stack.Screen name="auth" />

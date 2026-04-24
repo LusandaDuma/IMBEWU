@@ -2,7 +2,7 @@
  * @fileoverview Authentication service wrapper for Supabase auth operations.
  */
 
-import type { Session } from '@supabase/supabase-js';
+import { createClient, type Session } from '@supabase/supabase-js';
 
 import type { UserRole } from '@/types';
 import { AUTH_ERROR_MESSAGES } from '@/utils/constants';
@@ -78,6 +78,57 @@ export async function signUp(
     return { data: data.session, error: null };
   } catch (error) {
     console.error('[authService.signUp] Unexpected exception:', error);
+    return {
+      data: null,
+      error: mapAuthError(error instanceof Error ? error.message : undefined),
+    };
+  }
+}
+
+/**
+ * Create a user account without replacing the current session.
+ * Uses an isolated Supabase client so admin remains signed in.
+ */
+export async function createUserAsAdmin(
+  email: string,
+  password: string,
+  firstName: string,
+  lastName: string,
+  role: UserRole,
+): Promise<ServiceResult<true>> {
+  try {
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return { data: null, error: 'Missing Supabase environment variables.' };
+    }
+
+    const isolatedClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+
+    const { error } = await isolatedClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          role,
+        },
+      },
+    });
+
+    if (error) {
+      return { data: null, error: mapAuthError(error.message, error.code) };
+    }
+
+    return { data: true, error: null };
+  } catch (error) {
     return {
       data: null,
       error: mapAuthError(error instanceof Error ? error.message : undefined),

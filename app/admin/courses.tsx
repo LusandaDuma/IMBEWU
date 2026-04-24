@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Edit2, Eye, EyeOff, Plus, Sprout, Trash2 } from 'lucide-react-native';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function AdminCoursesScreen() {
   const router = useRouter();
@@ -77,35 +78,39 @@ export default function AdminCoursesScreen() {
   );
 
   return (
-    <LinearGradient colors={['#faf5ff', '#fafaf9']} className="flex-1">
-      <View className="pt-14 px-5 pb-4 flex-row justify-between items-center">
-        <View>
-          <Text className="text-2xl font-bold text-earth-800">All Courses</Text>
-          <Text className="text-earth-500">Manage platform courses</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.push('/admin/courses/new')}
-          className="w-12 h-12 rounded-full bg-violet-600 items-center justify-center shadow-md"
-        >
-          <Plus size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      <FlatList
-        data={courses}
-        keyExtractor={(item) => item.id}
-        renderItem={renderCourseCard}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#7c3aed" />
-        }
-        ListEmptyComponent={
-          <View className="items-center justify-center py-12">
-            <Sprout size={48} color="#d6d3d1" />
-            <Text className="text-earth-500 mt-4">No courses yet</Text>
+    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <View className="px-5 pb-4 flex-row justify-between items-center">
+          <View>
+            <Text className="text-2xl font-bold text-white">All Courses</Text>
+            <Text className="text-slate-400">Manage platform courses</Text>
           </View>
-        }
-      />
+          <TouchableOpacity
+            onPress={() => router.push('/admin/courses/new')}
+            className="w-12 h-12 rounded-full bg-primary-600/95 items-center justify-center"
+            style={{ elevation: 4 }}
+            activeOpacity={0.9}
+          >
+            <Plus size={24} color="white" />
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={courses}
+          keyExtractor={(item) => item.id}
+          renderItem={renderCourseCard}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+          refreshControl={
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#a78bfa" />
+          }
+          ListEmptyComponent={
+            <View className="items-center justify-center py-12">
+              <Sprout size={48} color="#94a3b8" />
+              <Text className="text-slate-300 mt-4">No courses yet</Text>
+            </View>
+          }
+        />
+      </SafeAreaView>
     </LinearGradient>
   );
 }

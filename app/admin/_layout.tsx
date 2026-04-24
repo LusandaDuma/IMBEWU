@@ -69,6 +69,18 @@ export default function AdminLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="users-new"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
