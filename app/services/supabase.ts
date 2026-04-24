@@ -85,11 +85,25 @@ export async function getCourseById(courseId: string): Promise<Course | null> {
   return data;
 }
 
-export async function createCourse(course: Omit<Course, 'id' | 'created_at' | 'updated_at'>): Promise<Course | null> {
+type CreateCoursePayload = {
+  created_by: string;
+  title: string;
+  description?: string | null;
+  offline_url?: string | null;
+  is_published?: boolean;
+};
+
+export async function createCourse(course: CreateCoursePayload): Promise<Course | null> {
   const { data, error } = await supabase
     .from('courses')
-    .insert(course)
-    .select()
+    .insert({
+      created_by: course.created_by,
+      title: course.title,
+      description: course.description ?? null,
+      offline_url: course.offline_url ?? null,
+      is_published: course.is_published ?? false,
+    })
+    .select('id, created_by, title, description, offline_url, is_published, created_at, updated_at')
     .single();
   
   if (error) {

@@ -32,6 +32,10 @@ export default function AdminActivityScreen() {
   const { data: actions = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-activity-feed'],
     queryFn: getAdminActivityFeed,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   return (

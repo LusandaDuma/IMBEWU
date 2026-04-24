@@ -48,6 +48,7 @@ export default function AdminUsersNewScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       resetForm();
       Alert.alert('User created', 'The new user account was added successfully.', [
         { text: 'Add another', style: 'cancel' },

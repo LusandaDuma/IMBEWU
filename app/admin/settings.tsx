@@ -22,10 +22,12 @@ export default function AdminSettingsScreen() {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: async () => {
-            await signOut();
+          onPress: () => {
             logout();
-            router.replace('/auth/login');
+            router.replace('/');
+            signOut().catch((error) => {
+              console.error('[admin.settings] signOut failed after local logout:', error);
+            });
           },
         },
       ]

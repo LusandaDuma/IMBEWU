@@ -25,6 +25,10 @@ export default function AdminCoursesScreen() {
   const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
     queryKey: ['admin-courses'],
     queryFn: getAllCourses,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const togglePublishMutation = useMutation({
@@ -32,6 +36,7 @@ export default function AdminCoursesScreen() {
       updateCourse(id, { is_published: !isPublished }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
     },
   });
 
@@ -40,6 +45,7 @@ export default function AdminCoursesScreen() {
       updateCourse(id, { title, description }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       setEditingCourse(null);
       Alert.alert('Success', 'Course updated successfully.');
     },
@@ -56,6 +62,7 @@ export default function AdminCoursesScreen() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       Alert.alert('Deleted', 'Course removed successfully.');
     },
     onError: () => {

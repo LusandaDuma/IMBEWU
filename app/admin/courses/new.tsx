@@ -20,24 +20,26 @@ export default function CreateCourseScreen() {
   const [description, setDescription] = useState('');
 
   const createMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!user) throw new Error('Not authenticated');
-      return createCourse({
-        title,
-        description,
-        cover_image: null,
+      const createdCourse = await createCourse({
+        title: title.trim(),
+        description: description.trim(),
         offline_url: null,
         created_by: user.id,
         is_published: false,
       });
+      if (!createdCourse) throw new Error('Course could not be created. Check permissions and try again.');
+      return createdCourse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       Alert.alert('Success', 'Course created successfully!');
       router.back();
     },
-    onError: () => {
-      Alert.alert('Error', 'Failed to create course. Please try again.');
+    onError: (error) => {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create course. Please try again.');
     },
   });
 

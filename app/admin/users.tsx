@@ -60,6 +60,10 @@ export default function AdminUsersScreen() {
   const { data: users = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-users'],
     queryFn: getAdminUsers,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const filteredUsers = useMemo(() => {

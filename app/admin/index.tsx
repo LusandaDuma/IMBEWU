@@ -37,6 +37,10 @@ export default function AdminDashboard() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-dashboard-analytics'],
     queryFn: getAdminDashboardAnalytics,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const stats = [

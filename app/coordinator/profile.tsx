@@ -22,10 +22,12 @@ export default function CoordinatorProfileScreen() {
         {
           text: 'Logout',
           style: 'destructive',
-          onPress: async () => {
-            await signOut();
+          onPress: () => {
             logout();
-            router.replace('/auth/login');
+            router.replace('/');
+            signOut().catch((error) => {
+              console.error('[coordinator.profile] signOut failed after local logout:', error);
+            });
           },
         },
       ]
