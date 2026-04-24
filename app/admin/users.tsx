@@ -165,10 +165,10 @@ export default function AdminUsersScreen() {
                 <TouchableOpacity
                   key={filter.key}
                   onPress={() => setActiveFilter(filter.key)}
-                  className={`mr-2.5 px-4 py-2 rounded-full border ${active ? 'bg-primary-600 border-primary-500' : 'bg-white/10 border-white/20'}`}
+                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-500' : 'bg-white/10 border-white/20'}`}
                   activeOpacity={0.9}
                 >
-                  <Text className={`text-sm ${active ? 'text-white font-semibold' : 'text-slate-200'}`}>{filter.label}</Text>
+                  <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-slate-200'}`}>{filter.label}</Text>
                 </TouchableOpacity>
               );
             })}

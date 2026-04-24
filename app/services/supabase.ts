@@ -114,6 +114,19 @@ export async function updateCourse(courseId: string, updates: Partial<Course>): 
   return data;
 }
 
+export async function deleteCourse(courseId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('courses')
+    .delete()
+    .eq('id', courseId);
+
+  if (error) {
+    console.error('Error deleting course:', error);
+    return false;
+  }
+  return true;
+}
+
 // Lesson services
 export async function getLessonsByCourse(courseId: string): Promise<Lesson[]> {
   const { data, error } = await supabase
