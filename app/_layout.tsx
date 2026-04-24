@@ -5,6 +5,7 @@
 import 'react-native-reanimated';
 import '../global.css';
 
+import { NolwaziFab } from '@/components/shared';
 import { getSession } from '@/services/authService';
 import { getProfile } from '@/services/profileService';
 import supabase from '@/services/supabase';
@@ -170,6 +171,7 @@ export default function RootLayout() {
             <Stack.Screen name="admin" />
             <Stack.Screen name="independent" />
           </Stack>
+          <NolwaziFab />
           <StatusBar style="light" translucent />
         </AuthProvider>
       </QueryClientProvider>

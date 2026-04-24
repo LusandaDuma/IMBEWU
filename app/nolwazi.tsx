@@ -5,10 +5,11 @@
 import { Input } from '@/components/shared';
 import { NOLWAZI_SYSTEM_INSTRUCTION } from '@/constants/nolwaziKnowledge';
 import { generateGeminiReply, type GeminiContent } from '@/services/gemini';
+import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, SendHorizontal, Sparkles } from 'lucide-react-native';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,9 +23,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Msg = { id: string; role: 'user' | 'assistant'; text: string };
 
-const GREETING = `Why did the seed start learning? To grow smarter 😄
-I'm Nolwazi 🌱
+function getGreeting(name?: string | null): string {
+  if (name?.trim()) {
+    return `I'm Nolwazi 🌱
+Welcome back, ${name}. What would you like to grow today?`;
+  }
+
+  return `I'm Nolwazi 🌱
 What would you like to grow today?`;
+}
 
 /** Build API history; skip local welcome bubble so the first API turn is never `model`. */
 function toHistory(messages: Msg[]): GeminiContent[] {
@@ -42,13 +49,31 @@ function toHistory(messages: Msg[]): GeminiContent[] {
 
 export default function NolwaziScreen() {
   const router = useRouter();
+  const { profile, role, isAuthenticated } = useAuthStore();
+  const userFirstName = profile?.first_name ?? null;
+  const userLastName = profile?.last_name ?? null;
+  const displayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim() || userFirstName;
+  const personalizedSystemInstruction = useMemo(() => {
+    const userContext = [
+      'CURRENT USER CONTEXT',
+      `- isAuthenticated: ${isAuthenticated ? 'true' : 'false'}`,
+      `- role: ${role ?? 'guest'}`,
+      `- firstName: ${userFirstName ?? 'unknown'}`,
+      `- lastName: ${userLastName ?? 'unknown'}`,
+      `- displayName: ${displayName ?? 'unknown'}`,
+      '- If the user asks who they are or asks for personalized guidance, use this context.',
+      '- Greet them by first name naturally when appropriate.',
+    ].join('\n');
+
+    return `${NOLWAZI_SYSTEM_INSTRUCTION}\n\n${userContext}`;
+  }, [displayName, isAuthenticated, role, userFirstName, userLastName]);
   const listRef = useRef<FlatList<Msg>>(null);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Msg[]>([
     {
       id: 'welcome',
       role: 'assistant',
-      text: GREETING,
+      text: getGreeting(displayName),
     },
   ]);
   const [sending, setSending] = useState(false);
@@ -64,7 +89,7 @@ export default function NolwaziScreen() {
 
     const prior = toHistory(messages);
     const result = await generateGeminiReply({
-      systemInstruction: NOLWAZI_SYSTEM_INSTRUCTION,
+      systemInstruction: personalizedSystemInstruction,
       history: prior,
       userMessage: trimmed,
     });
@@ -87,7 +112,7 @@ export default function NolwaziScreen() {
       ...prev,
       { id: `a-${Date.now()}`, role: 'assistant', text: result.text },
     ]);
-  }, [input, messages, sending]);
+  }, [input, messages, personalizedSystemInstruction, sending]);
 
   return (
     <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
