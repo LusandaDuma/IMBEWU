@@ -41,7 +41,7 @@ export default function CoordinatorProfileScreen() {
   ];
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
         <Text className="text-2xl font-bold text-white">Profile</Text>
       </View>

@@ -3,6 +3,7 @@
  */
 
 import { LessonRow, ScreenHeader } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getCourseById, getLessonsByCourse } from '@/services/supabase';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -27,11 +28,11 @@ export default function IndependentCourseScreen() {
   });
 
   return (
-    <View className="flex-1 bg-slate-950">
+    <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
 
       <LinearGradient
-        colors={['#0f172a', '#1e293b', '#0f172a']}
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="pb-8"

@@ -7,13 +7,13 @@ import { Text, View } from 'react-native';
 export type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'primary' | 'accent';
 
 const styles: Record<BadgeVariant, { box: string; text: string }> = {
-  success: { box: 'bg-primary-500/14', text: 'text-primary-800' },
-  warning: { box: 'bg-accent-500/14', text: 'text-accent-900' },
-  danger: { box: 'bg-red-500/12', text: 'text-red-800' },
-  info: { box: 'bg-slate-500/12', text: 'text-slate-700' },
-  neutral: { box: 'bg-earth-500/10', text: 'text-earth-700' },
+  success: { box: 'bg-primary-600', text: 'text-white' },
+  warning: { box: 'bg-earth-300', text: 'text-black' },
+  danger: { box: 'bg-red-600', text: 'text-white' },
+  info: { box: 'bg-earth-300', text: 'text-black' },
+  neutral: { box: 'bg-earth-200', text: 'text-black' },
   primary: { box: 'bg-primary-600/90', text: 'text-white' },
-  accent: { box: 'bg-accent-500/90', text: 'text-white' },
+  accent: { box: 'bg-primary-700', text: 'text-white' },
 };
 
 export interface BadgeProps {

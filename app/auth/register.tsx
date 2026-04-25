@@ -3,6 +3,7 @@
  */
 
 import { AlertBanner, Button, FormField } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { signUp } from '@/services/authService';
 import { createProfile } from '@/services/profileService';
 import { registerSchema, type RegisterFormData } from '@/validators/authSchemas';
@@ -10,10 +11,10 @@ import { USER_ROLES } from '@/utils/constants';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail, Sprout, User } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RegisterRole = RegisterFormData['role'];
@@ -97,7 +98,12 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-      <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
+      <LinearGradient
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        className="flex-1"
+      >
         <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
           <ScrollView
             contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 28, paddingBottom: 48 }}
@@ -105,16 +111,18 @@ export default function RegisterScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View className="items-center mb-8">
-              <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-6">
-                <Sprout size={44} color="white" strokeWidth={1.25} />
-              </View>
-              <Text className="text-3xl font-light text-white mb-2 text-center tracking-tight">Create your account</Text>
-              <Text className="text-slate-400/95 text-center text-base leading-6 max-w-sm font-light">
-                Join Imbewu to access courses, lessons, and progress tracking.
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={{ width: 224, height: 80, marginBottom: 24 }}
+                resizeMode="contain"
+              />
+              <Text className="text-3xl font-light text-black mb-2 text-center tracking-tight">Create your account</Text>
+              <Text className="text-earth-700 text-center text-base leading-6 max-w-sm font-light">
+                Access courses, lessons, and progress tracking.
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-white/6">
+            <View className="rounded-[28px] p-8 bg-earth-200">
               {banner ? (
                 <AlertBanner message={banner.message} variant={banner.variant} onDismiss={() => setBanner(null)} />
               ) : null}
@@ -217,7 +225,7 @@ export default function RegisterScreen() {
               />
 
               <View className="mt-2 mb-6">
-                <Text className="text-slate-300 font-semibold text-sm mb-3 tracking-wide uppercase">I want to</Text>
+                <Text className="text-black font-semibold text-sm mb-3 tracking-wide uppercase">I want to</Text>
                 <View className="gap-3">
                   {ROLE_OPTIONS.map((option) => {
                     const selected = selectedRole === option.value;
@@ -226,10 +234,10 @@ export default function RegisterScreen() {
                         key={option.value}
                         onPress={() => setValue('role', option.value, { shouldValidate: true })}
                         activeOpacity={0.88}
-                        className={`rounded-3xl p-4 ${selected ? 'bg-primary-600/35' : 'bg-white/5'}`}
+                        className={`rounded-3xl p-4 ${selected ? 'bg-primary-600' : 'bg-earth-300'}`}
                       >
-                        <Text className={`font-semibold text-base ${selected ? 'text-white' : 'text-slate-100'}`}>{option.label}</Text>
-                        <Text className={`text-sm mt-1 leading-5 ${selected ? 'text-primary-100' : 'text-slate-400'}`}>
+                        <Text className={`font-semibold text-base ${selected ? 'text-white' : 'text-black'}`}>{option.label}</Text>
+                        <Text className={`text-sm mt-1 leading-5 ${selected ? 'text-white/90' : 'text-earth-700'}`}>
                           {option.description}
                         </Text>
                       </TouchableOpacity>
@@ -250,7 +258,7 @@ export default function RegisterScreen() {
               />
 
               <View className="flex-row justify-center mt-8 flex-wrap">
-                <Text className="text-slate-400 text-sm">Already have an account? </Text>
+                <Text className="text-earth-700 text-sm">Already have an account? </Text>
                 <Link href="/auth/login" asChild>
                   <TouchableOpacity>
                     <Text className="text-primary-400 font-semibold text-sm">Sign in</Text>

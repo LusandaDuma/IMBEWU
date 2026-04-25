@@ -97,7 +97,7 @@ export default function CoordinatorClassScreen() {
 
   if (classLoading) {
     return (
-      <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
         <SafeAreaView className="flex-1 items-center justify-center">
           <Text className="text-earth-600">Loading class…</Text>
         </SafeAreaView>
@@ -107,7 +107,7 @@ export default function CoordinatorClassScreen() {
 
   if (!classData) {
     return (
-      <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
         <SafeAreaView className="flex-1 items-center justify-center px-6">
           <Text className="text-earth-800 text-lg font-semibold mb-2">Class not found</Text>
           <Button label="Back to classes" onPress={() => router.back()} />
@@ -136,7 +136,7 @@ export default function CoordinatorClassScreen() {
   };
 
   return (
-    <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 py-4 flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white items-center justify-center">

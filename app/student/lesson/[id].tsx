@@ -3,6 +3,7 @@
  */
 
 import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -55,10 +56,10 @@ export default function LessonScreen() {
   };
 
   return (
-    <View className="flex-1 bg-earth-50">
+    <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LinearGradient colors={['#f0fdf4', '#ffffff']}>
+      <LinearGradient colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}>
         <SafeAreaView edges={['top']}>
           <ScreenHeader
             title={lesson?.title ?? 'Lesson'}

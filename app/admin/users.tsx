@@ -179,7 +179,7 @@ export default function AdminUsersScreen() {
   };
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 pb-4 flex-row items-start justify-between">
           <View className="flex-row items-center flex-1 pr-3">
@@ -191,8 +191,8 @@ export default function AdminUsersScreen() {
               <ChevronLeft size={20} color="white" />
             </TouchableOpacity>
             <View className="ml-3">
-              <Text className="text-2xl font-bold text-white">Users</Text>
-              <Text className="text-slate-400">Manage platform users</Text>
+              <Text className="text-2xl font-bold text-black">Users</Text>
+              <Text className="text-earth-700">Manage platform users</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -226,10 +226,10 @@ export default function AdminUsersScreen() {
                 <TouchableOpacity
                   key={filter.key}
                   onPress={() => setActiveFilter(filter.key)}
-                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-500' : 'bg-white/10 border-white/20'}`}
+                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-600' : 'bg-earth-300 border-earth-400'}`}
                   activeOpacity={0.9}
                 >
-                  <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-slate-200'}`}>{filter.label}</Text>
+                  <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-black'}`}>{filter.label}</Text>
                 </TouchableOpacity>
               );
             })}

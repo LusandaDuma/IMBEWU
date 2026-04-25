@@ -157,12 +157,12 @@ export default function AdminCoursesScreen() {
   );
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 pb-4 flex-row justify-between items-center">
           <View>
-            <Text className="text-2xl font-bold text-white">All Courses</Text>
-            <Text className="text-slate-400">Manage platform courses</Text>
+            <Text className="text-2xl font-bold text-black">All Courses</Text>
+            <Text className="text-earth-700">Manage platform courses</Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push('/admin/courses/new')}
@@ -186,10 +186,10 @@ export default function AdminCoursesScreen() {
                 <TouchableOpacity
                   key={filter.key}
                   onPress={() => setActiveFilter(filter.key as CourseFilter)}
-                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-500' : 'bg-white/10 border-white/20'}`}
+                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-600' : 'bg-earth-300 border-earth-400'}`}
                   activeOpacity={0.9}
                 >
-                  <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-slate-200'}`}>{filter.label}</Text>
+                  <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-black'}`}>{filter.label}</Text>
                 </TouchableOpacity>
               );
             })}

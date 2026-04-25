@@ -60,7 +60,7 @@ export default function CoordinatorCourseScreen() {
 
   if (isLoading) {
     return (
-      <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
         <SafeAreaView className="flex-1 items-center justify-center">
           <Text className="text-earth-600">Loading course…</Text>
         </SafeAreaView>
@@ -70,7 +70,7 @@ export default function CoordinatorCourseScreen() {
 
   if (!course) {
     return (
-      <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
         <SafeAreaView className="flex-1 items-center justify-center px-6">
           <Text className="text-earth-800 text-lg font-semibold mb-2">Course not found</Text>
           <Button label="Back" onPress={() => router.back()} />
@@ -80,7 +80,7 @@ export default function CoordinatorCourseScreen() {
   }
 
   return (
-    <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 py-4 flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white items-center justify-center">

@@ -52,7 +52,7 @@ export default function CreateCourseScreen() {
   };
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 pb-5 flex-row items-center">
           <TouchableOpacity

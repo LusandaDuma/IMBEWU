@@ -4,12 +4,12 @@
 
 import { PublicCatalogHome } from '@/components/screens/PublicCatalogHome';
 import { getHomeHrefForRole } from '@/constants/routing';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect } from 'expo-router';
-import { Sprout } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Text, View } from 'react-native';
 
 export default function Index() {
   const { profile, isAuthenticated, isLoading } = useAuthStore();
@@ -36,7 +36,7 @@ export default function Index() {
   if (isLoading) {
     return (
       <LinearGradient
-        colors={['#0f172a', '#1e293b', '#0f172a']}
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="flex-1"
@@ -51,11 +51,17 @@ export default function Index() {
             ]}
             className="items-center"
           >
-            <View className="w-24 h-24 rounded-3xl bg-primary-600/95 items-center justify-center mb-6">
-              <Sprout size={48} color="white" strokeWidth={1.5} />
-            </View>
+            <Image
+              source={require('../assets/images/logo.png')}
+              style={{ width: 224, height: 80, marginBottom: 16 }}
+              resizeMode="contain"
+            />
 
-            <Text className="text-3xl font-light text-white mb-2">Imbewu</Text>
+            <Image
+              source={require('../assets/images/name.png')}
+              style={{ width: 192, height: 48, marginBottom: 8 }}
+              resizeMode="contain"
+            />
             <Text className="text-slate-400 text-center text-base mb-12 max-w-xs font-light">
               Loading your learning experience
             </Text>

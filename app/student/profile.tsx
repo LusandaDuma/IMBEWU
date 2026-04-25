@@ -2,8 +2,8 @@
  * @fileoverview Student profile screen
  */
 
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { User, Mail, LogOut, Sprout, ChevronRight } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Image } from 'react-native';
+import { User, Mail, LogOut, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/auth';
 import { signOut } from '@/services/authService';
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <View className="pt-14 px-5 pb-4">
         <Text className="text-2xl font-bold text-white">Profile</Text>
       </View>
@@ -90,8 +90,17 @@ export default function ProfileScreen() {
         </View>
 
         <View className="items-center py-8">
-          <Sprout size={32} color="#16a34a" />
-          <Text className="text-earth-400 text-sm mt-2">AgroLearn v1.0</Text>
+          <Image
+            source={require('../../assets/images/icon.png')}
+            className="w-8 h-8"
+            resizeMode="contain"
+          />
+          <Image
+            source={require('../../assets/images/name.png')}
+            className="w-24 h-6 mt-2"
+            resizeMode="contain"
+          />
+          <Text className="text-earth-400 text-xs mt-1">v1.0</Text>
         </View>
       </ScrollView>
     </LinearGradient>

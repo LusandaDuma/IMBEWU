@@ -3,6 +3,7 @@
  */
 
 import { AlertBanner, Button, FormField } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { requestPasswordReset } from '@/services/authService';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
@@ -51,7 +52,7 @@ export default function ForgotPasswordScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
       <LinearGradient
-        colors={['#0f172a', '#1e293b', '#0f172a']}
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="flex-1"
@@ -71,15 +72,15 @@ export default function ForgotPasswordScreen() {
               <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-7">
                 <Sprout size={44} color="white" strokeWidth={1.25} />
               </View>
-              <Text className="text-3xl font-light text-white mb-2 text-center tracking-tight">
+              <Text className="text-3xl font-light text-black mb-2 text-center tracking-tight">
                 Reset your password
               </Text>
-              <Text className="text-slate-400/95 text-center text-base leading-6 max-w-xs font-light">
+              <Text className="text-earth-700 text-center text-base leading-6 max-w-xs font-light">
                 Enter your account email and we will send you a secure reset link.
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-white/6">
+            <View className="rounded-[28px] p-8 bg-earth-200">
               {errorMessage ? (
                 <AlertBanner
                   message={errorMessage}
@@ -123,7 +124,7 @@ export default function ForgotPasswordScreen() {
               <Link href="/auth/login" asChild>
                 <TouchableOpacity className="flex-row items-center justify-center mt-8">
                   <ArrowLeft size={16} color="#94a3b8" />
-                  <Text className="text-slate-400 text-sm ml-2">Back to sign in</Text>
+                  <Text className="text-earth-700 text-sm ml-2">Back to sign in</Text>
                 </TouchableOpacity>
               </Link>
             </View>

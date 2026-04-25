@@ -3,6 +3,7 @@
  */
 
 import { useAuthStore } from '@/store/auth';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { Redirect, Tabs } from 'expo-router';
 import { Award, BookOpen, GraduationCap, User } from 'lucide-react-native';
 
@@ -21,16 +22,19 @@ export default function StudentLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: {
+          backgroundColor: APP_BACKGROUND_COLOR,
+        },
         tabBarStyle: {
-          backgroundColor: 'white',
-          borderTopColor: '#e7e5e4',
+          backgroundColor: APP_BACKGROUND_COLOR,
+          borderTopColor: '#a8a29e',
           borderTopWidth: 1,
           paddingBottom: 8,
           paddingTop: 8,
           height: 64,
         },
         tabBarActiveTintColor: '#16a34a',
-        tabBarInactiveTintColor: '#78716c',
+        tabBarInactiveTintColor: '#1c1917',
       }}
     >
       <Tabs.Screen

@@ -3,6 +3,7 @@
  */
 
 import { Button, ScreenHeader } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getCourseById, getLessonsByCourse } from '@/services/supabase';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -38,10 +39,10 @@ export default function PublicCoursePreviewScreen() {
   };
 
   return (
-    <View className="flex-1 bg-earth-50">
+    <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LinearGradient colors={['#14532d', '#166534']} className="pb-10">
+      <LinearGradient colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]} className="pb-10">
         <SafeAreaView edges={['top']}>
           <ScreenHeader
             title={course?.title ?? 'Course'}

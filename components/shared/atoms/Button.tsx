@@ -10,18 +10,18 @@ export type ButtonSize = 'sm' | 'md' | 'lg';
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary: 'bg-primary-600 active:opacity-90',
-  secondary: 'bg-earth-200/70 active:bg-earth-200',
+  secondary: 'bg-earth-300 active:bg-earth-400',
   outline: 'bg-primary-500/10 active:bg-primary-500/18',
   ghost: 'bg-transparent active:bg-earth-500/8',
   danger: 'bg-red-600/95 active:opacity-90',
-  accent: 'bg-accent-600/95 active:opacity-90',
+  accent: 'bg-primary-700 active:opacity-90',
 };
 
 const textClasses: Record<ButtonVariant, string> = {
   primary: 'text-white',
-  secondary: 'text-earth-800',
+  secondary: 'text-black',
   outline: 'text-primary-700',
-  ghost: 'text-earth-600',
+  ghost: 'text-black',
   danger: 'text-white',
   accent: 'text-white',
 };

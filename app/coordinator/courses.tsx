@@ -42,7 +42,7 @@ export default function CoordinatorCoursesScreen() {
   );
 
   return (
-    <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <View className="pt-14 px-5 pb-4">
         <Text className="text-2xl font-bold text-white">Available Courses</Text>
         <Text className="text-slate-400">Browse and assign to classes</Text>

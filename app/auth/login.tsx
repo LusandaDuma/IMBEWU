@@ -3,6 +3,7 @@
  */
 
 import { AlertBanner, Button, FormField } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { signIn } from '@/services/authService';
 import { getProfile } from '@/services/profileService';
 import { useAuthStore } from '@/store/auth';
@@ -10,10 +11,10 @@ import { loginSchema, type LoginFormData } from '@/validators/authSchemas';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, Sprout } from 'lucide-react-native';
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
@@ -70,7 +71,7 @@ export default function LoginScreen() {
       className="flex-1"
     >
       <LinearGradient
-        colors={['#0f172a', '#1e293b', '#0f172a']}
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="flex-1"
@@ -87,16 +88,18 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View className="items-center mb-10">
-              <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-7">
-                <Sprout size={44} color="white" strokeWidth={1.25} />
-              </View>
-              <Text className="text-3xl font-light text-white mb-2 text-center tracking-tight">Welcome back</Text>
-              <Text className="text-slate-400/95 text-center text-base leading-6 max-w-xs font-light">
-                Sign in to continue courses, lessons, and progress on Imbewu.
+              <Image
+                source={require('../../assets/images/logo.png')}
+                style={{ width: 224, height: 80, marginBottom: 28 }}
+                resizeMode="contain"
+              />
+              <Text className="text-3xl font-light text-black mb-2 text-center tracking-tight">Welcome back</Text>
+              <Text className="text-earth-700 text-center text-base leading-6 max-w-xs font-light">
+                Sign in to continue your courses, lessons, and progress.
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-white/6">
+            <View className="rounded-[28px] p-8 bg-earth-200">
               {banner ? (
                 <AlertBanner
                   message={banner}
@@ -177,7 +180,7 @@ export default function LoginScreen() {
               </Link>
 
               <View className="flex-row justify-center mt-8 flex-wrap">
-                <Text className="text-slate-400 text-sm">No account yet? </Text>
+                <Text className="text-earth-700 text-sm">No account yet? </Text>
                 <Link href="/auth/register" asChild>
                   <TouchableOpacity>
                     <Text className="text-primary-400 font-semibold text-sm">Create one</Text>
@@ -186,15 +189,15 @@ export default function LoginScreen() {
               </View>
 
               <Link href="/nolwazi" asChild>
-                <TouchableOpacity className="mt-5 self-center px-4 py-2 rounded-full bg-white/8 active:bg-white/12">
-                  <Text className="text-slate-300 text-sm font-light text-center">
+                <TouchableOpacity className="mt-5 self-center px-4 py-2 rounded-full bg-earth-300 active:bg-earth-400">
+                  <Text className="text-black text-sm font-light text-center">
                     Questions about the app? Chat with <Text className="text-primary-400 font-medium">Nolwazi</Text>
                   </Text>
                 </TouchableOpacity>
               </Link>
             </View>
 
-            <Text className="text-slate-600 text-center text-xs mt-8 leading-5 px-4">
+            <Text className="text-earth-700 text-center text-xs mt-8 leading-5 px-4">
               Encrypted session · Agricultural learning platform
             </Text>
           </ScrollView>

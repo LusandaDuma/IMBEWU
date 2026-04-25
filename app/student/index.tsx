@@ -47,7 +47,7 @@ export default function StudentDashboard() {
   );
 
   return (
-    <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScreenHeader
           title="My learning"

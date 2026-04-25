@@ -3,12 +3,13 @@
  */
 
 import { Button, CourseCard, SearchBar } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { useCourses } from '@/hooks/useCourse';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
 import { MessageCircle, Search, Sprout } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function promptSignIn(router: ReturnType<typeof useRouter>) {
@@ -35,12 +36,16 @@ export function PublicCatalogHome() {
   );
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
+    <LinearGradient colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 pt-2 pb-4 flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Text className="text-2xl font-light text-white tracking-tight">Imbewu</Text>
-            <Text className="text-slate-400 text-sm mt-1 font-light">
+            <Image
+              source={require('../../assets/images/name.png')}
+              style={{ width: 144, height: 40 }}
+              resizeMode="contain"
+            />
+            <Text className="text-earth-700 text-sm mt-1 font-light">
               Browse courses — sign in when you are ready to learn
             </Text>
           </View>
@@ -49,13 +54,13 @@ export function PublicCatalogHome() {
               <TouchableOpacity
                 className="w-11 h-11 rounded-full bg-white/10 items-center justify-center active:bg-white/15"
                 accessibilityRole="button"
-                accessibilityLabel="Open Nolwazi — AgroLearn guide"
+                accessibilityLabel="Open Nolwazi guide"
               >
-                <MessageCircle size={20} color="#e2e8f0" strokeWidth={1.75} />
+                <MessageCircle size={20} color="#1c1917" strokeWidth={1.75} />
               </TouchableOpacity>
             </Link>
             <Link href="/auth/login" asChild>
-              <TouchableOpacity className="px-4 py-2 rounded-full bg-white/10 active:bg-white/15">
+              <TouchableOpacity className="px-4 py-2 rounded-full bg-primary-600 active:bg-primary-700">
                 <Text className="text-white text-sm font-medium tracking-wide">Sign in</Text>
               </TouchableOpacity>
             </Link>
@@ -74,14 +79,14 @@ export function PublicCatalogHome() {
             <RefreshControl refreshing={isLoading} onRefresh={() => refetch()} tintColor="#86efac" />
           }
           ListHeaderComponent={
-            <Text className="text-slate-500 text-xs font-light tracking-wide mb-3 uppercase">
+            <Text className="text-earth-700 text-xs font-light tracking-wide mb-3 uppercase">
               Published courses
             </Text>
           }
           ListEmptyComponent={
             <View className="py-16 items-center px-6">
               <Sprout size={40} color="#64748b" strokeWidth={1.2} />
-              <Text className="text-slate-400 text-center mt-4 font-light">
+              <Text className="text-earth-700 text-center mt-4 font-light">
                 {isLoading ? 'Loading catalogue…' : 'No courses match your search.'}
               </Text>
             </View>

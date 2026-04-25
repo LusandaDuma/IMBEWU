@@ -68,8 +68,8 @@ export default function ExploreScreen() {
               variant="dark"
             />
           </View>
-          <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-white/10 items-center justify-center">
-            <Filter size={20} color="#cbd5e1" />
+          <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-earth-300 items-center justify-center">
+            <Filter size={20} color="#1c1917" />
           </TouchableOpacity>
         </View>
       </View>
@@ -84,13 +84,13 @@ export default function ExploreScreen() {
               onPress={() => setSelectedCategory(item)}
               activeOpacity={0.88}
                 className={`px-4 py-2.5 rounded-full mr-2 ${
-                  selectedCategory === item ? 'bg-cyan-600/95' : 'bg-white/10'
+                  selectedCategory === item ? 'bg-primary-600' : 'bg-earth-300'
                 }`}
               style={{ elevation: selectedCategory === item ? 2 : 0 }}
             >
               <Text
                 className={`text-sm font-semibold ${
-                  selectedCategory === item ? 'text-white' : 'text-slate-200'
+                  selectedCategory === item ? 'text-white' : 'text-black'
                 }`}
               >
                 {item}
@@ -104,7 +104,7 @@ export default function ExploreScreen() {
 
   return (
     <LinearGradient
-      colors={['#0f172a', '#1e293b', '#0f172a']}
+      colors={['#D6D6D6', '#D6D6D6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       className="flex-1"
@@ -116,7 +116,7 @@ export default function ExploreScreen() {
           ListHeaderComponent={listHeader}
           contentContainerStyle={{ paddingBottom: 28 }}
           refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#0891b2" />
+            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#16a34a" />
           }
           ListEmptyComponent={
             <EmptyState

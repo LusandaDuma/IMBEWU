@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   const recentActions = data?.recentActions ?? [];
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 flex-row items-start justify-between">
           <View className="flex-1 pr-3">

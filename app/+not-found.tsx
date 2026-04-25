@@ -3,6 +3,7 @@
  */
 
 import { Link, Stack } from 'expo-router';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Home } from 'lucide-react-native';
 
@@ -10,7 +11,7 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Page Not Found' }} />
-      <View className="flex-1 items-center justify-center bg-earth-50 px-6">
+      <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
         <View className="w-24 h-24 rounded-full bg-primary-100 items-center justify-center mb-6">
           <Text className="text-4xl font-bold text-primary-600">?</Text>
         </View>

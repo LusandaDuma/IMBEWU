@@ -29,7 +29,7 @@ export default function AchievementsScreen() {
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
         <Text className="text-2xl font-bold text-white">Achievements</Text>
         <Text className="text-slate-400 mt-1">Your progress</Text>

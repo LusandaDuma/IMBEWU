@@ -17,9 +17,9 @@ export interface ScreenHeaderProps {
 
 export function ScreenHeader({ title, subtitle, onBack, rightSlot, variant = 'light', testID }: ScreenHeaderProps) {
   const titleCls =
-    variant === 'dark' ? 'text-white' : variant === 'transparent' ? 'text-white' : 'text-earth-900';
+    variant === 'dark' ? 'text-black' : variant === 'transparent' ? 'text-white' : 'text-earth-900';
   const subCls =
-    variant === 'dark' ? 'text-slate-400' : variant === 'transparent' ? 'text-white/75' : 'text-earth-500';
+    variant === 'dark' ? 'text-earth-700' : variant === 'transparent' ? 'text-white/75' : 'text-earth-600';
 
   const backTint = variant === 'light' ? 'bg-earth-900/5' : 'bg-white/10';
 

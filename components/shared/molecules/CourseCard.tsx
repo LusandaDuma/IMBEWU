@@ -11,10 +11,10 @@ import { ProgressBar } from '../atoms/ProgressBar';
 export type CourseCardVariant = 'elevated' | 'dark' | 'flat' | 'solid';
 
 const shell: Record<CourseCardVariant, string> = {
-  elevated: 'bg-white/72 rounded-3xl',
-  dark: 'bg-white/6 rounded-3xl',
-  flat: 'bg-earth-100/35 rounded-3xl',
-  solid: 'bg-white rounded-3xl',
+  elevated: 'bg-earth-100 rounded-3xl',
+  dark: 'bg-primary-700 rounded-3xl',
+  flat: 'bg-earth-200 rounded-3xl',
+  solid: 'bg-primary-600 rounded-3xl',
 };
 
 const glassShadow =
@@ -53,8 +53,8 @@ export function CourseCard({
   testID,
 }: CourseCardProps) {
   const titleCls = variant === 'dark' ? 'text-white' : 'text-earth-900';
-  const subCls = variant === 'dark' ? 'text-slate-300' : 'text-earth-500';
-  const metaCls = variant === 'dark' ? 'text-slate-400' : 'text-earth-500';
+  const subCls = variant === 'dark' ? 'text-white/90' : 'text-earth-700';
+  const metaCls = variant === 'dark' ? 'text-white/80' : 'text-earth-600';
 
   const body = (
     <View className="flex-row">

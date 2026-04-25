@@ -115,7 +115,7 @@ export default function NolwaziScreen() {
   }, [input, messages, personalizedSystemInstruction, sending]);
 
   return (
-    <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} className="flex-1">
+    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <KeyboardAvoidingView
           className="flex-1"
@@ -125,18 +125,18 @@ export default function NolwaziScreen() {
           <View className="px-5 pt-2 pb-3 flex-row items-center gap-3">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-full bg-white/10 items-center justify-center active:bg-white/15"
+              className="w-10 h-10 rounded-full bg-earth-300 items-center justify-center active:bg-earth-400"
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >
-              <ArrowLeft size={20} color="#e2e8f0" />
+              <ArrowLeft size={20} color="#1c1917" />
             </TouchableOpacity>
             <View className="flex-1">
               <View className="flex-row items-center gap-2">
-                <Sparkles size={18} color="#86efac" />
-                <Text className="text-xl font-light text-white tracking-tight">Nolwazi</Text>
+                <Sparkles size={18} color="#15803d" />
+                <Text className="text-xl font-light text-black tracking-tight">Nolwazi</Text>
               </View>
-              <Text className="text-slate-400 text-xs mt-0.5 font-light">
+              <Text className="text-earth-700 text-xs mt-0.5 font-light">
                 AgroLearn guide — mother of knowledge
               </Text>
             </View>
@@ -152,13 +152,13 @@ export default function NolwaziScreen() {
               <View
                 className={`max-w-[90%] mb-3 px-4 py-3 rounded-3xl ${
                   item.role === 'user'
-                    ? 'self-end bg-primary-600/90'
-                    : 'self-start bg-white/10'
+                    ? 'self-end bg-primary-600'
+                    : 'self-start bg-earth-300'
                 }`}
               >
                 <Text
                   className={`text-sm leading-5 font-light ${
-                    item.role === 'user' ? 'text-white' : 'text-slate-100'
+                    item.role === 'user' ? 'text-white' : 'text-black'
                   }`}
                 >
                   {item.text}
@@ -170,19 +170,19 @@ export default function NolwaziScreen() {
           <View className="px-5 pb-4 pt-2 gap-2">
             {sending ? (
               <View className="flex-row items-center gap-2 px-1">
-                <ActivityIndicator color="#86efac" />
-                <Text className="text-slate-500 text-xs font-light">Nolwazi is thinking…</Text>
+                <ActivityIndicator color="#16a34a" />
+                <Text className="text-earth-700 text-xs font-light">Nolwazi is thinking…</Text>
               </View>
             ) : null}
             <View className="flex-row items-end gap-2">
-              <View className="flex-1 rounded-3xl bg-white/10 px-4 py-2">
+              <View className="flex-1 rounded-3xl bg-earth-300 px-4 py-2">
                 <Input
                   value={input}
                   onChangeText={setInput}
                   placeholder="Ask Nolwazi…"
-                  placeholderTextColor="#94a3b8"
+                  placeholderTextColor="#78716c"
                   multiline
-                  className="text-white min-h-[44px] max-h-28 py-2"
+                  className="text-black min-h-[44px] max-h-28 py-2"
                   editable={!sending}
                 />
               </View>

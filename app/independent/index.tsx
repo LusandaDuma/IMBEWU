@@ -54,7 +54,7 @@ export default function IndependentDashboard() {
 
   return (
     <LinearGradient
-      colors={['#0f172a', '#1e293b', '#0f172a']}
+      colors={['#D6D6D6', '#D6D6D6']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       className="flex-1"

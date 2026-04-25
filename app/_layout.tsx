@@ -6,6 +6,7 @@ import 'react-native-reanimated';
 import '../global.css';
 
 import { NolwaziFab } from '@/components/shared';
+import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getSession } from '@/services/authService';
 import { getProfile } from '@/services/profileService';
 import supabase from '@/services/supabase';
@@ -15,9 +16,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Sprout } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Text, View } from 'react-native';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -111,7 +111,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   if (!isReady) {
     return (
       <LinearGradient
-        colors={['#0f172a', '#1e293b', '#0f172a']}
+        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         className="flex-1"
@@ -126,11 +126,17 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
             ]}
             className="items-center"
           >
-            <View className="w-24 h-24 rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 items-center justify-center mb-6 shadow-2xl">
-              <Sprout size={48} color="white" strokeWidth={1.5} />
-            </View>
+            <Image
+              source={require('../assets/images/logo.png')}
+              style={{ width: 224, height: 80, marginBottom: 16 }}
+              resizeMode="contain"
+            />
 
-            <Text className="text-3xl font-bold text-white mb-2">Imbewu</Text>
+            <Image
+              source={require('../assets/images/name.png')}
+              style={{ width: 192, height: 48, marginBottom: 8 }}
+              resizeMode="contain"
+            />
             <Text className="text-slate-300 text-center text-base mb-12 max-w-xs">
               Initializing your learning platform
             </Text>
@@ -157,10 +163,15 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <View className="flex-1">
+    <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: APP_BACKGROUND_COLOR },
+            }}
+          >
             <Stack.Screen name="index" />
             <Stack.Screen name="course/[id]" />
             <Stack.Screen name="fieldwise" />
