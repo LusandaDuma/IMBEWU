@@ -3,7 +3,7 @@
  */
 
 import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
-import { enrollInCourse, getClassByJoinCode, getCourses } from '@/services/supabase';
+import { addStudentToClass, enrollInCourse, getClassByJoinCode, getCourses } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,21 +37,42 @@ export default function DiscoverScreen() {
     },
   });
 
+  const joinClassMutation = useMutation({
+    mutationFn: async (rawCode: string) => {
+      if (!user) return { ok: false as const, reason: 'not-authenticated' };
+
+      const classData = await getClassByJoinCode(rawCode.trim().toUpperCase());
+      if (!classData) return { ok: false as const, reason: 'invalid-code' };
+
+      const joined = await addStudentToClass(classData.id, user.id);
+      if (!joined) return { ok: false as const, reason: 'join-failed' };
+
+      return { ok: true as const };
+    },
+    onSuccess: (result) => {
+      if (!result.ok) {
+        if (result.reason === 'invalid-code') {
+          Alert.alert('Code not found', 'Double-check the join code with your coordinator.');
+          return;
+        }
+
+        Alert.alert('Could not join class', 'Please try again in a moment.');
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
+      Alert.alert('Welcome', 'You have joined the class.');
+      setJoinCode('');
+      setShowJoinInput(false);
+    },
+    onError: () => {
+      Alert.alert('Could not join class', 'Please try again in a moment.');
+    },
+  });
+
   const handleJoinClass = async () => {
     if (!joinCode.trim() || !user) return;
-
-    const classData = await getClassByJoinCode(joinCode.trim().toUpperCase());
-    if (classData) {
-      const result = await enrollInCourse(user.id, classData.course_id, 'class_based');
-      if (result) {
-        queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
-        Alert.alert('Welcome', 'You have joined the class.');
-        setJoinCode('');
-        setShowJoinInput(false);
-      }
-    } else {
-      Alert.alert('Code not found', 'Double-check the join code with your coordinator.');
-    }
+    joinClassMutation.mutate(joinCode);
   };
 
   const filteredCourses = courses.filter(
@@ -108,7 +129,14 @@ export default function DiscoverScreen() {
                   autoCapitalize="characters"
                   maxLength={10}
                 />
-                <Button label="Join" onPress={handleJoinClass} variant="accent" size="md" />
+                <Button
+                  label={joinClassMutation.isPending ? 'Joining…' : 'Join'}
+                  onPress={handleJoinClass}
+                  variant="accent"
+                  size="md"
+                  isLoading={joinClassMutation.isPending}
+                  disabled={joinClassMutation.isPending}
+                />
               </View>
               <TouchableOpacity onPress={() => setShowJoinInput(false)} className="mt-3 py-2">
                 <Text className="text-slate-400 text-center text-sm font-medium">Cancel</Text>

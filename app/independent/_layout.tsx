@@ -22,15 +22,15 @@ export default function IndependentLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: 'white',
-          borderTopColor: '#e7e5e4',
+          backgroundColor: '#0f172a',
+          borderTopColor: '#1e293b',
           borderTopWidth: 1,
           paddingBottom: 8,
           paddingTop: 8,
           height: 64,
         },
         tabBarActiveTintColor: '#0891b2',
-        tabBarInactiveTintColor: '#78716c',
+        tabBarInactiveTintColor: '#94a3b8',
       }}
     >
       <Tabs.Screen

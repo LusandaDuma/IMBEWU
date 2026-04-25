@@ -6,10 +6,11 @@ import { CourseCard, EmptyState, ScreenHeader } from '@/components/shared';
 import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Clock, Play, Sprout, Target } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -24,28 +25,45 @@ export default function IndependentDashboard() {
   });
 
   const firstCourse = enrolments[0];
-  const {
-    data: firstCourseProgress,
-  } = useQuery({
-    queryKey: ['independent-course-progress', user?.id, firstCourse?.course_id],
-    queryFn: () =>
-      user && firstCourse
-        ? getCourseProgressSummary(user.id, firstCourse.course_id)
-        : Promise.resolve(null),
-    enabled: !!user && !!firstCourse,
+  const progressQueries = useQueries({
+    queries: enrolments.map((enrolment) => ({
+      queryKey: ['independent-course-progress', user?.id, enrolment.course_id],
+      queryFn: () =>
+        user
+          ? getCourseProgressSummary(user.id, enrolment.course_id)
+          : Promise.resolve({ courseId: enrolment.course_id, totalLessons: 0, completedLessons: 0, averagePctComplete: 0 }),
+      enabled: !!user,
+    })),
   });
 
+  const progressByCourseId = useMemo(
+    () =>
+      new Map(
+        progressQueries
+          .map((query) => query.data)
+          .filter((summary): summary is NonNullable<typeof summary> => Boolean(summary))
+          .map((summary) => [summary.courseId, summary])
+      ),
+    [progressQueries]
+  );
+
+  const firstCourseProgress = firstCourse ? progressByCourseId.get(firstCourse.course_id) : null;
   const progressPct = Math.max(0, Math.min(100, firstCourseProgress?.averagePctComplete ?? 0));
   const completedLessons = firstCourseProgress?.completedLessons ?? 0;
   const totalLessons = firstCourseProgress?.totalLessons ?? 0;
 
   return (
-    <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
+    <LinearGradient
+      colors={['#0f172a', '#1e293b', '#0f172a']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      className="flex-1"
+    >
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScreenHeader
           title={`Hello, ${profile?.first_name ?? 'Learner'}`}
           subtitle="Your self-paced workspace — courses, progress, and achievements."
-          variant="light"
+          variant="dark"
         />
 
         <FlatList
@@ -108,7 +126,13 @@ export default function IndependentDashboard() {
               description={item.courses?.description}
               coverImageUri={item.courses?.cover_image ?? undefined}
               placeholderIcon={Sprout}
-              variant="elevated"
+              progress={Math.max(0, Math.min(100, progressByCourseId.get(item.course_id)?.averagePctComplete ?? 0))}
+              meta={
+                (progressByCourseId.get(item.course_id)?.totalLessons ?? 0) > 0
+                  ? `${progressByCourseId.get(item.course_id)?.completedLessons ?? 0}/${progressByCourseId.get(item.course_id)?.totalLessons ?? 0} lessons complete`
+                  : 'No lessons yet'
+              }
+              variant="solid"
               onPress={() =>
                 router.push({ pathname: '/independent/course/[id]', params: { id: item.course_id } })
               }

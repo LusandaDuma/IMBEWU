@@ -8,12 +8,13 @@ import type { ReactNode } from 'react';
 import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { ProgressBar } from '../atoms/ProgressBar';
 
-export type CourseCardVariant = 'elevated' | 'dark' | 'flat';
+export type CourseCardVariant = 'elevated' | 'dark' | 'flat' | 'solid';
 
 const shell: Record<CourseCardVariant, string> = {
   elevated: 'bg-white/72 rounded-3xl',
   dark: 'bg-white/6 rounded-3xl',
   flat: 'bg-earth-100/35 rounded-3xl',
+  solid: 'bg-white rounded-3xl',
 };
 
 const glassShadow =

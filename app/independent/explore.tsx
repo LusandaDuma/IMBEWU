@@ -55,7 +55,7 @@ export default function ExploreScreen() {
       <ScreenHeader
         title="Explore catalogue"
         subtitle="Search published courses and enrol in one tap."
-        variant="light"
+        variant="dark"
       />
       <View className="px-5 mb-3">
         <View className="flex-row items-center">
@@ -65,11 +65,11 @@ export default function ExploreScreen() {
               onChangeText={setSearchQuery}
               placeholder="Search by title, skill, or topic…"
               icon={Search}
-              variant="light"
+              variant="dark"
             />
           </View>
-            <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-white/80 items-center justify-center">
-            <Filter size={20} color="#78716c" />
+          <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-white/10 items-center justify-center">
+            <Filter size={20} color="#cbd5e1" />
           </TouchableOpacity>
         </View>
       </View>
@@ -84,13 +84,13 @@ export default function ExploreScreen() {
               onPress={() => setSelectedCategory(item)}
               activeOpacity={0.88}
                 className={`px-4 py-2.5 rounded-full mr-2 ${
-                  selectedCategory === item ? 'bg-cyan-600/95' : 'bg-white/75'
+                  selectedCategory === item ? 'bg-cyan-600/95' : 'bg-white/10'
                 }`}
               style={{ elevation: selectedCategory === item ? 2 : 0 }}
             >
               <Text
                 className={`text-sm font-semibold ${
-                  selectedCategory === item ? 'text-white' : 'text-earth-600'
+                  selectedCategory === item ? 'text-white' : 'text-slate-200'
                 }`}
               >
                 {item}
@@ -103,7 +103,12 @@ export default function ExploreScreen() {
   );
 
   return (
-    <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
+    <LinearGradient
+      colors={['#0f172a', '#1e293b', '#0f172a']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      className="flex-1"
+    >
       <SafeAreaView className="flex-1" edges={['top']}>
         <FlatList
           data={filteredCourses}
@@ -118,7 +123,7 @@ export default function ExploreScreen() {
               icon={Sprout}
               title="No courses found"
               description="Try another search or category, or pull to refresh."
-              variant="light"
+              variant="dark"
             />
           }
           renderItem={({ item }) => (
@@ -127,7 +132,7 @@ export default function ExploreScreen() {
                 title={item.title}
                 description={item.description}
                 placeholderIcon={Sprout}
-                variant="elevated"
+                variant="solid"
                 onPress={() =>
                   router.push({ pathname: '/independent/course/[id]', params: { id: item.id } })
                 }

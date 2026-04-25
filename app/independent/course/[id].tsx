@@ -27,22 +27,27 @@ export default function IndependentCourseScreen() {
   });
 
   return (
-    <View className="flex-1 bg-earth-50">
+    <View className="flex-1 bg-slate-950">
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LinearGradient colors={['#0891b2', '#0e7490']} className="pb-8">
+      <LinearGradient
+        colors={['#0f172a', '#1e293b', '#0f172a']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        className="pb-8"
+      >
         <SafeAreaView edges={['top']}>
           <ScreenHeader
             title={course?.title ?? 'Course'}
             subtitle={course?.description ?? ' '}
-            variant="transparent"
+            variant="dark"
             onBack={() => router.back()}
           />
         </SafeAreaView>
       </LinearGradient>
 
       <ScrollView className="flex-1 px-5 -mt-4" showsVerticalScrollIndicator={false}>
-        <View className="bg-white/75 rounded-3xl p-6 mb-6">
+        <View className="bg-white rounded-3xl p-6 mb-6">
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center flex-1 min-w-0">
               <BookOpen size={18} color="#0891b2" strokeWidth={1.5} />

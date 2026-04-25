@@ -3,13 +3,14 @@
  */
 
 import { CourseCard, EmptyState, ScreenHeader } from '@/components/shared';
-import { getEnrolmentsByUser } from '@/services/supabase';
+import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Clock, Sprout } from 'lucide-react-native';
+import { useMemo } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,6 +23,28 @@ export default function StudentDashboard() {
     queryFn: () => (user ? getEnrolmentsByUser(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
+
+  const progressQueries = useQueries({
+    queries: enrolments.map((enrolment) => ({
+      queryKey: ['student-course-progress', user?.id, enrolment.course_id],
+      queryFn: () =>
+        user
+          ? getCourseProgressSummary(user.id, enrolment.course_id)
+          : Promise.resolve({ courseId: enrolment.course_id, totalLessons: 0, completedLessons: 0, averagePctComplete: 0 }),
+      enabled: !!user,
+    })),
+  });
+
+  const progressByCourseId = useMemo(
+    () =>
+      new Map(
+        progressQueries
+          .map((query) => query.data)
+          .filter((summary): summary is NonNullable<typeof summary> => Boolean(summary))
+          .map((summary) => [summary.courseId, summary])
+      ),
+    [progressQueries]
+  );
 
   return (
     <LinearGradient colors={['#f0fdf4', '#fafaf9']} className="flex-1">
@@ -55,6 +78,12 @@ export default function StudentDashboard() {
               description={item.courses?.description}
               coverImageUri={item.courses?.cover_image ?? undefined}
               placeholderIcon={Sprout}
+              progress={Math.max(0, Math.min(100, progressByCourseId.get(item.course_id)?.averagePctComplete ?? 0))}
+              meta={
+                (progressByCourseId.get(item.course_id)?.totalLessons ?? 0) > 0
+                  ? `${progressByCourseId.get(item.course_id)?.completedLessons ?? 0}/${progressByCourseId.get(item.course_id)?.totalLessons ?? 0} lessons complete`
+                  : 'No lessons yet'
+              }
               variant="elevated"
               onPress={() =>
                 router.push({ pathname: '/student/course/[id]', params: { id: item.course_id } })

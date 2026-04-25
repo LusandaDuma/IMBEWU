@@ -632,7 +632,30 @@ function getDayStreak(dateKeys: string[]): number {
   return streak;
 }
 
-export async function getIndependentAchievementsData(userId: string): Promise<IndependentAchievementsData> {
+function getDefaultAchievements(): IndependentAchievementItem[] {
+  return [
+    { id: 'first-steps', name: 'First Steps', description: 'Complete your first lesson', unlocked: false },
+    { id: 'dedicated-learner', name: 'Dedicated Learner', description: 'Learn for 7 days straight', unlocked: false },
+    { id: 'course-master', name: 'Course Master', description: 'Complete your first course', unlocked: false },
+  ];
+}
+
+function getZeroWeeklyActivity(): { day: string; value: number }[] {
+  return Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return {
+      day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+      value: 0,
+    };
+  });
+}
+
+async function getLearnerAchievementsData(
+  userId: string,
+  enrolmentTypes: Array<'independent' | 'class_based'>
+): Promise<IndependentAchievementsData> {
   const emptyData: IndependentAchievementsData = {
     stats: {
       hoursLearned: 0,
@@ -640,21 +663,17 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
       dayStreak: 0,
     },
     weeklyActivity: [],
-    achievements: [
-      { id: 'first-steps', name: 'First Steps', description: 'Complete your first lesson', unlocked: false },
-      { id: 'dedicated-learner', name: 'Dedicated Learner', description: 'Learn for 7 days straight', unlocked: false },
-      { id: 'course-master', name: 'Course Master', description: 'Complete your first course', unlocked: false },
-    ],
+    achievements: getDefaultAchievements(),
   };
 
   const { data: enrolmentsData, error: enrolmentsError } = await supabase
     .from('course_enrolments')
     .select('course_id, enrolment_type')
     .eq('user_id', userId)
-    .eq('enrolment_type', 'independent');
+    .in('enrolment_type', enrolmentTypes);
 
   if (enrolmentsError) {
-    console.error('Error fetching independent enrolments for achievements:', enrolmentsError);
+    console.error('Error fetching learner enrolments for achievements:', enrolmentsError);
     return emptyData;
   }
 
@@ -663,15 +682,7 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
   if (!courseIds.length) {
     return {
       ...emptyData,
-      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() - (6 - index));
-        return {
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
-          value: 0,
-        };
-      }),
+      weeklyActivity: getZeroWeeklyActivity(),
     };
   }
 
@@ -681,22 +692,14 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
     .in('course_id', courseIds);
 
   if (lessonsError) {
-    console.error('Error fetching lessons for achievements:', lessonsError);
+    console.error('Error fetching learner lessons for achievements:', lessonsError);
     return {
       ...emptyData,
       stats: {
         ...emptyData.stats,
         courses: courseIds.length,
       },
-      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() - (6 - index));
-        return {
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
-          value: 0,
-        };
-      }),
+      weeklyActivity: getZeroWeeklyActivity(),
     };
   }
 
@@ -709,15 +712,7 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
         ...emptyData.stats,
         courses: courseIds.length,
       },
-      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() - (6 - index));
-        return {
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
-          value: 0,
-        };
-      }),
+      weeklyActivity: getZeroWeeklyActivity(),
     };
   }
 
@@ -728,22 +723,14 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
     .in('lesson_id', lessonIds);
 
   if (progressError) {
-    console.error('Error fetching independent lesson progress for achievements:', progressError);
+    console.error('Error fetching learner lesson progress for achievements:', progressError);
     return {
       ...emptyData,
       stats: {
         ...emptyData.stats,
         courses: courseIds.length,
       },
-      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
-        const date = new Date();
-        date.setHours(0, 0, 0, 0);
-        date.setDate(date.getDate() - (6 - index));
-        return {
-          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
-          value: 0,
-        };
-      }),
+      weeklyActivity: getZeroWeeklyActivity(),
     };
   }
 
@@ -822,6 +809,14 @@ export async function getIndependentAchievementsData(userId: string): Promise<In
       },
     ],
   };
+}
+
+export async function getIndependentAchievementsData(userId: string): Promise<IndependentAchievementsData> {
+  return getLearnerAchievementsData(userId, ['independent']);
+}
+
+export async function getStudentAchievementsData(userId: string): Promise<IndependentAchievementsData> {
+  return getLearnerAchievementsData(userId, ['class_based']);
 }
 
 export async function getCoordinatorAnalytics(coordinatorId: string): Promise<CoordinatorAnalytics> {

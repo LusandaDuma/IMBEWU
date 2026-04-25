@@ -3,13 +3,13 @@
  */
 
 import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
-import { getLessonById, updateLessonProgress } from '@/services/supabase';
+import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { CheckCircle, Clock } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -17,6 +17,7 @@ export default function LessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [progress, setProgress] = useState(0);
 
   const { data: lesson } = useQuery({
@@ -24,20 +25,31 @@ export default function LessonScreen() {
     queryFn: () => getLessonById(id),
   });
 
+  const { data: existingProgress } = useQuery({
+    queryKey: ['lesson-progress', user?.id, id],
+    queryFn: () => (user ? getLessonProgress(user.id, id) : Promise.resolve(null)),
+    enabled: !!user,
+  });
+
+  const existingPct = useMemo(() => existingProgress?.pct_complete ?? 0, [existingProgress]);
+
   const progressMutation = useMutation({
     mutationFn: (percentage: number) =>
       user ? updateLessonProgress(user.id, id, percentage) : Promise.resolve(null),
+    onSuccess: () => {
+      if (!user || !lesson) return;
+      queryClient.invalidateQueries({ queryKey: ['lesson-progress', user.id, id] });
+      queryClient.invalidateQueries({ queryKey: ['student-course-progress', user.id, lesson.course_id] });
+      queryClient.invalidateQueries({ queryKey: ['student-enrolments', user.id] });
+    },
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProgress(50);
-      progressMutation.mutate(50);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, [id]);
+    setProgress(existingPct);
+  }, [existingPct]);
 
   const handleComplete = () => {
+    if (progress >= 100 || progressMutation.isPending) return;
     setProgress(100);
     progressMutation.mutate(100);
   };

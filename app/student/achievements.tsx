@@ -2,20 +2,31 @@
  * @fileoverview Student achievements screen
  */
 
+import { getStudentAchievementsData } from '@/services/supabase';
+import { useAuthStore } from '@/store/auth';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Award, BookOpen, Star, Target, Zap } from 'lucide-react-native';
+import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 
-const achievements = [
-  { id: '1', name: 'First Steps', description: 'Complete your first lesson', icon: BookOpen, color: '#16a34a', unlocked: true },
-  { id: '2', name: 'Quick Learner', description: 'Complete 5 lessons in a week', icon: Zap, color: '#d97706', unlocked: true },
-  { id: '3', name: 'Course Master', description: 'Complete an entire course', icon: Star, color: '#7c3aed', unlocked: false },
-  { id: '4', name: 'Goal Setter', description: 'Set your learning goals', icon: Target, color: '#dc2626', unlocked: false },
-  { id: '5', name: 'Knowledge Seeker', description: 'Enroll in 3 courses', icon: Award, color: '#0891b2', unlocked: true },
-];
-
 export default function AchievementsScreen() {
-  const unlockedCount = achievements.filter(a => a.unlocked).length;
+  const { user } = useAuthStore();
+  const { data } = useQuery({
+    queryKey: ['student-achievements', user?.id],
+    queryFn: () => (user ? getStudentAchievementsData(user.id) : Promise.resolve(null)),
+    enabled: !!user,
+  });
+
+  const achievements = data?.achievements ?? [];
+  const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
+  const completionPct = achievements.length > 0 ? Math.round((unlockedCount / achievements.length) * 100) : 0;
+  const stats = [
+    { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
+    { label: 'Courses', value: `${data?.stats.courses ?? 0}`, icon: BookOpen, color: '#16a34a' },
+    { label: 'Day Streak', value: `${data?.stats.dayStreak ?? 0}`, icon: Flame, color: '#ea580c' },
+  ];
+  const weeklyActivity = data?.weeklyActivity ?? [];
+  const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
 
   return (
     <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
@@ -24,33 +35,67 @@ export default function AchievementsScreen() {
         <Text className="text-slate-400 mt-1">Your progress</Text>
       </View>
 
-      <View className="px-5 mb-6">
-        <View className="bg-white rounded-2xl p-6 shadow-sm">
+      <ScrollView className="flex-1 px-5">
+        <View className="flex-row justify-between mb-6">
+          {stats.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <View key={stat.label} className="flex-1 mx-1 bg-white rounded-2xl p-4 shadow-sm">
+                <View
+                  className="w-10 h-10 rounded-xl items-center justify-center mb-3"
+                  style={{ backgroundColor: `${stat.color}20` }}
+                >
+                  <Icon size={20} color={stat.color} />
+                </View>
+                <Text className="text-2xl font-bold text-earth-800">{stat.value}</Text>
+                <Text className="text-earth-500 text-xs">{stat.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View className="bg-white rounded-2xl p-6 shadow-sm mb-6">
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-3xl font-bold text-primary-600">{unlockedCount}</Text>
-              <Text className="text-earth-500">Achievements Unlocked</Text>
+              <Text className="text-earth-500">Achievements unlocked</Text>
             </View>
             <View className="w-16 h-16 rounded-full bg-primary-100 items-center justify-center">
               <Award size={32} color="#16a34a" />
             </View>
           </View>
           <View className="h-2 bg-earth-100 rounded-full mt-4 overflow-hidden">
-            <View 
+            <View
               className="h-full bg-primary-500 rounded-full"
-              style={{ width: `${(unlockedCount / achievements.length) * 100}%` }}
+              style={{ width: `${completionPct}%` }}
             />
           </View>
-          <Text className="text-earth-500 text-sm mt-2">
-            {Math.round((unlockedCount / achievements.length) * 100)}% complete
-          </Text>
+          <Text className="text-earth-500 text-sm mt-2">{completionPct}% complete</Text>
         </View>
-      </View>
 
-      <ScrollView className="flex-1 px-5">
+        <View className="bg-white rounded-2xl p-5 shadow-sm mb-6">
+          <Text className="text-lg font-bold text-earth-800 mb-4">Weekly Activity</Text>
+          <View className="flex-row items-end justify-between h-24">
+            {weeklyActivity.map((item, index) => (
+              <View key={`${item.day}-${index}`} className="items-center">
+                <View
+                  className="w-8 bg-primary-200 rounded-t-lg"
+                  style={{ height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 8 }}
+                />
+                <Text className="text-earth-500 text-xs mt-2">{item.day}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
         <Text className="text-lg font-bold text-earth-800 mb-3">All Badges</Text>
         {achievements.map((achievement) => {
-          const Icon = achievement.icon;
+          const Icon =
+            achievement.id === 'dedicated-learner'
+              ? Flame
+              : achievement.id === 'course-master'
+                ? Award
+                : Target;
           return (
             <View
               key={achievement.id}
@@ -59,11 +104,8 @@ export default function AchievementsScreen() {
               }`}
               style={{ elevation: 1 }}
             >
-              <View 
-                className="w-12 h-12 rounded-xl items-center justify-center"
-                style={{ backgroundColor: `${achievement.color}20` }}
-              >
-                <Icon size={24} color={achievement.color} />
+              <View className="w-12 h-12 rounded-xl bg-primary-100 items-center justify-center">
+                <Icon size={24} color="#16a34a" />
               </View>
               <View className="flex-1 ml-4">
                 <Text className="font-semibold text-earth-800">{achievement.name}</Text>
