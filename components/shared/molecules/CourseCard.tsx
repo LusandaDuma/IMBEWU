@@ -6,6 +6,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { ProgressBar } from '../atoms/ProgressBar';
 
 export type CourseCardVariant = 'elevated' | 'dark' | 'flat' | 'solid';
@@ -31,6 +32,7 @@ export interface CourseCardProps {
   title: string;
   description?: string | null;
   meta?: string;
+  coverImageSource?: ImageSourcePropType;
   coverImageUri?: string | null;
   placeholderIcon?: LucideIcon;
   progress?: number;
@@ -44,6 +46,7 @@ export function CourseCard({
   title,
   description,
   meta,
+  coverImageSource,
   coverImageUri,
   placeholderIcon: PlaceholderIcon,
   progress,
@@ -63,11 +66,23 @@ export function CourseCard({
           variant === 'dark' ? 'bg-white/8' : 'bg-primary-500/12'
         }`}
       >
-        {coverImageUri ? (
-          <Image source={{ uri: coverImageUri }} className="w-full h-full" resizeMode="cover" />
-        ) : PlaceholderIcon ? (
-          <PlaceholderIcon size={28} color={variant === 'dark' ? '#86efac' : '#16a34a'} strokeWidth={1.5} />
-        ) : null}
+        <View className="w-full h-full items-center justify-center">
+          {coverImageSource ? (
+            <Image
+              source={coverImageSource}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          ) : coverImageUri ? (
+            <Image
+              source={{ uri: coverImageUri }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          ) : PlaceholderIcon ? (
+            <PlaceholderIcon size={28} color={variant === 'dark' ? '#86efac' : '#16a34a'} strokeWidth={1.5} />
+          ) : null}
+        </View>
       </View>
       <View className="flex-1 ml-4 min-w-0">
         <Text className={`text-base font-medium tracking-tight ${titleCls}`} numberOfLines={1}>
