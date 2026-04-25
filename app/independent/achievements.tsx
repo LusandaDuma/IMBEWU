@@ -2,23 +2,32 @@
  * @fileoverview Independent learner progress screen
  */
 
+import { getIndependentAchievementsData } from '@/services/supabase';
+import { useAuthStore } from '@/store/auth';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 
-const stats = [
-  { label: 'Hours Learned', value: '24', icon: Clock, color: '#0891b2' },
-  { label: 'Courses', value: '3', icon: BookOpen, color: '#16a34a' },
-  { label: 'Day Streak', value: '12', icon: Flame, color: '#ea580c' },
-];
-
-const achievements = [
-  { id: '1', name: 'First Steps', description: 'Complete your first lesson', icon: Target, unlocked: true },
-  { id: '2', name: 'Dedicated Learner', description: 'Learn for 7 days straight', icon: Flame, unlocked: true },
-  { id: '3', name: 'Course Master', description: 'Complete your first course', icon: Award, unlocked: false },
-];
-
 export default function ProgressScreen() {
+  const { user } = useAuthStore();
+
+  const { data } = useQuery({
+    queryKey: ['independent-achievements', user?.id],
+    queryFn: () => (user ? getIndependentAchievementsData(user.id) : Promise.resolve(null)),
+    enabled: !!user,
+  });
+
+  const stats = [
+    { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
+    { label: 'Courses', value: `${data?.stats.courses ?? 0}`, icon: BookOpen, color: '#16a34a' },
+    { label: 'Day Streak', value: `${data?.stats.dayStreak ?? 0}`, icon: Flame, color: '#ea580c' },
+  ];
+
+  const weeklyActivity = data?.weeklyActivity ?? [];
+  const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
+  const achievements = data?.achievements ?? [];
+
   return (
     <LinearGradient colors={['#0f172a', '#1e293b', '#0f172a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
@@ -48,13 +57,13 @@ export default function ProgressScreen() {
         <View className="bg-white rounded-2xl p-5 shadow-sm mb-6">
           <Text className="text-lg font-bold text-earth-800 mb-4">Weekly Activity</Text>
           <View className="flex-row items-end justify-between h-24">
-            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
-              <View key={day + index} className="items-center">
+            {weeklyActivity.map((item, index) => (
+              <View key={`${item.day}-${index}`} className="items-center">
                 <View 
                   className="w-8 bg-cyan-200 rounded-t-lg"
-                  style={{ height: Math.random() * 60 + 20 }}
+                  style={{ height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 8 }}
                 />
-                <Text className="text-earth-500 text-xs mt-2">{day}</Text>
+                <Text className="text-earth-500 text-xs mt-2">{item.day}</Text>
               </View>
             ))}
           </View>
@@ -62,7 +71,12 @@ export default function ProgressScreen() {
 
         <Text className="text-lg font-bold text-earth-800 mb-3">Achievements</Text>
         {achievements.map((achievement) => {
-          const Icon = achievement.icon;
+          const Icon =
+            achievement.id === 'dedicated-learner'
+              ? Flame
+              : achievement.id === 'course-master'
+                ? Award
+                : Target;
           return (
             <View
               key={achievement.id}

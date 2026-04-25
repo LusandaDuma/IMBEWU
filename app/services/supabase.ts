@@ -187,6 +187,81 @@ export async function getLessonProgress(userId: string, lessonId: string): Promi
   return data;
 }
 
+export type CourseProgressSummary = {
+  courseId: string;
+  totalLessons: number;
+  completedLessons: number;
+  averagePctComplete: number;
+};
+
+export async function getCourseProgressSummary(
+  userId: string,
+  courseId: string
+): Promise<CourseProgressSummary> {
+  const emptySummary: CourseProgressSummary = {
+    courseId,
+    totalLessons: 0,
+    completedLessons: 0,
+    averagePctComplete: 0,
+  };
+
+  const { data: lessonsData, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id')
+    .eq('course_id', courseId);
+
+  if (lessonsError) {
+    console.error('Error fetching lessons for progress summary:', lessonsError);
+    return emptySummary;
+  }
+
+  const lessonIds = (lessonsData || []).map((lesson) => lesson.id);
+  if (!lessonIds.length) {
+    return emptySummary;
+  }
+
+  const { data: progressData, error: progressError } = await supabase
+    .from('lesson_progress')
+    .select('lesson_id, pct_complete, is_completed')
+    .eq('user_id', userId)
+    .in('lesson_id', lessonIds);
+
+  if (progressError) {
+    console.error('Error fetching course progress summary:', progressError);
+    return {
+      ...emptySummary,
+      totalLessons: lessonIds.length,
+    };
+  }
+
+  const progressByLessonId = new Map(
+    (progressData || []).map((row) => [
+      row.lesson_id,
+      { pctComplete: row.pct_complete || 0, isCompleted: !!row.is_completed },
+    ])
+  );
+
+  let completedLessons = 0;
+  let totalPctAcrossLessons = 0;
+
+  for (const lessonId of lessonIds) {
+    const row = progressByLessonId.get(lessonId);
+    if (row?.isCompleted) {
+      completedLessons += 1;
+    }
+    totalPctAcrossLessons += row?.pctComplete || 0;
+  }
+
+  const averagePctComplete = Math.round(totalPctAcrossLessons / lessonIds.length);
+
+  return {
+    courseId,
+    totalLessons: lessonIds.length,
+    completedLessons,
+    averagePctComplete,
+  };
+}
+
 export async function updateLessonProgress(
   userId: string, 
   lessonId: string, 
@@ -519,6 +594,235 @@ export type CoordinatorAnalytics = {
   stats: CoordinatorAnalyticsStat;
   recentActivity: CoordinatorActivityItem[];
 };
+
+export type IndependentAchievementItem = {
+  id: string;
+  name: string;
+  description: string;
+  unlocked: boolean;
+};
+
+export type IndependentAchievementStats = {
+  hoursLearned: number;
+  courses: number;
+  dayStreak: number;
+};
+
+export type IndependentAchievementsData = {
+  stats: IndependentAchievementStats;
+  weeklyActivity: { day: string; value: number }[];
+  achievements: IndependentAchievementItem[];
+};
+
+function toDateKey(value: string): string {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function getDayStreak(dateKeys: string[]): number {
+  const available = new Set(dateKeys);
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+
+  while (available.has(cursor.toISOString().slice(0, 10))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+
+  return streak;
+}
+
+export async function getIndependentAchievementsData(userId: string): Promise<IndependentAchievementsData> {
+  const emptyData: IndependentAchievementsData = {
+    stats: {
+      hoursLearned: 0,
+      courses: 0,
+      dayStreak: 0,
+    },
+    weeklyActivity: [],
+    achievements: [
+      { id: 'first-steps', name: 'First Steps', description: 'Complete your first lesson', unlocked: false },
+      { id: 'dedicated-learner', name: 'Dedicated Learner', description: 'Learn for 7 days straight', unlocked: false },
+      { id: 'course-master', name: 'Course Master', description: 'Complete your first course', unlocked: false },
+    ],
+  };
+
+  const { data: enrolmentsData, error: enrolmentsError } = await supabase
+    .from('course_enrolments')
+    .select('course_id, enrolment_type')
+    .eq('user_id', userId)
+    .eq('enrolment_type', 'independent');
+
+  if (enrolmentsError) {
+    console.error('Error fetching independent enrolments for achievements:', enrolmentsError);
+    return emptyData;
+  }
+
+  const enrolments = enrolmentsData || [];
+  const courseIds = [...new Set(enrolments.map((item) => item.course_id))];
+  if (!courseIds.length) {
+    return {
+      ...emptyData,
+      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (6 - index));
+        return {
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+          value: 0,
+        };
+      }),
+    };
+  }
+
+  const { data: lessonsData, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, course_id, duration_mins')
+    .in('course_id', courseIds);
+
+  if (lessonsError) {
+    console.error('Error fetching lessons for achievements:', lessonsError);
+    return {
+      ...emptyData,
+      stats: {
+        ...emptyData.stats,
+        courses: courseIds.length,
+      },
+      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (6 - index));
+        return {
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+          value: 0,
+        };
+      }),
+    };
+  }
+
+  const lessons = lessonsData || [];
+  const lessonIds = lessons.map((lesson) => lesson.id);
+  if (!lessonIds.length) {
+    return {
+      ...emptyData,
+      stats: {
+        ...emptyData.stats,
+        courses: courseIds.length,
+      },
+      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (6 - index));
+        return {
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+          value: 0,
+        };
+      }),
+    };
+  }
+
+  const { data: progressData, error: progressError } = await supabase
+    .from('lesson_progress')
+    .select('lesson_id, pct_complete, is_completed, completed_at')
+    .eq('user_id', userId)
+    .in('lesson_id', lessonIds);
+
+  if (progressError) {
+    console.error('Error fetching independent lesson progress for achievements:', progressError);
+    return {
+      ...emptyData,
+      stats: {
+        ...emptyData.stats,
+        courses: courseIds.length,
+      },
+      weeklyActivity: Array.from({ length: 7 }).map((_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (6 - index));
+        return {
+          day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+          value: 0,
+        };
+      }),
+    };
+  }
+
+  const progressRows = progressData || [];
+  const completedLessonIds = new Set(
+    progressRows.filter((row) => row.is_completed).map((row) => row.lesson_id)
+  );
+  const lessonsById = new Map(lessons.map((lesson) => [lesson.id, lesson]));
+  const lessonsByCourse = new Map<string, { total: number; completed: number }>();
+
+  for (const lesson of lessons) {
+    const course = lessonsByCourse.get(lesson.course_id) || { total: 0, completed: 0 };
+    course.total += 1;
+    if (completedLessonIds.has(lesson.id)) {
+      course.completed += 1;
+    }
+    lessonsByCourse.set(lesson.course_id, course);
+  }
+
+  const completedMinutes = [...completedLessonIds].reduce((sum, lessonId) => {
+    const lesson = lessonsById.get(lessonId);
+    return sum + (lesson?.duration_mins || 0);
+  }, 0);
+
+  const completedDateKeys = progressRows
+    .filter((row) => row.is_completed && !!row.completed_at)
+    .map((row) => toDateKey(row.completed_at || ''));
+
+  const dayStreak = getDayStreak([...new Set(completedDateKeys)]);
+  const courseMasterUnlocked = [...lessonsByCourse.values()].some(
+    (value) => value.total > 0 && value.completed === value.total
+  );
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const activityCountByDate = new Map<string, number>();
+  for (const dateKey of completedDateKeys) {
+    activityCountByDate.set(dateKey, (activityCountByDate.get(dateKey) || 0) + 1);
+  }
+
+  const weeklyActivity = Array.from({ length: 7 }).map((_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - index));
+    const dateKey = date.toISOString().slice(0, 10);
+    return {
+      day: date.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 1),
+      value: activityCountByDate.get(dateKey) || 0,
+    };
+  });
+
+  return {
+    stats: {
+      hoursLearned: Math.round((completedMinutes / 60) * 10) / 10,
+      courses: courseIds.length,
+      dayStreak,
+    },
+    weeklyActivity,
+    achievements: [
+      {
+        id: 'first-steps',
+        name: 'First Steps',
+        description: 'Complete your first lesson',
+        unlocked: completedLessonIds.size > 0,
+      },
+      {
+        id: 'dedicated-learner',
+        name: 'Dedicated Learner',
+        description: 'Learn for 7 days straight',
+        unlocked: dayStreak >= 7,
+      },
+      {
+        id: 'course-master',
+        name: 'Course Master',
+        description: 'Complete your first course',
+        unlocked: courseMasterUnlocked,
+      },
+    ],
+  };
+}
 
 export async function getCoordinatorAnalytics(coordinatorId: string): Promise<CoordinatorAnalytics> {
   const emptyData: CoordinatorAnalytics = {

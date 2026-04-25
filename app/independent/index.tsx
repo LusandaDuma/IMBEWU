@@ -3,7 +3,7 @@
  */
 
 import { CourseCard, EmptyState, ScreenHeader } from '@/components/shared';
-import { getEnrolmentsByUser } from '@/services/supabase';
+import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,20 @@ export default function IndependentDashboard() {
   });
 
   const firstCourse = enrolments[0];
+  const {
+    data: firstCourseProgress,
+  } = useQuery({
+    queryKey: ['independent-course-progress', user?.id, firstCourse?.course_id],
+    queryFn: () =>
+      user && firstCourse
+        ? getCourseProgressSummary(user.id, firstCourse.course_id)
+        : Promise.resolve(null),
+    enabled: !!user && !!firstCourse,
+  });
+
+  const progressPct = Math.max(0, Math.min(100, firstCourseProgress?.averagePctComplete ?? 0));
+  const completedLessons = firstCourseProgress?.completedLessons ?? 0;
+  const totalLessons = firstCourseProgress?.totalLessons ?? 0;
 
   return (
     <LinearGradient colors={['#ecfeff', '#fafaf9']} className="flex-1">
@@ -63,9 +77,13 @@ export default function IndependentDashboard() {
                       {firstCourse.courses?.title ?? 'Course'}
                     </Text>
                     <View className="mt-4 h-2 w-full bg-cyan-800 rounded-full overflow-hidden">
-                      <View className="h-full bg-white rounded-full" style={{ width: '35%' }} />
+                      <View className="h-full bg-white rounded-full" style={{ width: `${progressPct}%` }} />
                     </View>
-                    <Text className="text-cyan-100 text-xs mt-2">Sample progress — complete lessons to update.</Text>
+                    <Text className="text-cyan-100 text-xs mt-2">
+                      {totalLessons > 0
+                        ? `${completedLessons}/${totalLessons} lessons complete (${progressPct}%)`
+                        : 'No lessons yet for this course'}
+                    </Text>
                   </View>
                   <View className="w-14 h-14 rounded-full bg-white/15 items-center justify-center">
                     <Play size={28} color="white" fill="white" />
