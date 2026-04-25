@@ -35,7 +35,7 @@ export interface Class {
   name: string;
   join_code: string;
   is_active: boolean;
-  start_date: string;
+  start_date?: string | null;
   created_at: string;
 }
 
@@ -66,6 +66,15 @@ export interface CourseEnrolment {
   course_id: string;
   enrolment_type: 'independent' | 'class_based';
   enrolled_at: string;
+}
+
+export interface ClassMember {
+  id: string;
+  class_id: string;
+  user_id: string;
+  role: 'coordinator' | 'student';
+  joined_at: string;
+  profile?: Pick<Profile, 'id' | 'first_name' | 'last_name'> | null;
 }
 
 export interface Quiz {

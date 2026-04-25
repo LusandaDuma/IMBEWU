@@ -212,3 +212,15 @@ export async function getAdminUsers(): Promise<AdminUserItem[]> {
     updatedAt: user.updated_at,
   }));
 }
+
+export async function updateAdminUserRole(userId: string, role: UserRole): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      role,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId);
+
+  if (error) throw new Error(error.message);
+}

@@ -2,13 +2,14 @@
  * @fileoverview Admin users management
  */
 
-import { getAdminUsers } from '@/services/adminService';
-import { useQuery } from '@tanstack/react-query';
+import { getAdminUsers, updateAdminUserRole } from '@/services/adminService';
+import type { UserRole } from '@/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, GraduationCap, Plus, Search, Shield, User, Users } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const roleIcons = {
@@ -55,6 +56,7 @@ function shortId(id: string): string {
 
 export default function AdminUsersScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const { data: users = [], isLoading, isError, refetch } = useQuery({
@@ -65,6 +67,57 @@ export default function AdminUsersScreen() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: UserRole }) => {
+      await updateAdminUserRole(userId, role);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+    },
+    onError: (error) => {
+      Alert.alert('Could not update role', error instanceof Error ? error.message : 'Please try again.');
+    },
+  });
+
+  const handleUserCardPress = (user: (typeof filteredUsers)[number]) => {
+    if (updateRoleMutation.isPending) {
+      return;
+    }
+
+    Alert.alert(
+      `Edit role: ${formatFullName(user.firstName, user.lastName)}`,
+      'Select a new role for this user.',
+      [
+        {
+          text: 'Admin',
+          onPress: () => {
+            if (user.role !== 'admin') updateRoleMutation.mutate({ userId: user.id, role: 'admin' });
+          },
+        },
+        {
+          text: 'Coordinator',
+          onPress: () => {
+            if (user.role !== 'coordinator') updateRoleMutation.mutate({ userId: user.id, role: 'coordinator' });
+          },
+        },
+        {
+          text: 'Student',
+          onPress: () => {
+            if (user.role !== 'student') updateRoleMutation.mutate({ userId: user.id, role: 'student' });
+          },
+        },
+        {
+          text: 'Independent',
+          onPress: () => {
+            if (user.role !== 'independent') updateRoleMutation.mutate({ userId: user.id, role: 'independent' });
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const filteredUsers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -89,7 +142,11 @@ export default function AdminUsersScreen() {
     const label = roleLabels[item.role as keyof typeof roleLabels];
 
     return (
-      <View className="bg-white/95 rounded-2xl p-4 shadow-md mb-4">
+      <TouchableOpacity
+        onPress={() => handleUserCardPress(item)}
+        className="bg-white/95 rounded-2xl p-4 shadow-md mb-4"
+        activeOpacity={0.9}
+      >
         <View className="flex-row items-center">
           <View
             className="w-12 h-12 rounded-full items-center justify-center"
@@ -117,7 +174,7 @@ export default function AdminUsersScreen() {
             </View>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

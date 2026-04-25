@@ -4,6 +4,7 @@
 
 import type {
     Class,
+    ClassMember,
     Course,
     CourseEnrolment,
     Lesson,
@@ -110,7 +111,7 @@ export async function createCourse(course: CreateCoursePayload): Promise<Course 
     console.error('Error creating course:', error);
     return null;
   }
-  return data;
+  return data as Course;
 }
 
 export async function updateCourse(courseId: string, updates: Partial<Course>): Promise<Course | null> {
@@ -323,16 +324,328 @@ export async function getClassByJoinCode(joinCode: string): Promise<Class | null
   return data;
 }
 
-export async function createClass(classData: Omit<Class, 'id' | 'created_at'>): Promise<Class | null> {
-  const { data, error } = await supabase
-    .from('classes')
-    .insert(classData)
-    .select()
-    .single();
-  
+type CreateClassPayload = {
+  created_by: string;
+  course_id: string;
+  name: string;
+  join_code?: string;
+};
+
+export type StudentSearchResult = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  role: Profile['role'];
+};
+
+function generateClientJoinCode(length = 6): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < length; i += 1) {
+    const idx = Math.floor(Math.random() * chars.length);
+    code += chars[idx];
+  }
+  return code;
+}
+
+export async function createClass(classData: CreateClassPayload): Promise<Class | null> {
+  const requestedJoinCode = classData.join_code?.trim() || generateClientJoinCode();
+
+  const createWithCode = (joinCode: string) =>
+    supabase.rpc('create_class_atomic', {
+      p_coordinator_id: classData.created_by,
+      p_course_id: classData.course_id,
+      p_name: classData.name,
+      p_join_code: joinCode,
+    });
+
+  let { data, error } = await createWithCode(requestedJoinCode);
+
+  // Retry once with a fresh code if uniqueness collision occurs.
+  if (error?.code === '23505') {
+    ({ data, error } = await createWithCode(generateClientJoinCode()));
+  }
+
   if (error) {
     console.error('Error creating class:', error);
     return null;
   }
+  return data as Class;
+}
+
+export async function getClassById(classId: string): Promise<Class | null> {
+  const { data, error } = await supabase
+    .from('classes')
+    .select('*')
+    .eq('id', classId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching class:', error);
+    return null;
+  }
   return data;
+}
+
+export async function updateClass(
+  classId: string,
+  updates: Pick<Class, 'name' | 'is_active'>
+): Promise<Class | null> {
+  const { data, error } = await supabase
+    .from('classes')
+    .update(updates)
+    .eq('id', classId)
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error updating class:', error);
+    return null;
+  }
+  return data;
+}
+
+export async function getClassMembers(classId: string): Promise<ClassMember[]> {
+  const { data, error } = await supabase
+    .from('class_members')
+    .select('id, class_id, user_id, role, joined_at')
+    .eq('class_id', classId)
+    .order('joined_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching class members:', error);
+    return [];
+  }
+
+  const members = (data || []) as ClassMember[];
+  const userIds = [...new Set(members.map((member) => member.user_id))];
+  if (userIds.length === 0) {
+    return members;
+  }
+
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name')
+    .in('id', userIds);
+
+  if (profilesError) {
+    console.error('Error fetching member profiles:', profilesError);
+    return members;
+  }
+
+  const profileById = new Map(
+    (profilesData || []).map((profile) => [profile.id, profile])
+  );
+
+  return members.map((member) => ({
+    ...member,
+    profile: profileById.get(member.user_id) || null,
+  }));
+}
+
+export async function addStudentToClass(classId: string, studentId: string): Promise<boolean> {
+  const { data: classData, error: classError } = await supabase
+    .from('classes')
+    .select('course_id')
+    .eq('id', classId)
+    .single();
+
+  if (classError || !classData) {
+    console.error('Error fetching class for add student:', classError);
+    return false;
+  }
+
+  const { error: memberError } = await supabase.from('class_members').insert({
+    class_id: classId,
+    user_id: studentId,
+    role: 'student',
+  });
+
+  if (memberError && memberError.code !== '23505') {
+    console.error('Error adding class member:', memberError);
+    return false;
+  }
+
+  const { error: enrolError } = await supabase.from('course_enrolments').insert({
+    user_id: studentId,
+    course_id: classData.course_id,
+    enrolment_type: 'class_based',
+  });
+
+  if (enrolError && enrolError.code !== '23505') {
+    console.error('Error enrolling student in course:', enrolError);
+    return false;
+  }
+
+  return true;
+}
+
+export async function searchStudentsByName(searchText: string): Promise<StudentSearchResult[]> {
+  const query = searchText.trim();
+  if (query.length < 2) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name, role')
+    .eq('role', 'student')
+    .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%`)
+    .order('first_name', { ascending: true })
+    .limit(20);
+
+  if (error) {
+    console.error('Error searching students:', error);
+    return [];
+  }
+
+  return (data || []) as StudentSearchResult[];
+}
+
+export type CoordinatorAnalyticsStat = {
+  totalStudents: number;
+  activeClasses: number;
+  averageCompletionPct: number;
+  certificates: number;
+};
+
+export type CoordinatorActivityItem = {
+  id: string;
+  text: string;
+  timestamp: string;
+};
+
+export type CoordinatorAnalytics = {
+  stats: CoordinatorAnalyticsStat;
+  recentActivity: CoordinatorActivityItem[];
+};
+
+export async function getCoordinatorAnalytics(coordinatorId: string): Promise<CoordinatorAnalytics> {
+  const emptyData: CoordinatorAnalytics = {
+    stats: {
+      totalStudents: 0,
+      activeClasses: 0,
+      averageCompletionPct: 0,
+      certificates: 0,
+    },
+    recentActivity: [],
+  };
+
+  const classes = await getClassesByCoordinator(coordinatorId);
+  if (classes.length === 0) {
+    return emptyData;
+  }
+
+  const classIds = classes.map((item) => item.id);
+  const courseIds = [...new Set(classes.map((item) => item.course_id))];
+
+  const { data: classMembersData, error: classMembersError } = await supabase
+    .from('class_members')
+    .select('id, class_id, user_id, role, joined_at')
+    .in('class_id', classIds)
+    .eq('role', 'student')
+    .order('joined_at', { ascending: false });
+
+  if (classMembersError) {
+    console.error('Error fetching coordinator class members:', classMembersError);
+    return emptyData;
+  }
+
+  const classMembers = (classMembersData || []) as ClassMember[];
+  const studentIds = [...new Set(classMembers.map((member) => member.user_id))];
+
+  const { data: profilesData, error: profilesError } = studentIds.length
+    ? await supabase
+        .from('profiles')
+        .select('id, first_name, last_name')
+        .in('id', studentIds)
+    : { data: [], error: null };
+
+  if (profilesError) {
+    console.error('Error fetching coordinator student profiles:', profilesError);
+  }
+
+  const profileById = new Map(
+    (profilesData || []).map((profile) => [
+      profile.id,
+      `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Student',
+    ])
+  );
+
+  const { data: lessonsData, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, title')
+    .in('course_id', courseIds);
+
+  if (lessonsError) {
+    console.error('Error fetching coordinator lessons:', lessonsError);
+    return {
+      ...emptyData,
+      stats: {
+        ...emptyData.stats,
+        totalStudents: studentIds.length,
+        activeClasses: classes.filter((item) => item.is_active).length,
+      },
+      recentActivity: classMembers.slice(0, 5).map((member) => ({
+        id: `join-${member.id}`,
+        text: `${profileById.get(member.user_id) || 'Student'} joined a class`,
+        timestamp: member.joined_at,
+      })),
+    };
+  }
+
+  const lessonIds = (lessonsData || []).map((lesson) => lesson.id);
+  const lessonTitleById = new Map((lessonsData || []).map((lesson) => [lesson.id, lesson.title]));
+
+  const { data: progressData, error: progressError } = lessonIds.length
+    ? await supabase
+        .from('lesson_progress')
+        .select('id, user_id, lesson_id, pct_complete, is_completed, completed_at')
+        .in('lesson_id', lessonIds)
+        .in('user_id', studentIds)
+    : { data: [], error: null };
+
+  if (progressError) {
+    console.error('Error fetching coordinator lesson progress:', progressError);
+  }
+
+  const progressRows = (progressData || []) as Pick<
+    LessonProgress,
+    'id' | 'user_id' | 'lesson_id' | 'pct_complete' | 'is_completed' | 'completed_at'
+  >[];
+
+  const totalProgress = progressRows.reduce((sum, row) => sum + (row.pct_complete || 0), 0);
+  const averageCompletionPct = progressRows.length ? Math.round(totalProgress / progressRows.length) : 0;
+  const certificates = progressRows.filter((row) => row.is_completed).length;
+
+  const joinEvents: CoordinatorActivityItem[] = classMembers.slice(0, 8).map((member) => ({
+    id: `join-${member.id}`,
+    text: `${profileById.get(member.user_id) || 'Student'} joined a class`,
+    timestamp: member.joined_at,
+  }));
+
+  const completionEvents: CoordinatorActivityItem[] = progressRows
+    .filter((row) => row.is_completed && !!row.completed_at)
+    .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime())
+    .slice(0, 8)
+    .map((row) => ({
+      id: `complete-${row.id}`,
+      text: `${profileById.get(row.user_id) || 'Student'} completed "${lessonTitleById.get(row.lesson_id) || 'a lesson'}"`,
+      timestamp: row.completed_at || '',
+    }));
+
+  const recentActivity = [...joinEvents, ...completionEvents]
+    .filter((item) => !!item.timestamp)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 6);
+
+  return {
+    stats: {
+      totalStudents: studentIds.length,
+      activeClasses: classes.filter((item) => item.is_active).length,
+      averageCompletionPct,
+      certificates,
+    },
+    recentActivity,
+  };
 }

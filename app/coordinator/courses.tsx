@@ -20,7 +20,7 @@ export default function CoordinatorCoursesScreen() {
 
   const renderCourseCard = ({ item }: { item: Course }) => (
     <TouchableOpacity
-      onPress={() => router.push({ pathname: '/coordinator/course/[id]', params: { id: item.id } })}
+      onPress={() => router.push(`/coordinator/course/${item.id}`)}
       className="bg-slate-800 rounded-2xl p-4 shadow-lg mb-4 border border-slate-700"
       style={{ elevation: 2 }}
     >

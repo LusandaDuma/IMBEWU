@@ -69,6 +69,18 @@ export default function CoordinatorLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="class/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="course/[id]"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
