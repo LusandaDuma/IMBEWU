@@ -77,7 +77,6 @@ export default function StudentDashboard() {
               title={item.courses?.title ?? 'Course'}
               description={item.courses?.description}
               coverImageUri={item.courses?.cover_image ?? undefined}
-              placeholderIcon={Sprout}
               progress={Math.max(0, Math.min(100, progressByCourseId.get(item.course_id)?.averagePctComplete ?? 0))}
               meta={
                 (progressByCourseId.get(item.course_id)?.totalLessons ?? 0) > 0

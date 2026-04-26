@@ -99,7 +99,7 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-earth-200">
+            <View>
               {banner ? (
                 <AlertBanner
                   message={banner}
@@ -113,7 +113,7 @@ export default function LoginScreen() {
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <FormField
-                    appearance="dark"
+                    appearance="blend"
                     leftIcon={Mail}
                     placeholder="Email address"
                     value={value}
@@ -136,7 +136,7 @@ export default function LoginScreen() {
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <FormField
-                    appearance="dark"
+                    appearance="blend"
                     leftIcon={Lock}
                     placeholder="Password"
                     value={value}
@@ -175,7 +175,7 @@ export default function LoginScreen() {
 
               <Link href="/auth/forgot-password" asChild>
                 <TouchableOpacity className="self-center mt-4 px-3 py-1.5">
-                  <Text className="text-primary-300 text-sm">Forgot password?</Text>
+                  <Text className="text-black text-sm">Forgot password?</Text>
                 </TouchableOpacity>
               </Link>
 
@@ -183,15 +183,15 @@ export default function LoginScreen() {
                 <Text className="text-earth-700 text-sm">No account yet? </Text>
                 <Link href="/auth/register" asChild>
                   <TouchableOpacity>
-                    <Text className="text-primary-400 font-semibold text-sm">Create one</Text>
+                    <Text className="text-black font-semibold text-sm">Create one</Text>
                   </TouchableOpacity>
                 </Link>
               </View>
 
               <Link href="/nolwazi" asChild>
-                <TouchableOpacity className="mt-5 self-center px-4 py-2 rounded-full bg-earth-300 active:bg-earth-400">
-                  <Text className="text-black text-sm font-light text-center">
-                    Questions about the app? Chat with <Text className="text-primary-400 font-medium">Nolwazi</Text>
+                <TouchableOpacity className="mt-5 self-center py-2 border-b border-primary-500/30 active:opacity-80">
+                  <Text className="text-earth-800 text-sm font-light text-center">
+                    Questions about the app? Chat with <Text className="text-black font-medium">Nolwazi</Text>
                   </Text>
                 </TouchableOpacity>
               </Link>

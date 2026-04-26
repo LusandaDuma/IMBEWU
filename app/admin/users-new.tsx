@@ -2,6 +2,7 @@
  * @fileoverview Create new user screen for admins.
  */
 
+import { fieldPlain } from '@/constants/theme';
 import { createUserAsAdmin } from '@/services/authService';
 import type { UserRole } from '@/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -79,26 +80,26 @@ export default function AdminUsersNewScreen() {
           <View className="px-5 pb-5 flex-row items-center">
             <TouchableOpacity
               onPress={goToUsersList}
-              className="w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+              className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
               activeOpacity={0.9}
             >
-              <ChevronLeft size={20} color="white" />
+              <ChevronLeft size={20} color="#1c1917" />
             </TouchableOpacity>
             <View className="ml-3">
-              <Text className="text-2xl font-bold text-white">Add User</Text>
-              <Text className="text-slate-400">Create a new account for the platform</Text>
+              <Text className="text-2xl font-bold text-black">Add User</Text>
+              <Text className="text-earth-800">Create a new account for the platform</Text>
             </View>
           </View>
 
           <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View className="bg-white/95 rounded-2xl p-4">
+            <View>
               <Text className="text-earth-700 font-medium mb-2">First name</Text>
               <TextInput
                 value={firstName}
                 onChangeText={setFirstName}
                 placeholder="e.g. Naledi"
                 placeholderTextColor="#a8a29e"
-                className="bg-white rounded-xl border border-earth-200 px-4 py-3 text-earth-800"
+                className={fieldPlain}
               />
 
               <Text className="text-earth-700 font-medium mb-2 mt-4">Last name</Text>
@@ -107,7 +108,7 @@ export default function AdminUsersNewScreen() {
                 onChangeText={setLastName}
                 placeholder="e.g. Molefe"
                 placeholderTextColor="#a8a29e"
-                className="bg-white rounded-xl border border-earth-200 px-4 py-3 text-earth-800"
+                className={fieldPlain}
               />
 
               <Text className="text-earth-700 font-medium mb-2 mt-4">Email</Text>
@@ -118,7 +119,7 @@ export default function AdminUsersNewScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 placeholderTextColor="#a8a29e"
-                className="bg-white rounded-xl border border-earth-200 px-4 py-3 text-earth-800"
+                className={fieldPlain}
               />
 
               <Text className="text-earth-700 font-medium mb-2 mt-4">Temporary password</Text>
@@ -128,7 +129,7 @@ export default function AdminUsersNewScreen() {
                 placeholder="At least 6 characters"
                 secureTextEntry
                 placeholderTextColor="#a8a29e"
-                className="bg-white rounded-xl border border-earth-200 px-4 py-3 text-earth-800"
+                className={fieldPlain}
               />
 
               <Text className="text-earth-700 font-medium mb-2 mt-4">Role</Text>
@@ -139,7 +140,7 @@ export default function AdminUsersNewScreen() {
                     <View key={option.value} className="px-1 mb-2 w-1/2">
                       <TouchableOpacity
                         onPress={() => setRole(option.value)}
-                        className={`rounded-full py-2.5 items-center border ${active ? 'bg-primary-600 border-primary-500' : 'bg-white border-earth-200'}`}
+                        className={`rounded-full py-2.5 items-center ${active ? 'bg-primary-600' : 'bg-white/60'}`}
                         activeOpacity={0.9}
                       >
                         <Text className={active ? 'text-white font-semibold' : 'text-earth-700'}>{option.label}</Text>
@@ -167,10 +168,10 @@ export default function AdminUsersNewScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={goToUsersList}
-              className="mt-3 rounded-xl py-3.5 items-center bg-white/10 border border-white/20"
+              className="mt-3 rounded-xl py-3.5 items-center border border-earth-400/50"
               activeOpacity={0.9}
             >
-              <Text className="text-slate-100 font-medium">Back to users list</Text>
+              <Text className="text-black font-medium">Back to users list</Text>
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

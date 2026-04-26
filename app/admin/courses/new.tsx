@@ -2,6 +2,7 @@
  * @fileoverview Create new course screen
  */
 
+import { fieldPlain } from '@/constants/theme';
 import { createCourse } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -57,22 +58,22 @@ export default function CreateCourseScreen() {
         <View className="px-5 pb-5 flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
             activeOpacity={0.9}
           >
-            <ChevronLeft size={20} color="white" />
+            <ChevronLeft size={20} color="#1c1917" />
           </TouchableOpacity>
           <View className="ml-3">
-            <Text className="text-2xl font-bold text-white">Create Course</Text>
-            <Text className="text-slate-400">Add a new course to the platform</Text>
+            <Text className="text-2xl font-bold text-black">Create Course</Text>
+            <Text className="text-earth-800">Add a new course to the platform</Text>
           </View>
         </View>
 
         <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-          <View className="bg-white/95 rounded-2xl p-5">
+          <View>
             <Text className="text-earth-700 font-medium mb-2">Course Title</Text>
           <TextInput
-            className="bg-white rounded-xl px-4 py-3 text-earth-800 border border-earth-200"
+            className={fieldPlain}
             placeholder="Enter course title"
             value={title}
             onChangeText={setTitle}
@@ -81,7 +82,7 @@ export default function CreateCourseScreen() {
 
             <Text className="text-earth-700 font-medium mb-2 mt-5">Description</Text>
           <TextInput
-            className="bg-white rounded-xl px-4 py-3 text-earth-800 border border-earth-200"
+            className={fieldPlain}
             placeholder="Enter course description"
             value={description}
             onChangeText={setDescription}
@@ -114,12 +115,12 @@ export default function CreateCourseScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => router.push('/admin/courses')}
-            className="rounded-xl py-4 items-center border border-white/20 bg-white/10 mt-3"
+            className="rounded-xl py-4 items-center border border-earth-400/50 mt-3"
             activeOpacity={0.9}
           >
             <View className="flex-row items-center">
-              <List size={20} color="#e2e8f0" />
-              <Text className="text-slate-100 font-semibold text-base ml-2">Manage Courses (CRUD)</Text>
+              <List size={20} color="#44403c" />
+              <Text className="text-black font-semibold text-base ml-2">Manage Courses (CRUD)</Text>
             </View>
           </TouchableOpacity>
         </View>

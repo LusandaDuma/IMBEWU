@@ -150,15 +150,13 @@ export default function NolwaziScreen() {
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             renderItem={({ item }) => (
               <View
-                className={`max-w-[90%] mb-3 px-4 py-3 rounded-3xl ${
-                  item.role === 'user'
-                    ? 'self-end bg-primary-600'
-                    : 'self-start bg-earth-300'
+                className={`max-w-[90%] mb-4 ${
+                  item.role === 'user' ? 'self-end border-b-2 border-primary-600/70 pb-2' : 'self-start border-b border-earth-400/40 pb-2'
                 }`}
               >
                 <Text
                   className={`text-sm leading-5 font-light ${
-                    item.role === 'user' ? 'text-white' : 'text-black'
+                    item.role === 'user' ? 'text-earth-900 text-right' : 'text-earth-900'
                   }`}
                 >
                   {item.text}
@@ -175,14 +173,14 @@ export default function NolwaziScreen() {
               </View>
             ) : null}
             <View className="flex-row items-end gap-2">
-              <View className="flex-1 rounded-3xl bg-earth-300 px-4 py-2">
+              <View className="flex-1 border-b border-earth-400/50 py-1">
                 <Input
                   value={input}
                   onChangeText={setInput}
                   placeholder="Ask Nolwazi…"
                   placeholderTextColor="#78716c"
                   multiline
-                  className="text-black min-h-[44px] max-h-28 py-2"
+                  className="text-earth-900 min-h-[44px] max-h-28 py-2"
                   editable={!sending}
                 />
               </View>

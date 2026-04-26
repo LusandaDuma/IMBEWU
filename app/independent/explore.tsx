@@ -55,7 +55,7 @@ export default function ExploreScreen() {
       <ScreenHeader
         title="Explore catalogue"
         subtitle="Search published courses and enrol in one tap."
-        variant="dark"
+        variant="light"
       />
       <View className="px-5 mb-3">
         <View className="flex-row items-center">
@@ -65,11 +65,11 @@ export default function ExploreScreen() {
               onChangeText={setSearchQuery}
               placeholder="Search by title, skill, or topic…"
               icon={Search}
-              variant="dark"
+              variant="light"
             />
           </View>
-          <TouchableOpacity className="ml-2 w-12 h-12 rounded-full bg-earth-300 items-center justify-center">
-            <Filter size={20} color="#1c1917" />
+          <TouchableOpacity className="ml-2 w-10 h-10 items-center justify-center">
+            <Filter size={20} color="#44403c" />
           </TouchableOpacity>
         </View>
       </View>
@@ -83,14 +83,13 @@ export default function ExploreScreen() {
             <TouchableOpacity
               onPress={() => setSelectedCategory(item)}
               activeOpacity={0.88}
-                className={`px-4 py-2.5 rounded-full mr-2 ${
-                  selectedCategory === item ? 'bg-primary-600' : 'bg-earth-300'
-                }`}
-              style={{ elevation: selectedCategory === item ? 2 : 0 }}
+              className={`mr-4 py-2 border-b-2 ${
+                selectedCategory === item ? 'border-primary-600' : 'border-transparent'
+              }`}
             >
               <Text
-                className={`text-sm font-semibold ${
-                  selectedCategory === item ? 'text-white' : 'text-black'
+                className={`text-sm ${
+                  selectedCategory === item ? 'text-primary-800 font-semibold' : 'text-earth-700 font-medium'
                 }`}
               >
                 {item}
@@ -123,7 +122,7 @@ export default function ExploreScreen() {
               icon={Sprout}
               title="No courses found"
               description="Try another search or category, or pull to refresh."
-              variant="dark"
+              variant="light"
             />
           }
           renderItem={({ item }) => (
@@ -131,8 +130,7 @@ export default function ExploreScreen() {
               <CourseCard
                 title={item.title}
                 description={item.description}
-                placeholderIcon={Sprout}
-                variant="solid"
+                variant="elevated"
                 onPress={() =>
                   router.push({ pathname: '/independent/course/[id]', params: { id: item.id } })
                 }

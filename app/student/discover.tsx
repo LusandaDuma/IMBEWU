@@ -87,7 +87,7 @@ export default function DiscoverScreen() {
         <ScreenHeader
           title="Discover"
           subtitle="Search the catalogue or join a class with a code."
-          variant="dark"
+          variant="light"
         />
 
         <View className="px-5 mb-4">
@@ -96,7 +96,7 @@ export default function DiscoverScreen() {
             onChangeText={setSearchQuery}
             placeholder="Search by course title or topic…"
             icon={Search}
-            variant="dark"
+            variant="light"
           />
         </View>
 
@@ -105,25 +105,25 @@ export default function DiscoverScreen() {
             <TouchableOpacity
               onPress={() => setShowJoinInput(true)}
               activeOpacity={0.92}
-              className="flex-row items-center rounded-3xl p-4 bg-accent-500/12"
+              className="flex-row items-center py-4 border-b border-earth-400/35"
             >
-              <View className="w-12 h-12 rounded-2xl bg-accent-600/95 items-center justify-center">
-                <Users size={22} color="white" />
+              <View className="w-12 h-12 items-center justify-center">
+                <Users size={22} color="#d97706" />
               </View>
-              <View className="flex-1 ml-4">
-                <Text className="font-medium text-white text-base tracking-tight">Join a class</Text>
-                <Text className="text-slate-400 text-sm mt-0.5">Use the six-character code from your coordinator</Text>
+              <View className="flex-1 ml-3">
+                <Text className="font-medium text-earth-900 text-base tracking-tight">Join a class</Text>
+                <Text className="text-earth-600 text-sm mt-0.5">Use the six-character code from your coordinator</Text>
               </View>
-              <Plus size={22} color="#fbbf24" />
+              <Plus size={22} color="#b45309" />
             </TouchableOpacity>
           ) : (
-            <View className="rounded-3xl p-5 bg-white/8">
-              <Text className="font-medium text-white mb-3 tracking-tight">Enter join code</Text>
+            <View className="pb-4 border-b border-earth-400/35">
+              <Text className="font-medium text-earth-900 mb-3 tracking-tight">Enter join code</Text>
               <View className="flex-row gap-2">
                 <TextInput
-                  className="flex-1 bg-white/6 rounded-full px-5 py-3.5 text-white uppercase tracking-widest font-medium"
+                  className="flex-1 border-b border-earth-400/50 py-2 text-earth-900 uppercase tracking-widest font-medium"
                   placeholder="CODE"
-                  placeholderTextColor="#64748b"
+                  placeholderTextColor="#a8a29e"
                   value={joinCode}
                   onChangeText={setJoinCode}
                   autoCapitalize="characters"
@@ -139,7 +139,7 @@ export default function DiscoverScreen() {
                 />
               </View>
               <TouchableOpacity onPress={() => setShowJoinInput(false)} className="mt-3 py-2">
-                <Text className="text-slate-400 text-center text-sm font-medium">Cancel</Text>
+                <Text className="text-earth-800 text-center text-sm font-medium">Cancel</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -157,15 +157,14 @@ export default function DiscoverScreen() {
               icon={Sprout}
               title="No courses match"
               description="Try another search term or pull to refresh the catalogue."
-              variant="dark"
+              variant="light"
             />
           }
           renderItem={({ item }) => (
             <CourseCard
               title={item.title}
               description={item.description}
-              placeholderIcon={Sprout}
-              variant="dark"
+              variant="elevated"
               footer={
                 <Button
                   label={enrollMutation.isPending ? 'Enrolling…' : 'Enrol in course'}

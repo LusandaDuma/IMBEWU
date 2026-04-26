@@ -7,8 +7,8 @@ export default function IndependentLearnScreen() {
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1 items-center justify-center px-6">
-      <Text className="text-2xl font-bold text-white mb-4">Learning Path</Text>
-      <Text className="text-slate-300 text-center mb-6">
+      <Text className="text-2xl font-bold text-black mb-4">Learning Path</Text>
+      <Text className="text-earth-800 text-center mb-6">
         This is the independent learning hub. Select a course from the Explore tab to begin.
       </Text>
       <TouchableOpacity

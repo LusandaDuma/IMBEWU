@@ -1,19 +1,9 @@
 /**
- * @fileoverview Search as a soft pill — blends on light or dark canvases.
+ * @fileoverview Search field that sits on the page — underline only, no pill box.
  */
 
 import type { LucideIcon } from 'lucide-react-native';
-import { Platform, TextInput, View } from 'react-native';
-
-const pillShadow =
-  Platform.OS === 'ios'
-    ? {
-        shadowColor: '#1c1917',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.04,
-        shadowRadius: 20,
-      }
-    : { elevation: 0 };
+import { TextInput, View } from 'react-native';
 
 export interface SearchBarProps {
   value: string;
@@ -32,16 +22,14 @@ export function SearchBar({
   variant = 'light',
   testID,
 }: SearchBarProps) {
-  const box = variant === 'dark' ? 'bg-white/8' : 'bg-white/75';
-  const ph = variant === 'dark' ? '#94a3b8' : '#a8a29e';
-  const tx = variant === 'dark' ? 'text-white' : 'text-earth-800';
-  const ic = variant === 'dark' ? '#cbd5e1' : '#78716c';
+  const ph = variant === 'dark' ? '#78716c' : '#a8a29e';
+  const tx = 'text-black';
+  const ic = variant === 'dark' ? '#57534e' : '#78716c';
 
   return (
     <View
-      className={`flex-row items-center rounded-full px-5 py-3 ${box}`}
+      className="flex-row items-center border-b border-earth-400/40 pb-3 pt-1 bg-transparent"
       testID={testID}
-      style={variant === 'light' ? pillShadow : undefined}
     >
       <Icon size={18} color={ic} strokeWidth={1.75} />
       <TextInput

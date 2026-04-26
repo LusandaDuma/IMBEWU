@@ -137,7 +137,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
               style={{ width: 192, height: 48, marginBottom: 8 }}
               resizeMode="contain"
             />
-            <Text className="text-slate-300 text-center text-base mb-12 max-w-xs">
+            <Text className="text-black text-center text-base mb-12 max-w-xs">
               Initializing your learning platform
             </Text>
 
@@ -150,7 +150,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
             </View>
           </Animated.View>
 
-          <Text className="absolute bottom-12 text-slate-500 text-xs text-center max-w-xs px-6">
+          <Text className="absolute bottom-12 text-earth-800 text-xs text-center max-w-xs px-6">
             Setting up your personalized learning experience
           </Text>
         </View>

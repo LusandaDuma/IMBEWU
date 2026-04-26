@@ -69,8 +69,8 @@ export default function ForgotPasswordScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View className="items-center mb-10">
-              <View className="w-24 h-24 rounded-[28px] bg-primary-600/95 items-center justify-center mb-7">
-                <Sprout size={44} color="white" strokeWidth={1.25} />
+              <View className="mb-7">
+                <Sprout size={48} color="#16a34a" strokeWidth={1.25} />
               </View>
               <Text className="text-3xl font-light text-black mb-2 text-center tracking-tight">
                 Reset your password
@@ -80,7 +80,7 @@ export default function ForgotPasswordScreen() {
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-earth-200">
+            <View>
               {errorMessage ? (
                 <AlertBanner
                   message={errorMessage}
@@ -98,7 +98,7 @@ export default function ForgotPasswordScreen() {
               ) : null}
 
               <FormField
-                appearance="dark"
+                appearance="blend"
                 leftIcon={Mail}
                 placeholder="Email address"
                 value={email}

@@ -1,32 +1,42 @@
 /**
- * @fileoverview Course surfaces that melt into the page — glass-soft, no rims.
+ * @fileoverview Course rows — inline on the canvas, separated by hairline dividers only.
  * When both `onPress` and `footer` are set, only the main body is pressable so footer actions stay independent.
  */
 
-import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Image, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
 import { ProgressBar } from '../atoms/ProgressBar';
 
 export type CourseCardVariant = 'elevated' | 'dark' | 'flat' | 'solid';
 
-const shell: Record<CourseCardVariant, string> = {
-  elevated: 'bg-earth-100 rounded-3xl',
-  dark: 'bg-primary-700 rounded-3xl',
-  flat: 'bg-earth-200 rounded-3xl',
-  solid: 'bg-primary-600 rounded-3xl',
+/** All rows sit on the grey canvas — dark text. Use `Button` (green) for white label CTAs. */
+const titleStyle: Record<CourseCardVariant, string> = {
+  elevated: 'text-black',
+  dark: 'text-black',
+  flat: 'text-black',
+  solid: 'text-black',
+};
+const subStyle: Record<CourseCardVariant, string> = {
+  elevated: 'text-earth-800',
+  dark: 'text-earth-800',
+  flat: 'text-earth-800',
+  solid: 'text-earth-800',
+};
+const metaStyle: Record<CourseCardVariant, string> = {
+  elevated: 'text-earth-700',
+  dark: 'text-earth-700',
+  flat: 'text-earth-700',
+  solid: 'text-earth-700',
 };
 
-const glassShadow =
-  Platform.OS === 'ios'
-    ? {
-        shadowColor: '#1c1917',
-        shadowOffset: { width: 0, height: 16 },
-        shadowOpacity: 0.06,
-        shadowRadius: 32,
-      }
-    : { elevation: 2 };
+const thumbBg: Record<CourseCardVariant, string> = {
+  elevated: 'bg-primary-500/10',
+  dark: 'bg-white/10',
+  flat: 'bg-primary-500/10',
+  solid: 'bg-white/15',
+};
 
 export interface CourseCardProps {
   title: string;
@@ -34,7 +44,6 @@ export interface CourseCardProps {
   meta?: string;
   coverImageSource?: ImageSourcePropType;
   coverImageUri?: string | null;
-  placeholderIcon?: LucideIcon;
   progress?: number;
   variant?: CourseCardVariant;
   onPress?: () => void;
@@ -48,24 +57,20 @@ export function CourseCard({
   meta,
   coverImageSource,
   coverImageUri,
-  placeholderIcon: PlaceholderIcon,
   progress,
   variant = 'elevated',
   onPress,
   footer,
   testID,
 }: CourseCardProps) {
-  const titleCls = variant === 'dark' ? 'text-white' : 'text-earth-900';
-  const subCls = variant === 'dark' ? 'text-white/90' : 'text-earth-700';
-  const metaCls = variant === 'dark' ? 'text-white/80' : 'text-earth-600';
+  const titleCls = titleStyle[variant];
+  const subCls = subStyle[variant];
+  const metaCls = metaStyle[variant];
+  const thumb = thumbBg[variant];
 
   const body = (
     <View className="flex-row">
-      <View
-        className={`w-16 h-16 rounded-2xl overflow-hidden items-center justify-center ${
-          variant === 'dark' ? 'bg-white/8' : 'bg-primary-500/12'
-        }`}
-      >
+      <View className={`w-16 h-16 rounded-2xl overflow-hidden items-center justify-center ${thumb}`}>
         <View className="w-full h-full items-center justify-center">
           {coverImageSource ? (
             <Image
@@ -79,9 +84,13 @@ export function CourseCard({
               style={{ width: '100%', height: '100%' }}
               resizeMode="contain"
             />
-          ) : PlaceholderIcon ? (
-            <PlaceholderIcon size={28} color={variant === 'dark' ? '#86efac' : '#16a34a'} strokeWidth={1.5} />
-          ) : null}
+          ) : (
+            <Image
+              source={COURSE_LOGO_THUMB}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
+          )}
         </View>
       </View>
       <View className="flex-1 ml-4 min-w-0">
@@ -95,7 +104,7 @@ export function CourseCard({
         ) : null}
         {typeof progress === 'number' && progress > 0 ? (
           <View className="mt-3.5">
-            <ProgressBar value={progress} tone={variant === 'dark' ? 'primary' : 'primary'} />
+            <ProgressBar value={progress} tone="primary" />
           </View>
         ) : null}
         {meta ? (
@@ -107,12 +116,12 @@ export function CourseCard({
     </View>
   );
 
-  const footerBlock = footer ? <View className="mt-5">{footer}</View> : null;
-  const wrap = `p-5 mb-4 ${shell[variant]}`;
+  const footerBlock = footer ? <View className="mt-4">{footer}</View> : null;
+  const wrap = 'pt-2 pb-6 mb-1 border-b border-earth-400/35';
 
   if (onPress && footer) {
     return (
-      <View testID={testID} className={wrap} style={glassShadow}>
+      <View testID={testID} className={wrap}>
         <TouchableOpacity onPress={onPress} activeOpacity={0.92} accessibilityRole="button">
           {body}
         </TouchableOpacity>
@@ -128,7 +137,6 @@ export function CourseCard({
         onPress={onPress}
         activeOpacity={0.92}
         className={wrap}
-        style={glassShadow}
         accessibilityRole="button"
       >
         {body}
@@ -138,7 +146,7 @@ export function CourseCard({
   }
 
   return (
-    <View testID={testID} className={wrap} style={glassShadow}>
+    <View testID={testID} className={wrap}>
       {body}
       {footerBlock}
     </View>

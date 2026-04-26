@@ -3,6 +3,7 @@
  */
 
 import { Button, EmptyState, ScreenHeader } from '@/components/shared';
+import { fieldPlain } from '@/constants/theme';
 import { createClass, getClassesByCoordinator, getCourses } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Class, Course } from '@/types';
@@ -121,8 +122,7 @@ export default function CoordinatorDashboard() {
             <TouchableOpacity
               onPress={() => router.push(`/coordinator/class/${item.id}`)}
               activeOpacity={0.9}
-              className="bg-white/75 rounded-3xl p-5 mb-4"
-              style={{ elevation: 1 }}
+              className="py-3 mb-2 border-b border-earth-400/40"
             >
               <View className="flex-row justify-between items-start">
                 <View className="flex-1 min-w-0 pr-2">
@@ -135,7 +135,7 @@ export default function CoordinatorDashboard() {
                 </View>
                 <TouchableOpacity
                   onPress={() => handleCopyCode(item.join_code)}
-                  className="bg-accent-500/12 px-3 py-2 rounded-full flex-row items-center"
+                  className="px-0 py-1 border-b border-accent-600/40 flex-row items-center"
                 >
                   <Text className="text-accent-800 font-bold mr-2">{item.join_code}</Text>
                   <Copy size={14} color="#b45309" />
@@ -172,7 +172,7 @@ export default function CoordinatorDashboard() {
               onChangeText={setClassName}
               placeholder="e.g. Grade 11 Agriculture"
               placeholderTextColor="#a8a29e"
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 mb-4"
+              className={`${fieldPlain} mb-4`}
             />
 
             <Text className="text-earth-700 text-xs font-semibold uppercase tracking-wide mb-2">
@@ -185,7 +185,7 @@ export default function CoordinatorDashboard() {
                   <TouchableOpacity
                     key={course.id}
                     onPress={() => setSelectedCourseId(course.id)}
-                    className={`rounded-xl px-4 py-3 mb-2 border ${isSelected ? 'border-primary-600 bg-primary-50' : 'border-stone-300 bg-white'}`}
+                    className={`rounded-xl px-4 py-3 mb-2 ${isSelected ? 'bg-primary-100/90' : 'bg-white/50'}`}
                   >
                     <Text className={`font-semibold ${isSelected ? 'text-primary-800' : 'text-earth-800'}`}>
                       {course.title}

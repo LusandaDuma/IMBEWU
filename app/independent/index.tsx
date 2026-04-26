@@ -63,7 +63,7 @@ export default function IndependentDashboard() {
         <ScreenHeader
           title={`Hello, ${profile?.first_name ?? 'Learner'}`}
           subtitle="Your self-paced workspace — courses, progress, and achievements."
-          variant="dark"
+          variant="light"
         />
 
         <FlatList
@@ -83,28 +83,27 @@ export default function IndependentDashboard() {
                   })
                 }
                 activeOpacity={0.93}
-                className="rounded-3xl p-6 mb-6 bg-cyan-600/95"
-                style={{ elevation: 3 }}
+                className="mb-6 pb-6 border-b border-earth-400/40"
               >
                 <View className="flex-row items-center justify-between">
                   <View className="flex-1 pr-3">
-                    <Text className="text-cyan-100/95 text-xs font-medium uppercase tracking-[0.18em] mb-1.5">
+                    <Text className="text-earth-600 text-xs font-medium uppercase tracking-[0.18em] mb-1.5">
                       Continue learning
                     </Text>
-                    <Text className="text-white text-lg font-light tracking-tight" numberOfLines={2}>
+                    <Text className="text-earth-900 text-lg font-light tracking-tight" numberOfLines={2}>
                       {firstCourse.courses?.title ?? 'Course'}
                     </Text>
-                    <View className="mt-4 h-2 w-full bg-cyan-800 rounded-full overflow-hidden">
-                      <View className="h-full bg-white rounded-full" style={{ width: `${progressPct}%` }} />
+                    <View className="mt-4 h-1.5 w-full bg-earth-300/50 rounded-full overflow-hidden">
+                      <View className="h-full bg-cyan-600 rounded-full" style={{ width: `${progressPct}%` }} />
                     </View>
-                    <Text className="text-cyan-100 text-xs mt-2">
+                    <Text className="text-earth-600 text-xs mt-2">
                       {totalLessons > 0
                         ? `${completedLessons}/${totalLessons} lessons complete (${progressPct}%)`
                         : 'No lessons yet for this course'}
                     </Text>
                   </View>
-                  <View className="w-14 h-14 rounded-full bg-white/15 items-center justify-center">
-                    <Play size={28} color="white" fill="white" />
+                  <View className="w-14 h-14 items-center justify-center">
+                    <Play size={28} color="#0891b2" fill="#0891b2" />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -125,14 +124,13 @@ export default function IndependentDashboard() {
               title={item.courses?.title ?? 'Course'}
               description={item.courses?.description}
               coverImageUri={item.courses?.cover_image ?? undefined}
-              placeholderIcon={Sprout}
               progress={Math.max(0, Math.min(100, progressByCourseId.get(item.course_id)?.averagePctComplete ?? 0))}
               meta={
                 (progressByCourseId.get(item.course_id)?.totalLessons ?? 0) > 0
                   ? `${progressByCourseId.get(item.course_id)?.completedLessons ?? 0}/${progressByCourseId.get(item.course_id)?.totalLessons ?? 0} lessons complete`
                   : 'No lessons yet'
               }
-              variant="solid"
+              variant="elevated"
               onPress={() =>
                 router.push({ pathname: '/independent/course/[id]', params: { id: item.course_id } })
               }

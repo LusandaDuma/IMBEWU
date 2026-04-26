@@ -122,7 +122,7 @@ export default function RegisterScreen() {
               </Text>
             </View>
 
-            <View className="rounded-[28px] p-8 bg-earth-200">
+            <View>
               {banner ? (
                 <AlertBanner message={banner.message} variant={banner.variant} onDismiss={() => setBanner(null)} />
               ) : null}
@@ -134,7 +134,7 @@ export default function RegisterScreen() {
                     name="firstName"
                     render={({ field: { onChange, onBlur, value } }) => (
                       <FormField
-                        appearance="dark"
+                        appearance="blend"
                         leftIcon={User}
                         placeholder="First name"
                         value={value}
@@ -156,7 +156,7 @@ export default function RegisterScreen() {
                     name="lastName"
                     render={({ field: { onChange, onBlur, value } }) => (
                       <FormField
-                        appearance="dark"
+                        appearance="blend"
                         leftIcon={User}
                         placeholder="Last name"
                         value={value}
@@ -179,7 +179,7 @@ export default function RegisterScreen() {
                 name="email"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <FormField
-                    appearance="dark"
+                    appearance="blend"
                     leftIcon={Mail}
                     placeholder="Email address"
                     value={value}
@@ -202,7 +202,7 @@ export default function RegisterScreen() {
                 name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                   <FormField
-                    appearance="dark"
+                    appearance="blend"
                     leftIcon={Lock}
                     placeholder="Password"
                     value={value}
@@ -225,8 +225,8 @@ export default function RegisterScreen() {
               />
 
               <View className="mt-2 mb-6">
-                <Text className="text-black font-semibold text-sm mb-3 tracking-wide uppercase">I want to</Text>
-                <View className="gap-3">
+                <Text className="text-earth-800 font-semibold text-sm mb-2 tracking-wide uppercase">I want to</Text>
+                <View>
                   {ROLE_OPTIONS.map((option) => {
                     const selected = selectedRole === option.value;
                     return (
@@ -234,10 +234,14 @@ export default function RegisterScreen() {
                         key={option.value}
                         onPress={() => setValue('role', option.value, { shouldValidate: true })}
                         activeOpacity={0.88}
-                        className={`rounded-3xl p-4 ${selected ? 'bg-primary-600' : 'bg-earth-300'}`}
+                        className={`py-4 border-b border-earth-400/40 ${selected ? 'border-l-2 border-l-primary-600 -ml-0.5 pl-2' : ''}`}
                       >
-                        <Text className={`font-semibold text-base ${selected ? 'text-white' : 'text-black'}`}>{option.label}</Text>
-                        <Text className={`text-sm mt-1 leading-5 ${selected ? 'text-white/90' : 'text-earth-700'}`}>
+                        <Text
+                          className={`font-semibold text-base ${selected ? 'text-primary-800' : 'text-earth-900'}`}
+                        >
+                          {option.label}
+                        </Text>
+                        <Text className={`text-sm mt-0.5 leading-5 ${selected ? 'text-primary-800/80' : 'text-earth-600'}`}>
                           {option.description}
                         </Text>
                       </TouchableOpacity>
@@ -261,7 +265,7 @@ export default function RegisterScreen() {
                 <Text className="text-earth-700 text-sm">Already have an account? </Text>
                 <Link href="/auth/login" asChild>
                   <TouchableOpacity>
-                    <Text className="text-primary-400 font-semibold text-sm">Sign in</Text>
+                    <Text className="text-black font-semibold text-sm">Sign in</Text>
                   </TouchableOpacity>
                 </Link>
               </View>

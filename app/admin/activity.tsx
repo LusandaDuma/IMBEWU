@@ -44,14 +44,14 @@ export default function AdminActivityScreen() {
         <View className="px-5 pb-4 flex-row items-center">
           <TouchableOpacity
             onPress={() => router.replace('/admin')}
-            className="w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
             activeOpacity={0.9}
           >
-            <ChevronLeft size={20} color="white" />
+            <ChevronLeft size={20} color="#1c1917" />
           </TouchableOpacity>
           <View className="ml-3">
-            <Text className="text-2xl font-bold text-white">Recent Activity</Text>
-            <Text className="text-slate-400">Full admin activity timeline</Text>
+            <Text className="text-2xl font-bold text-black">Recent activity</Text>
+            <Text className="text-earth-800">Full admin activity timeline</Text>
           </View>
         </View>
 
@@ -62,16 +62,16 @@ export default function AdminActivityScreen() {
           refreshing={isLoading}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <View className="bg-white/8 rounded-2xl p-4 mb-2">
-              <Text className="text-white/95 text-sm leading-5 font-light">{item.text}</Text>
-              <Text className="text-slate-500 text-xs mt-2 font-light tracking-wide">
+            <View className="py-3 mb-1 border-b border-earth-400/40">
+              <Text className="text-earth-800 text-sm leading-5 font-light">{item.text}</Text>
+              <Text className="text-earth-500 text-xs mt-2 font-light tracking-wide">
                 {formatRelativeTime(item.timestamp)}
               </Text>
             </View>
           )}
           ListEmptyComponent={
             <View className="px-4 py-3.5 rounded-2xl">
-              <Text className="text-slate-300 text-sm leading-5 font-light">
+              <Text className="text-earth-600 text-sm leading-5 font-light">
                 {isError ? 'Unable to load activity right now.' : isLoading ? 'Loading activity...' : 'No activity yet.'}
               </Text>
             </View>

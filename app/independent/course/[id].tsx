@@ -3,7 +3,7 @@
  */
 
 import { LessonRow, ScreenHeader } from '@/components/shared';
-import { APP_BACKGROUND_COLOR } from '@/constants/theme';
+import { APP_BACKGROUND_COLOR, surfaceContentPanel } from '@/constants/theme';
 import { getCourseById, getLessonsByCourse } from '@/services/supabase';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -41,14 +41,14 @@ export default function IndependentCourseScreen() {
           <ScreenHeader
             title={course?.title ?? 'Course'}
             subtitle={course?.description ?? ' '}
-            variant="dark"
+            variant="transparent"
             onBack={() => router.back()}
           />
         </SafeAreaView>
       </LinearGradient>
 
       <ScrollView className="flex-1 px-5 -mt-4" showsVerticalScrollIndicator={false}>
-        <View className="bg-white rounded-3xl p-6 mb-6">
+        <View className={surfaceContentPanel}>
           <View className="flex-row items-center justify-between mb-2">
             <View className="flex-row items-center flex-1 min-w-0">
               <BookOpen size={18} color="#0891b2" strokeWidth={1.5} />

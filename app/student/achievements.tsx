@@ -31,16 +31,16 @@ export default function AchievementsScreen() {
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-white">Achievements</Text>
-        <Text className="text-slate-400 mt-1">Your progress</Text>
+        <Text className="text-2xl font-bold text-earth-900">Achievements</Text>
+        <Text className="text-earth-600 mt-1">Your progress</Text>
       </View>
 
       <ScrollView className="flex-1 px-5">
-        <View className="flex-row justify-between mb-6">
+        <View className="flex-row justify-between mb-6 border-b border-earth-400/35 pb-5">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <View key={stat.label} className="flex-1 mx-1 bg-white rounded-2xl p-4 shadow-sm">
+              <View key={stat.label} className="flex-1 mx-1">
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center mb-3"
                   style={{ backgroundColor: `${stat.color}20` }}
@@ -54,7 +54,7 @@ export default function AchievementsScreen() {
           })}
         </View>
 
-        <View className="bg-white rounded-2xl p-6 shadow-sm mb-6">
+        <View className="mb-6 pb-5 border-b border-earth-400/35">
           <View className="flex-row items-center justify-between">
             <View>
               <Text className="text-3xl font-bold text-primary-600">{unlockedCount}</Text>
@@ -73,7 +73,7 @@ export default function AchievementsScreen() {
           <Text className="text-earth-500 text-sm mt-2">{completionPct}% complete</Text>
         </View>
 
-        <View className="bg-white rounded-2xl p-5 shadow-sm mb-6">
+        <View className="mb-6 pb-5 border-b border-earth-400/35">
           <Text className="text-lg font-bold text-earth-800 mb-4">Weekly Activity</Text>
           <View className="flex-row items-end justify-between h-24">
             {weeklyActivity.map((item, index) => (
@@ -99,10 +99,9 @@ export default function AchievementsScreen() {
           return (
             <View
               key={achievement.id}
-              className={`flex-row items-center bg-white rounded-xl p-4 mb-3 ${
+              className={`flex-row items-center py-3 mb-0 border-b border-earth-400/30 ${
                 !achievement.unlocked ? 'opacity-50' : ''
               }`}
-              style={{ elevation: 1 }}
             >
               <View className="w-12 h-12 rounded-xl bg-primary-100 items-center justify-center">
                 <Icon size={24} color="#16a34a" />

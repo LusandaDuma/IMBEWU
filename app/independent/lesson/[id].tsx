@@ -3,7 +3,7 @@
  */
 
 import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
-import { APP_BACKGROUND_COLOR } from '@/constants/theme';
+import { APP_BACKGROUND_COLOR, surfaceProse } from '@/constants/theme';
 import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -64,13 +64,13 @@ export default function IndependentLessonScreen() {
           <ScreenHeader
             title={lesson?.title ?? 'Lesson'}
             subtitle="Self-paced module — save progress as you go."
-            variant="dark"
+            variant="light"
             onBack={() => router.back()}
           />
         </SafeAreaView>
       </LinearGradient>
 
-      <View className="px-5 py-4 bg-white">
+      <View className="px-5 py-4 border-b border-earth-400/40 bg-transparent">
         <ProgressBar value={progress} tone="primary" showLabel />
       </View>
 
@@ -82,7 +82,7 @@ export default function IndependentLessonScreen() {
           </Text>
         </View>
 
-        <View className="bg-white rounded-3xl p-6 mb-6">
+        <View className={surfaceProse}>
           <Text className="text-xl font-light text-earth-900 mb-3 tracking-tight">{lesson?.title}</Text>
           <Text className="text-earth-600 leading-7 text-base font-light">
             {lesson?.content || 'No lesson body yet.'}
@@ -90,7 +90,7 @@ export default function IndependentLessonScreen() {
         </View>
 
         {lesson?.description ? (
-          <View className="bg-cyan-500/8 rounded-3xl p-6 mb-8">
+          <View className="mb-8 pl-3 border-l-2 border-l-cyan-600/50 py-1">
             <Text className="text-xs font-medium text-cyan-900/85 uppercase tracking-[0.2em] mb-3">Summary</Text>
             <Text className="text-earth-700 leading-6 text-sm font-light">{lesson.description}</Text>
           </View>
