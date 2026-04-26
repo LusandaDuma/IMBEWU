@@ -9,7 +9,7 @@ const DEFAULT_MODEL = 'gemini-flash-latest';
 
 const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const;
 
-function getApiKey(): string | undefined {
+export function getGeminiApiKey(): string | undefined {
   return (
     process.env.EXPO_PUBLIC_GEMINI_API_KEY ??
     (Constants.expoConfig?.extra as { geminiApiKey?: string } | undefined)?.geminiApiKey
@@ -76,7 +76,7 @@ export async function generateGeminiReply({
   userMessage,
   model = DEFAULT_MODEL,
 }: GenerateReplyParams): Promise<GenerateReplyResult> {
-  const key = getApiKey();
+  const key = getGeminiApiKey();
   if (!key?.trim()) {
     return {
       ok: false,

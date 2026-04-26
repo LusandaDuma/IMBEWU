@@ -1,6 +1,6 @@
 # Imbewu / AgroLearn — Project status & change log
 
-This document describes **where the codebase stands today** and **what was changed** during recent development (routing, styling stack, shared UI, luxury visual pass, and the **Nolwazi** LMS AI assistant). For the original milestone specification and SQL prompts, see `cursor_prompt_agri_app.md`.
+This document describes **where the codebase stands today** and **what was changed** during recent development (routing, styling stack, shared UI, luxury visual pass, and the **Nolwazi** LMS AI assistant with **mediation API + tool calling**). For the original milestone specification and SQL prompts, see `cursor_prompt_agri_app.md`.
 
 ---
 
@@ -15,7 +15,7 @@ This document describes **where the codebase stands today** and **what was chang
 - **Zod** validators in `app/validators/index.ts`
 - **NativeWind v4** + **Tailwind CSS v3** for utility styling (`className` on React Native views)
 - **Lucide** icons (`lucide-react-native`)
-- **Google Gemini** (Generative Language API, REST) for the in-app assistant **Nolwazi** — product Q&A, learning tone, strict reply shape (see §4.6).
+- **Google Gemini** (Generative Language API, REST) for the in-app assistant **Nolwazi** — **function calling** + orchestration loop; **server tools** go only through a **Supabase Edge Function** (`copilot`) with JWT + RBAC (see §4.6 and §4.10).
 
 ### Roles & routing
 
@@ -43,11 +43,15 @@ Root redirect logic lives in `app/index.tsx` using `app/constants/routing.ts` (`
 | Types | `app/types/index.ts` | Domain TS types |
 | Auth state | `app/store/auth.ts` | Zustand |
 | Backend access | `app/services/supabase.ts` | Supabase client + CRUD-style helpers |
-| LMS AI (Gemini) | `app/services/gemini.ts` | `generateContent` REST client; model fallbacks on 429/404 |
+| LMS AI (Gemini) | `app/services/gemini.ts` | `generateContent` REST client; model fallbacks on 429/404; exports `getGeminiApiKey()` |
+| Nolwazi Copilot (orchestrator) | `app/services/geminiCopilot.ts` | Tool declarations, `runCopilotTurn` (model ↔ tools loop, max rounds) |
+| Copilot → API client | `app/services/copilotApi.ts` | `invokeCopilotTool` → `POST …/functions/v1/copilot` with user JWT |
+| Copilot client-only tools | `app/services/copilotClientTools.ts` | `navigateTo` (path allowlist), `signOut` (auth + store) |
 | Nolwazi prompt + product grounding | `app/constants/nolwaziKnowledge.ts` | `AGROLEARN_PRODUCT_CONTEXT`, `NOLWAZI_SYSTEM_INSTRUCTION` |
-| Nolwazi chat screen | `app/nolwazi.tsx` | Chat UI; greeting + history rules for API |
+| Nolwazi chat screen | `app/nolwazi.tsx` | Copilot UI, `apiContentsRef` for Gemini thread, **Actions** tool log, query invalidation on enrol |
+| Mediation API (Edge) | `supabase/functions/copilot/index.ts` | Deno; verify JWT; tool registry + handlers; no ad-hoc SQL from the model |
 | Legacy redirect | `app/fieldwise.tsx` | Redirects `/fieldwise` → `/nolwazi` |
-| Typescript paths | `tsconfig.json` | `@/*` → `app/*`, `@/components/*` → `components/*` |
+| Typescript paths | `tsconfig.json` | `@/*` → `app/*`, `@/components/*` → `components/*`; **`exclude`**: `supabase/functions/**/*` (Deno Edge — not part of Expo `tsc`) |
 | NativeWind types | `nativewind-env.d.ts` | `/// <reference types="nativewind/types" />` |
 
 ---
@@ -132,10 +136,9 @@ Updated: shared components above + auth cards + student/independent/coordinator/
 
 - **Name & role:** **Nolwazi** (“mother of knowledge”) — AgroLearn / Imbewu guide: concise, calm, lightly witty; answers about the product, stack, roles, and learning flows.
 - **System instruction:** `NOLWAZI_SYSTEM_INSTRUCTION` in `app/constants/nolwaziKnowledge.ts` encodes tone, humor boundaries, and a **strict reply shape**: short witty opener → direct answer (default 1–3 sentences unless user asks for depth) → **one** follow-up question. Product facts live in `AGROLEARN_PRODUCT_CONTEXT` in the same file.
-- **API:** `app/services/gemini.ts` calls `v1beta` `generateContent` with `fetch`. Default model **`gemini-flash-latest`**; on **429 / 503 / 404** tries fallbacks (`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-flash`). `maxOutputTokens` **512** to bias brevity. Key: **`EXPO_PUBLIC_GEMINI_API_KEY`** (optional `expo.extra.geminiApiKey`); documented in `.env.example`.
-- **Chat history:** `app/nolwazi.tsx` strips the local welcome bubble from API `contents` so the first turn is always `user` (avoids invalid `model`-first conversations).
+- **Base Gemini client:** `app/services/gemini.ts` calls `v1beta` `generateContent` with `fetch`. Default model **`gemini-flash-latest`**; on **429 / 503 / 404** tries fallbacks (`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.0-flash`). Key: **`EXPO_PUBLIC_GEMINI_API_KEY`**. `generateGeminiReply` remains available for simple text-only flows; the **Nolwazi screen** now uses the **Copilot pipeline** in **§4.10** (tools + mediation).
 - **Navigation:** **`/nolwazi`** registered in root `app/_layout.tsx`. **Guest catalogue** (`PublicCatalogHome`) — message icon; **`app/auth/login.tsx`** — “Chat with Nolwazi”. **`/fieldwise`** remains as a **redirect** to `/nolwazi` for old links.
-- **Security note:** `EXPO_PUBLIC_*` keys ship in the client bundle; treat the Gemini key as public-exposed (quotas, abuse). Prefer a backend proxy for production if you need to hide keys.
+- **Security note:** `EXPO_PUBLIC_*` keys ship in the client bundle; treat the Gemini key as public-exposed (quotas, abuse). **Service data** for Nolwazi is loaded via **Edge + user JWT** (§4.10), not by the model querying the DB.
 
 ### 4.7 Supabase migration + seed stabilization (April 2026)
 
@@ -181,14 +184,68 @@ Two runtime blockers were addressed:
     - `start-web-dev`: `expo start --web -c`
   - This stabilized web startup with `npm` and reduced cache-related bundling confusion.
 
+### 4.10 Nolwazi AI Copilot — mediation API, tools, RLS (April 2026)
+
+Enterprise-style **governed copilot**: the model may only call **registered tools**; **LMS mutations and reads** for account data go through a **Supabase Edge Function** so the LLM never holds database credentials and **RBAC is enforced server-side** before queries.
+
+**Mediation API (Edge Function `copilot`)**
+
+- **Path:** `POST {SUPABASE_URL}/functions/v1/copilot`
+- **Headers:** `Authorization: Bearer <access_token>`, `apikey: <anon key>`, `Content-Type: application/json`
+- **Body:** `{ "tool": "<name>", "args": { ... } }`
+- **Behaviour:** Validates session with `auth.getUser()`; loads `profiles` for **role**; rejects tools not allowed for that role **before** DB work. Uses the **user-scoped Supabase client** (JWT) so **RLS** still applies as a second line of defence.
+- **Source:** `supabase/functions/copilot/index.ts` (Deno). CORS enabled for web.
+
+**Server tools (whitelist in the function)**
+
+| Tool | Purpose | Role gate (API) |
+|------|---------|------------------|
+| `getMyProfile` | Current user profile | All authenticated |
+| `getMyEnrolments` | Enrolments + course snippets | All authenticated |
+| `getPublishedCourses` | Published catalogue list | All authenticated |
+| `getProgressForCourse` | Progress + completion % (`courseId` UUID) | All authenticated; unpublished course only if already enrolled |
+| `enrolIfEligible` | Self-serve `independent` enrol on **published** course if not already enrolled | **`student` and `independent` only**, `is_active` |
+
+**Client-only tools (handled in the app, not the Edge Function)**
+
+- `navigateTo` — `expo-router` `push` after **path allowlist** (`/auth`, `/course`, `/student`, `/independent`, `/coordinator`, `/admin`, `/nolwazi`, `/`).
+- `signOut` — `authService.signOut` + `useAuthStore.clearAuth()` (no passwords in chat).
+
+**Gemini orchestration (`app/services/geminiCopilot.ts`)**
+
+- Declares the same seven tools to Gemini (`functionDeclarations` + `toolConfig.functionCallingConfig.mode: AUTO`).
+- **Loop:** user message → model may return `functionCall` → execute (Edge or client) → append `functionResponse` → repeat until model returns text (max **8** tool rounds).
+- **Unauthenticated users:** server tools return a structured error in the function response; the model is instructed not to invent account data.
+
+**Nolwazi UI (`app/nolwazi.tsx`)**
+
+- Persists **`apiContentsRef`** for the full Gemini thread (including tool parts), separate from the on-screen welcome bubble.
+- Shows an **Actions** section with a short line per tool result.
+- After successful `enrolIfEligible`, invalidates relevant React Query keys (`student-enrolments`, `available-courses`, `courses` / `course`).
+
+**Database: `course_enrolments` RLS**
+
+- Migration **`20260427150000_course_enrolments_rls_copilot.sql`** adds policies so direct JWT access is well-defined: **select** (own + admin), **insert** self-serve **independent** on **published** courses for **student/independent** active users, **update** own rows. **Security definer RPCs** (e.g. `join_class_with_code`) are unchanged and still bypass RLS where designed.
+
+**CLI / `config.toml`**
+
+- **`supabase functions deploy`** failed on **older CLI** parsing: removed unsupported keys from `config.toml` (`db.health_timeout`, `[storage.s3_protocol]` / `[storage.analytics]` / `[storage.vector]`, `auth.external.apple.email_optional`) so the file matches the installed Supabase CLI schema. **Deploy `copilot`** succeeds after this.
+
+**Deploy checklist**
+
+1. Apply new migration(s) on the linked project (local: `supabase db push` / remote: migration pipeline as you use it).
+2. `supabase functions deploy copilot` (requires CLI + linked project).
+3. App env unchanged: **`EXPO_PUBLIC_SUPABASE_URL`**, **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_GEMINI_API_KEY`**.
+
 ---
 
 ## 5. How to run locally
 
 1. Install dependencies: `npm install`
-2. Env: set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`; for Nolwazi, set **`EXPO_PUBLIC_GEMINI_API_KEY`** (see `.env.example`).
-3. Start: `npm run start` or `npx expo start` (use **`npx expo start -c`** after NativeWind / Babel / Metro edits).
-4. Optional web: per `package.json` scripts (`start-web`, etc.).
+2. Env: set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`; for Nolwazi / Copilot, set **`EXPO_PUBLIC_GEMINI_API_KEY`** (see `.env.example`).
+3. **Copilot server tools:** deploy the Edge Function to your Supabase project: `supabase functions deploy copilot`, and ensure migration **`20260427150000_course_enrolments_rls_copilot.sql`** is applied so enrolment + tools align with RLS.
+4. Start: `npm run start` or `npx expo start` (use **`npx expo start -c`** after NativeWind / Babel / Metro edits).
+5. Optional web: per `package.json` scripts (`start-web`, etc.).
 
 ---
 
@@ -209,4 +266,4 @@ Two runtime blockers were addressed:
 | `PROJECT_STATUS.md` (this file) | Snapshot of implementation + change history |
 | `README.md` | Project readme (update if you add setup badges or links) |
 
-*Last updated to include Supabase seed/migration stabilization, Feature 4 service-layer implementation, and web startup hardening in addition to earlier routing, NativeWind, shared UI, and Nolwazi work.*
+*Last updated to include **Nolwazi AI Copilot** (Gemini function calling, `copilot` Edge mediation API, client tools, `course_enrolments` RLS migration, `config.toml` CLI compatibility), plus prior Supabase seed/migration stabilization, Feature 4 services, web startup hardening, routing, NativeWind, shared UI, and original Nolwazi prompting.*

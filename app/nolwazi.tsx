@@ -1,14 +1,15 @@
 /**
- * @fileoverview Nolwazi — AgroLearn / Imbewu LMS AI guide (Gemini).
+ * @fileoverview Nolwazi — AgroLearn / Imbewu LMS AI copilot (Gemini + tools + mediation API).
  */
 
 import { Input } from '@/components/shared';
 import { NOLWAZI_SYSTEM_INSTRUCTION } from '@/constants/nolwaziKnowledge';
-import { generateGeminiReply, type GeminiContent } from '@/services/gemini';
+import { runCopilotTurn, type CopilotContent, type ToolLogEntry } from '@/services/geminiCopilot';
 import { useAuthStore } from '@/store/auth';
+import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, SendHorizontal, Sparkles } from 'lucide-react-native';
+import { ArrowLeft, SendHorizontal, Sparkles, Wrench } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -21,7 +22,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Msg = { id: string; role: 'user' | 'assistant'; text: string };
+type Msg = {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  toolLog?: ToolLogEntry[];
+};
+
+const COPILOT_ADDENDUM = `
+
+COPILOT (REGISTERED TOOLS ONLY)
+- Use only the provided function tools for account data, catalogue, progress, self-enrolment, or safe navigation. Do not claim you performed an action without a tool result.
+- If the user is not signed in, say so and use navigateTo("/auth/login") or answer generally without inventing their data.`;
 
 function getGreeting(name?: string | null): string {
   if (name?.trim()) {
@@ -33,26 +45,16 @@ Welcome back, ${name}. What would you like to grow today?`;
 What would you like to grow today?`;
 }
 
-/** Build API history; skip local welcome bubble so the first API turn is never `model`. */
-function toHistory(messages: Msg[]): GeminiContent[] {
-  const out: GeminiContent[] = [];
-  for (const m of messages) {
-    if (m.id === 'welcome') continue;
-    if (m.role === 'user') {
-      out.push({ role: 'user', parts: [{ text: m.text }] });
-    } else {
-      out.push({ role: 'model', parts: [{ text: m.text }] });
-    }
-  }
-  return out;
-}
-
 export default function NolwaziScreen() {
   const router = useRouter();
-  const { profile, role, isAuthenticated } = useAuthStore();
+  const queryClient = useQueryClient();
+  const { profile, role, isAuthenticated, session } = useAuthStore();
   const userFirstName = profile?.first_name ?? null;
   const userLastName = profile?.last_name ?? null;
   const displayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim() || userFirstName;
+
+  const apiContentsRef = useRef<CopilotContent[]>([]);
+
   const personalizedSystemInstruction = useMemo(() => {
     const userContext = [
       'CURRENT USER CONTEXT',
@@ -61,12 +63,12 @@ export default function NolwaziScreen() {
       `- firstName: ${userFirstName ?? 'unknown'}`,
       `- lastName: ${userLastName ?? 'unknown'}`,
       `- displayName: ${displayName ?? 'unknown'}`,
-      '- If the user asks who they are or asks for personalized guidance, use this context.',
-      '- Greet them by first name naturally when appropriate.',
+      '- If the user asks who they are, use this context. Greet with first name when natural.',
     ].join('\n');
 
-    return `${NOLWAZI_SYSTEM_INSTRUCTION}\n\n${userContext}`;
+    return `${NOLWAZI_SYSTEM_INSTRUCTION}${COPILOT_ADDENDUM}\n\n${userContext}`;
   }, [displayName, isAuthenticated, role, userFirstName, userLastName]);
+
   const listRef = useRef<FlatList<Msg>>(null);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Msg[]>([
@@ -77,42 +79,70 @@ export default function NolwaziScreen() {
     },
   ]);
   const [sending, setSending] = useState(false);
+  const sendingRef = useRef(false);
+
+  const getAccessToken = useCallback(
+    () => session?.access_token ?? useAuthStore.getState().session?.access_token ?? null,
+    [session?.access_token],
+  );
 
   const send = useCallback(async () => {
     const trimmed = input.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sendingRef.current) return;
+    sendingRef.current = true;
 
-    const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', text: trimmed };
     setInput('');
-    setMessages((prev) => [...prev, userMsg]);
     setSending(true);
 
-    const prior = toHistory(messages);
-    const result = await generateGeminiReply({
-      systemInstruction: personalizedSystemInstruction,
-      history: prior,
-      userMessage: trimmed,
-    });
+    const userMsg: Msg = { id: `u-${Date.now()}`, role: 'user', text: trimmed };
+    setMessages((prev) => [...prev, userMsg]);
 
-    setSending(false);
+    const userContent: CopilotContent = { role: 'user', parts: [{ text: trimmed }] };
+    const priorContents = [...apiContentsRef.current, userContent];
 
-    if (!result.ok) {
+    try {
+      const { assistantText, toolLog, finalContents } = await runCopilotTurn({
+        systemInstruction: personalizedSystemInstruction,
+        priorContents,
+        getAccessToken,
+        router,
+      });
+
+      // Always sync API thread (including failed turns where finalContents = prior only)
+      apiContentsRef.current = finalContents;
+
+      if (toolLog.some((t) => t.name === 'enrolIfEligible' && t.ok)) {
+        void queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
+        void queryClient.invalidateQueries({ queryKey: ['available-courses'] });
+        void queryClient.invalidateQueries({ queryKey: ['courses', 'published'] });
+        void queryClient.invalidateQueries({ queryKey: ['course'] });
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `a-${Date.now()}`,
+          role: 'assistant',
+          text: assistantText,
+          toolLog: toolLog.length > 0 ? toolLog : undefined,
+        },
+      ]);
+    } catch (e) {
+      apiContentsRef.current = priorContents;
+      const message = e instanceof Error ? e.message : 'Unexpected error';
       setMessages((prev) => [
         ...prev,
         {
           id: `e-${Date.now()}`,
           role: 'assistant',
-          text: `Something went wrong: ${result.error}`,
+          text: `Something went wrong: ${message}`,
         },
       ]);
-      return;
+    } finally {
+      sendingRef.current = false;
+      setSending(false);
     }
-
-    setMessages((prev) => [
-      ...prev,
-      { id: `a-${Date.now()}`, role: 'assistant', text: result.text },
-    ]);
-  }, [input, messages, personalizedSystemInstruction, sending]);
+  }, [getAccessToken, input, personalizedSystemInstruction, queryClient, router]);
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
@@ -137,7 +167,7 @@ export default function NolwaziScreen() {
                 <Text className="text-xl font-light text-black tracking-tight">Nolwazi</Text>
               </View>
               <Text className="text-earth-700 text-xs mt-0.5 font-light">
-                AgroLearn guide — mother of knowledge
+                AgroLearn copilot — tools & your data (when signed in)
               </Text>
             </View>
           </View>
@@ -150,7 +180,7 @@ export default function NolwaziScreen() {
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             renderItem={({ item }) => (
               <View
-                className={`max-w-[90%] mb-4 ${
+                className={`max-w-[92%] mb-4 ${
                   item.role === 'user' ? 'self-end border-b-2 border-primary-600/70 pb-2' : 'self-start border-b border-earth-400/40 pb-2'
                 }`}
               >
@@ -161,6 +191,22 @@ export default function NolwaziScreen() {
                 >
                   {item.text}
                 </Text>
+                {item.toolLog && item.toolLog.length > 0 ? (
+                  <View className="mt-2.5 pl-0 pr-0 rounded-2xl bg-white/50 px-3 py-2">
+                    <View className="flex-row items-center gap-1.5 mb-1">
+                      <Wrench size={12} color="#57534e" />
+                      <Text className="text-[11px] text-earth-600 font-medium tracking-wide">Actions</Text>
+                    </View>
+                    {item.toolLog.map((t, ti) => (
+                      <Text
+                        key={`${item.id}-tl-${ti}`}
+                        className="text-[11px] text-earth-700 font-light leading-4 mb-0.5"
+                      >
+                        {t.ok ? '✓' : '—'} {t.summary}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             )}
           />
@@ -169,7 +215,7 @@ export default function NolwaziScreen() {
             {sending ? (
               <View className="flex-row items-center gap-2 px-1">
                 <ActivityIndicator color="#16a34a" />
-                <Text className="text-earth-700 text-xs font-light">Nolwazi is thinking…</Text>
+                <Text className="text-earth-700 text-xs font-light">Nolwazi is working…</Text>
               </View>
             ) : null}
             <View className="flex-row items-end gap-2">
