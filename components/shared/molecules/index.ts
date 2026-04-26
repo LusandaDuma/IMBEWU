@@ -1,5 +1,6 @@
 export { AlertBanner, type AlertBannerProps, type AlertBannerVariant } from './AlertBanner';
 export { CourseCard, type CourseCardProps, type CourseCardVariant } from './CourseCard';
+export { DashboardStatsGrid, type DashboardStatItem, type DashboardStatsGridProps } from './DashboardStatsGrid';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { FormField, type FormFieldProps } from './FormField';
 export { LessonRow, type LessonRowProps } from './LessonRow';

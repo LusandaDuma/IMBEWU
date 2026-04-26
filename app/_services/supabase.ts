@@ -23,10 +23,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Check EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
-);
+const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    /**
+     * Use the same no-op lock as non-browser runtimes. Default {@link
+     * navigatorLock} (Web Lock API) often throws
+     * `NavigatorLockAcquireTimeoutError` on Expo web with React Strict Mode,
+     * fast refresh, or concurrent `getSession` — same root cause as
+     * gotrue-js's lock recovery when another request "steals" the lock.
+     * Trade-off: no cross-tab mutex (acceptable for a single-tab mobile-style app).
+     */
+    lock: async <R,>(_name: string, _acquireTimeout: number, fn: () => Promise<R>) => fn(),
+  },
+});
 export { supabase };
 export default supabase;
 

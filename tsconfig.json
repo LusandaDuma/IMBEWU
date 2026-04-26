@@ -2,13 +2,43 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    // "baseUrl": ".",
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./app/*"
-      ],
       "@/components/*": [
         "./components/*"
+      ],
+      "@/services/*": [
+        "./app/_services/*"
+      ],
+      "@/store/*": [
+        "./app/_store/*"
+      ],
+      "@/constants/*": [
+        "./app/_constants/*"
+      ],
+      "@/hooks/*": [
+        "./app/_hooks/*"
+      ],
+      "@/lib/*": [
+        "./app/_lib/*"
+      ],
+      "@/middleware/*": [
+        "./app/_middleware/*"
+      ],
+      "@/types": [
+        "./app/_types/index.ts"
+      ],
+      "@/types/*": [
+        "./app/_types/*"
+      ],
+      "@/utils/*": [
+        "./app/_utils/*"
+      ],
+      "@/validators/*": [
+        "./app/_validators/*"
+      ],
+      "@/*": [
+        "./app/*"
       ]
     }
   },

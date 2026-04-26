@@ -2,16 +2,16 @@
  * @fileoverview Coordinator LMS — classes, join codes, roster entry.
  */
 
-import { Button, EmptyState, ScreenHeader } from '@/components/shared';
+import { Button, DashboardStatsGrid, EmptyState, ScreenHeader } from '@/components/shared';
 import { fieldPlain } from '@/constants/theme';
-import { createClass, getClassesByCoordinator, getCourses } from '@/services/supabase';
+import { createClass, getClassesByCoordinator, getCoordinatorAnalytics, getCourses } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Class, Course } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Calendar, ChevronRight, Copy, Plus, Users } from 'lucide-react-native';
-import { useState } from 'react';
+import { Award, BookOpen, Calendar, ChevronRight, Copy, Plus, TrendingUp, Users } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,12 +34,56 @@ export default function CoordinatorDashboard() {
     queryFn: getCourses,
   });
 
+  const { data: coAnalytics, isLoading: analyticsLoading, refetch: refetchAnalytics } = useQuery({
+    queryKey: ['coordinator-analytics', user?.id],
+    queryFn: () => (user?.id ? getCoordinatorAnalytics(user.id) : Promise.resolve(null)),
+    enabled: !!user?.id,
+  });
+
   useRefetchOnFocus(
     () => {
       void refetch();
       void refetchCatalog();
+      void refetchAnalytics();
     },
     !!user
+  );
+
+  const coordStatItems = useMemo(
+    () => {
+      const s = coAnalytics?.stats;
+      return [
+        {
+          label: 'Students in classes',
+          value: `${s?.totalStudents ?? 0}`,
+          change: 'Roster',
+          icon: Users,
+          iconColor: '#16a34a',
+        },
+        {
+          label: 'Active classes',
+          value: `${s?.activeClasses ?? 0}`,
+          change: 'Live',
+          icon: BookOpen,
+          iconColor: '#d97706',
+        },
+        {
+          label: 'Avg. completion',
+          value: `${s?.averageCompletionPct ?? 0}%`,
+          change: 'Classes',
+          icon: TrendingUp,
+          iconColor: '#0891b2',
+        },
+        {
+          label: 'Certificates',
+          value: `${s?.certificates ?? 0}`,
+          change: 'Issued',
+          icon: Award,
+          iconColor: '#7c3aed',
+        },
+      ];
+    },
+    [coAnalytics?.stats]
   );
 
   const createClassMutation = useMutation({
@@ -115,7 +159,22 @@ export default function CoordinatorDashboard() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}
           refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#16a34a" />
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={() => {
+                void refetch();
+                void refetchAnalytics();
+              }}
+              tintColor="#16a34a"
+            />
+          }
+          ListHeaderComponent={
+            <DashboardStatsGrid
+              title="Coordination at a glance"
+              items={coordStatItems}
+              isLoading={analyticsLoading}
+              accent="green"
+            />
           }
           ListEmptyComponent={
             <EmptyState

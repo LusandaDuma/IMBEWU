@@ -2,15 +2,16 @@
  * @fileoverview Independent learner LMS home — enrolments and continue learning.
  */
 
-import { CourseCard, EmptyState, ScreenHeader } from '@/components/shared';
+import { CourseCard, DashboardStatsGrid, EmptyState, ScreenHeader } from '@/components/shared';
+import { getLearnerDashboardStats } from '@/services/learnerDashboardStats';
 import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ChevronRight, Clock, Play, Sprout, Target } from 'lucide-react-native';
-import { useCallback, useMemo } from 'react';
+import { BookOpen, ChevronRight, Clock, ListChecks, Play, Sprout, Target } from 'lucide-react-native';
+import { Fragment, useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,10 +26,17 @@ export default function IndependentDashboard() {
     enabled: !!user,
   });
 
+  const { data: dashStats, isLoading: statsLoading } = useQuery({
+    queryKey: ['learner-dashboard-stats', 'indep', user?.id],
+    queryFn: () => (user ? getLearnerDashboardStats(user.id) : Promise.resolve(null)),
+    enabled: !!user,
+  });
+
   useFocusEffect(
     useCallback(() => {
       if (!user?.id) return;
       void queryClient.invalidateQueries({ queryKey: ['independent-course-progress', user.id] });
+      void queryClient.invalidateQueries({ queryKey: ['learner-dashboard-stats', 'indep', user.id] });
       void refetch();
     }, [user?.id, queryClient, refetch])
   );
@@ -61,6 +69,47 @@ export default function IndependentDashboard() {
   const completedLessons = firstCourseProgress?.completedLessons ?? 0;
   const totalLessons = firstCourseProgress?.totalLessons ?? 0;
 
+  const statItems = useMemo(
+    () => [
+      {
+        label: 'Courses',
+        value: `${dashStats?.coursesEnrolled ?? 0}`,
+        change: 'Enrolled',
+        icon: BookOpen,
+        iconColor: '#0891b2',
+      },
+      {
+        label: 'Average progress',
+        value: `${dashStats?.averageProgressPct ?? 0}%`,
+        change: 'Overall',
+        icon: Target,
+        iconColor: '#0e7490',
+      },
+      {
+        label: 'Lessons',
+        value:
+          (dashStats?.lessonsTotal ?? 0) > 0
+            ? `${dashStats?.lessonsCompleted ?? 0}/${dashStats?.lessonsTotal ?? 0}`
+            : '—',
+        sublabel: 'Complete across courses',
+        change: 'Progress',
+        icon: ListChecks,
+        iconColor: '#d97706',
+      },
+      {
+        label: 'In progress',
+        value: `${enrolments.filter((e) => {
+          const p = progressByCourseId.get(e.course_id);
+          return p && p.averagePctComplete > 0 && p.averagePctComplete < 100;
+        }).length}`,
+        change: 'Active',
+        icon: Sprout,
+        iconColor: '#7c3aed',
+      },
+    ],
+    [dashStats, enrolments, progressByCourseId],
+  );
+
   return (
     <LinearGradient
       colors={['#D6D6D6', '#D6D6D6']}
@@ -83,40 +132,48 @@ export default function IndependentDashboard() {
             <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#0891b2" />
           }
           ListHeaderComponent={
-            firstCourse ? (
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: '/independent/course/[id]',
-                    params: { id: firstCourse.course_id },
-                  })
-                }
-                activeOpacity={0.93}
-                className="mb-6 pb-6 border-b border-earth-400/40"
-              >
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-1 pr-3">
-                    <Text className="text-earth-600 text-xs font-medium uppercase tracking-[0.18em] mb-1.5">
-                      Continue learning
-                    </Text>
-                    <Text className="text-earth-900 text-lg font-light tracking-tight" numberOfLines={2}>
-                      {firstCourse.courses?.title ?? 'Course'}
-                    </Text>
-                    <View className="mt-4 h-1.5 w-full bg-earth-300/50 rounded-full overflow-hidden">
-                      <View className="h-full bg-cyan-600 rounded-full" style={{ width: `${progressPct}%` }} />
+            <Fragment>
+              <DashboardStatsGrid
+                title="Your stats"
+                items={statItems}
+                isLoading={statsLoading}
+                accent="cyan"
+              />
+              {firstCourse ? (
+                <TouchableOpacity
+                  onPress={() =>
+                    router.push({
+                      pathname: '/independent/course/[id]',
+                      params: { id: firstCourse.course_id },
+                    })
+                  }
+                  activeOpacity={0.93}
+                  className="mb-6 pb-6 border-b border-earth-400/40"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1 pr-3">
+                      <Text className="text-earth-600 text-xs font-medium uppercase tracking-[0.18em] mb-1.5">
+                        Continue learning
+                      </Text>
+                      <Text className="text-earth-900 text-lg font-light tracking-tight" numberOfLines={2}>
+                        {firstCourse.courses?.title ?? 'Course'}
+                      </Text>
+                      <View className="mt-4 h-1.5 w-full bg-earth-300/50 rounded-full overflow-hidden">
+                        <View className="h-full bg-cyan-600 rounded-full" style={{ width: `${progressPct}%` }} />
+                      </View>
+                      <Text className="text-earth-600 text-xs mt-2">
+                        {totalLessons > 0
+                          ? `${completedLessons}/${totalLessons} lessons complete (${progressPct}%)`
+                          : 'No lessons yet for this course'}
+                      </Text>
                     </View>
-                    <Text className="text-earth-600 text-xs mt-2">
-                      {totalLessons > 0
-                        ? `${completedLessons}/${totalLessons} lessons complete (${progressPct}%)`
-                        : 'No lessons yet for this course'}
-                    </Text>
+                    <View className="w-14 h-14 items-center justify-center">
+                      <Play size={28} color="#0891b2" fill="#0891b2" />
+                    </View>
                   </View>
-                  <View className="w-14 h-14 items-center justify-center">
-                    <Play size={28} color="#0891b2" fill="#0891b2" />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : null
+                </TouchableOpacity>
+              ) : null}
+            </Fragment>
           }
           ListEmptyComponent={
             <EmptyState

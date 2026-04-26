@@ -23,6 +23,23 @@ export interface AdminDashboardAnalytics {
   recentActions: AdminActivityItem[];
 }
 
+/** Deeper platform metrics for the admin home “Advanced” section. */
+export interface AdminAdvancedStats {
+  usersByRole: {
+    admin: number;
+    coordinator: number;
+    student: number;
+    independent: number;
+  };
+  publishedCourses: number;
+  draftCourses: number;
+  totalEnrolments: number;
+  totalClasses: number;
+  newEnrolments7d: number;
+  badgesAwarded: number;
+  activeLogins7d: number;
+}
+
 export interface AdminUserItem {
   id: string;
   firstName: string;
@@ -192,6 +209,83 @@ export async function getAdminDashboardAnalytics(): Promise<AdminDashboardAnalyt
 
 export async function getAdminActivityFeed(): Promise<AdminActivityItem[]> {
   return getRecentAdminActivity(50);
+}
+
+/**
+ * Broader platform counts (role mix, content, growth). Admin RLS or service-role client required.
+ */
+export async function getAdminAdvancedStats(): Promise<AdminAdvancedStats> {
+  const since = new Date();
+  since.setDate(since.getDate() - 7);
+  const sinceIso = since.toISOString();
+
+  const byRole = (role: UserRole) =>
+    supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('role', role);
+
+  const [
+    adminC,
+    coordC,
+    studC,
+    indepC,
+    pubC,
+    draftC,
+    enrC,
+    classC,
+    newEnC,
+    badgeC,
+    login7C,
+  ] = await Promise.all([
+    byRole('admin'),
+    byRole('coordinator'),
+    byRole('student'),
+    byRole('independent'),
+    supabase.from('courses').select('id', { count: 'exact', head: true }).eq('is_published', true),
+    supabase.from('courses').select('id', { count: 'exact', head: true }).eq('is_published', false),
+    supabase.from('course_enrolments').select('id', { count: 'exact', head: true }),
+    supabase.from('classes').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('course_enrolments')
+      .select('id', { count: 'exact', head: true })
+      .gte('enrolled_at', sinceIso),
+    supabase.from('student_badges').select('id', { count: 'exact', head: true }),
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .not('last_login', 'is', null)
+      .gte('last_login', sinceIso),
+  ]);
+
+  const firstErr =
+    adminC.error ||
+    coordC.error ||
+    studC.error ||
+    indepC.error ||
+    pubC.error ||
+    draftC.error ||
+    enrC.error ||
+    classC.error ||
+    newEnC.error ||
+    badgeC.error ||
+    login7C.error;
+  if (firstErr) {
+    throw new Error(firstErr.message);
+  }
+
+  return {
+    usersByRole: {
+      admin: adminC.count ?? 0,
+      coordinator: coordC.count ?? 0,
+      student: studC.count ?? 0,
+      independent: indepC.count ?? 0,
+    },
+    publishedCourses: pubC.count ?? 0,
+    draftCourses: draftC.count ?? 0,
+    totalEnrolments: enrC.count ?? 0,
+    totalClasses: classC.count ?? 0,
+    newEnrolments7d: newEnC.count ?? 0,
+    badgesAwarded: badgeC.count ?? 0,
+    activeLogins7d: login7C.count ?? 0,
+  };
 }
 
 export async function getAdminUsers(): Promise<AdminUserItem[]> {

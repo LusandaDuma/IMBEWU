@@ -2,13 +2,27 @@
  * @fileoverview Admin LMS control room — platform pulse and shortcuts.
  */
 
-import { ScreenHeader } from '@/components/shared';
+import { DashboardStatsGrid, ScreenHeader } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { getAdminDashboardAnalytics } from '@/services/adminService';
+import { getAdminAdvancedStats, getAdminDashboardAnalytics } from '@/services/adminService';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BookOpen, Plus, TrendingUp, Users } from 'lucide-react-native';
+import {
+  Activity,
+  Award,
+  BookOpen,
+  BookMarked,
+  Building2,
+  FileEdit,
+  GraduationCap,
+  Plus,
+  Sprout,
+  TrendingUp,
+  UserCog,
+  Users,
+} from 'lucide-react-native';
+import { useMemo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,19 +32,36 @@ function formatRelativeTime(isoDate: string): string {
 
   const diffMs = timestamp - Date.now();
   const absMs = Math.abs(diffMs);
-  const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
 
+  if (typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl) {
+    try {
+      const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+      if (absMs < hour) {
+        return formatter.format(Math.round(diffMs / minute), 'minute');
+      }
+      if (absMs < day) {
+        return formatter.format(Math.round(diffMs / hour), 'hour');
+      }
+      return formatter.format(Math.round(diffMs / day), 'day');
+    } catch {
+      /* engine stub — fall through */
+    }
+  }
+
+  if (absMs < minute) return 'just now';
   if (absMs < hour) {
-    return formatter.format(Math.round(diffMs / minute), 'minute');
+    const n = Math.round(absMs / minute);
+    return n === 1 ? '1 min ago' : `${n} min ago`;
   }
   if (absMs < day) {
-    return formatter.format(Math.round(diffMs / hour), 'hour');
+    const n = Math.round(absMs / hour);
+    return n === 1 ? '1 hour ago' : `${n} hours ago`;
   }
-  return formatter.format(Math.round(diffMs / day), 'day');
+  const n = Math.round(absMs / day);
+  return n === 1 ? '1 day ago' : `${n} days ago`;
 }
 
 export default function AdminDashboard() {
@@ -44,7 +75,23 @@ export default function AdminDashboard() {
     refetchOnReconnect: true,
   });
 
-  useRefetchOnFocus(refetch, true);
+  const {
+    data: advanced,
+    isLoading: advancedLoading,
+    isError: advancedError,
+    refetch: refetchAdvanced,
+  } = useQuery({
+    queryKey: ['admin-advanced-stats'],
+    queryFn: getAdminAdvancedStats,
+  });
+
+  useRefetchOnFocus(
+    () => {
+      void refetch();
+      void refetchAdvanced();
+    },
+    true
+  );
 
   const stats = [
     {
@@ -78,6 +125,77 @@ export default function AdminDashboard() {
   ];
 
   const recentActions = data?.recentActions ?? [];
+
+  const roleStatItems = useMemo(() => {
+    const r = advanced?.usersByRole;
+    return [
+      { label: 'Admins', value: `${r?.admin ?? 0}`, change: 'Role', icon: UserCog, iconColor: '#7c3aed' },
+      { label: 'Coordinators', value: `${r?.coordinator ?? 0}`, change: 'Role', icon: BookMarked, iconColor: '#16a34a' },
+      { label: 'Students', value: `${r?.student ?? 0}`, change: 'Role', icon: GraduationCap, iconColor: '#0ea5e9' },
+      { label: 'Independent', value: `${r?.independent ?? 0}`, change: 'Role', icon: Sprout, iconColor: '#ea580c' },
+    ];
+  }, [advanced?.usersByRole]);
+
+  const contentStatItems = useMemo(
+    () => [
+      {
+        label: 'Published courses',
+        value: `${advanced?.publishedCourses ?? 0}`,
+        change: 'Live',
+        icon: BookOpen,
+        iconColor: '#22c55e',
+      },
+      {
+        label: 'Draft courses',
+        value: `${advanced?.draftCourses ?? 0}`,
+        change: 'Unlisted',
+        icon: FileEdit,
+        iconColor: '#ca8a04',
+      },
+      {
+        label: 'Total enrolments',
+        value: `${advanced?.totalEnrolments ?? 0}`,
+        change: 'All time',
+        icon: Users,
+        iconColor: '#0891b2',
+      },
+      {
+        label: 'Classes',
+        value: `${advanced?.totalClasses ?? 0}`,
+        change: 'Cohorts',
+        icon: Building2,
+        iconColor: '#8b5cf6',
+      },
+    ],
+    [advanced]
+  );
+
+  const signalStatItems = useMemo(
+    () => [
+      {
+        label: 'New enrolments (7d)',
+        value: `${advanced?.newEnrolments7d ?? 0}`,
+        change: 'Week',
+        icon: TrendingUp,
+        iconColor: '#10b981',
+      },
+      {
+        label: 'Badges issued',
+        value: `${advanced?.badgesAwarded ?? 0}`,
+        change: 'All time',
+        icon: Award,
+        iconColor: '#d97706',
+      },
+      {
+        label: 'Logins (7d)',
+        value: `${advanced?.activeLogins7d ?? 0}`,
+        change: 'Active',
+        icon: Activity,
+        iconColor: '#6366f1',
+      },
+    ],
+    [advanced]
+  );
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
@@ -118,6 +236,36 @@ export default function AdminDashboard() {
                 </View>
               );
             })}
+          </View>
+
+          <View className="mb-2">
+            <Text className="text-black font-light text-base mb-1 tracking-tight">Platform detail</Text>
+            <Text className="text-earth-600 text-xs font-light mb-3">
+              Deeper metrics — user mix, content inventory, and recent momentum.
+            </Text>
+            {advancedError ? (
+              <Text className="text-red-800 text-sm font-light mb-3">
+                Could not load advanced stats. Try again later.
+              </Text>
+            ) : (
+              <>
+                <DashboardStatsGrid
+                  title="Users by role"
+                  items={roleStatItems}
+                  isLoading={advancedLoading}
+                />
+                <DashboardStatsGrid
+                  title="Content & enrolments"
+                  items={contentStatItems}
+                  isLoading={advancedLoading}
+                />
+                <DashboardStatsGrid
+                  title="Signals (7 days)"
+                  items={signalStatItems}
+                  isLoading={advancedLoading}
+                />
+              </>
+            )}
           </View>
 
           <View className="mb-6 pb-4 border-b border-earth-400/40">
