@@ -2,6 +2,7 @@
  * @fileoverview Admin full recent activity feed.
  */
 
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getAdminActivityFeed } from '@/services/adminService';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -37,6 +38,8 @@ export default function AdminActivityScreen() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  useRefetchOnFocus(refetch, true);
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">

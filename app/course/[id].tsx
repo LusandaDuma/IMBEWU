@@ -4,6 +4,7 @@
 
 import { Button, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getCourseById, getLessonsByCourse } from '@/services/supabase';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -17,15 +18,23 @@ export default function PublicCoursePreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const { data: course } = useQuery({
+  const { data: course, refetch: refetchCourse } = useQuery({
     queryKey: ['public-course', id],
     queryFn: () => getCourseById(id),
   });
 
-  const { data: lessons = [] } = useQuery({
+  const { data: lessons = [], refetch: refetchLessons } = useQuery({
     queryKey: ['public-course-lessons', id],
     queryFn: () => getLessonsByCourse(id),
   });
+
+  useRefetchOnFocus(
+    () => {
+      void refetchCourse();
+      void refetchLessons();
+    },
+    Boolean(id)
+  );
 
   const promptEnrol = () => {
     Alert.alert(

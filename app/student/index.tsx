@@ -6,23 +6,32 @@ import { CourseCard, EmptyState, ScreenHeader } from '@/components/shared';
 import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
-import { useQueries, useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { ChevronRight, Clock, Sprout } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function StudentDashboard() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: enrolments = [], isLoading, refetch } = useQuery<(CourseEnrolment & { courses: Course })[]>({
     queryKey: ['student-enrolments', user?.id],
     queryFn: () => (user ? getEnrolmentsByUser(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      void queryClient.invalidateQueries({ queryKey: ['student-course-progress', user.id] });
+      void refetch();
+    }, [user?.id, queryClient, refetch])
+  );
 
   const progressQueries = useQueries({
     queries: enrolments.map((enrolment) => ({

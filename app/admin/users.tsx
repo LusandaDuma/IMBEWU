@@ -2,6 +2,7 @@
  * @fileoverview Admin users management
  */
 
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getAdminUsers, updateAdminUserRole } from '@/services/adminService';
 import type { UserRole } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -67,6 +68,8 @@ export default function AdminUsersScreen() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  useRefetchOnFocus(refetch, true);
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: UserRole }) => {

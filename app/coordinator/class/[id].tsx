@@ -12,9 +12,9 @@ import {
 import type { ClassMember, Lesson } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen, ChevronLeft, Copy, Users } from 'lucide-react-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -57,6 +57,18 @@ export default function CoordinatorClassScreen() {
     queryFn: () => searchStudentsByName(studentSearchText),
     enabled: studentSearchText.trim().length >= 2,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!classId) {
+        return;
+      }
+      void queryClient.invalidateQueries({ queryKey: ['class', classId] });
+      void queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
+      void queryClient.invalidateQueries({ queryKey: ['class-lessons'] });
+      void queryClient.invalidateQueries({ queryKey: ['class-course'] });
+    }, [classId, queryClient])
+  );
 
   useEffect(() => {
     if (!classData) {

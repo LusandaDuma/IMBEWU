@@ -2,6 +2,7 @@
  * @fileoverview Available courses for coordinators
  */
 
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getCourses } from '@/services/supabase';
 import type { Course } from '@/types';
 import { useQuery } from '@tanstack/react-query';
@@ -17,6 +18,8 @@ export default function CoordinatorCoursesScreen() {
     queryKey: ['available-courses'],
     queryFn: getCourses,
   });
+
+  useRefetchOnFocus(refetch, true);
 
   const renderCourseCard = ({ item }: { item: Course }) => (
     <TouchableOpacity

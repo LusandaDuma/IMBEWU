@@ -2,6 +2,7 @@
  * @fileoverview Independent learner progress screen
  */
 
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getIndependentAchievementsData } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
@@ -12,11 +13,13 @@ import { ScrollView, Text, View } from 'react-native';
 export default function ProgressScreen() {
   const { user } = useAuthStore();
 
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ['independent-achievements', user?.id],
     queryFn: () => (user ? getIndependentAchievementsData(user.id) : Promise.resolve(null)),
     enabled: !!user,
   });
+
+  useRefetchOnFocus(refetch, !!user);
 
   const stats = [
     { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },

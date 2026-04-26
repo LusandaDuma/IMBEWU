@@ -2,6 +2,7 @@
  * @fileoverview Admin courses management
  */
 
+import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { deleteCourse, getAllCourses, updateCourse } from '@/services/supabase';
 import type { Course } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,6 +38,7 @@ export default function AdminCoursesScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      invalidateAllCourseCatalogQueries(queryClient);
     },
   });
 
@@ -46,6 +48,7 @@ export default function AdminCoursesScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      invalidateAllCourseCatalogQueries(queryClient);
       setEditingCourse(null);
       Alert.alert('Success', 'Course updated successfully.');
     },
@@ -63,6 +66,7 @@ export default function AdminCoursesScreen() {
       }
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      invalidateAllCourseCatalogQueries(queryClient);
       Alert.alert('Deleted', 'Course removed successfully.');
     },
     onError: () => {

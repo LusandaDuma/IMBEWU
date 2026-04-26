@@ -3,6 +3,7 @@
  */
 
 import { ScreenHeader } from '@/components/shared';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getAdminDashboardAnalytics } from '@/services/adminService';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,7 +35,7 @@ function formatRelativeTime(isoDate: string): string {
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-dashboard-analytics'],
     queryFn: getAdminDashboardAnalytics,
     staleTime: 0,
@@ -42,6 +43,8 @@ export default function AdminDashboard() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
+
+  useRefetchOnFocus(refetch, true);
 
   const stats = [
     {

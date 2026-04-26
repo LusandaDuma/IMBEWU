@@ -5,11 +5,11 @@
 import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
 import { enrollInCourse, getCourses } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
-import type { Course } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Filter, Search, Sprout, Star } from 'lucide-react-native';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +27,8 @@ export default function ExploreScreen() {
     queryKey: ['explore-courses'],
     queryFn: getCourses,
   });
+
+  useRefetchOnFocus(refetch, true);
 
   const enrollMutation = useMutation({
     mutationFn: (courseId: string) =>

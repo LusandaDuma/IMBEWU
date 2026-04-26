@@ -5,6 +5,7 @@
 import 'react-native-reanimated';
 import '../global.css';
 
+import { SupabaseRealtimeSync } from '@/components/SupabaseRealtimeSync';
 import { NolwaziFab } from '@/components/shared';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getSession } from '@/services/authService';
@@ -17,13 +18,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Image, Platform, Text, View } from 'react-native';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 0,
+      gcTime: 30 * 60 * 1000,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
   },
 });
@@ -93,16 +98,17 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isReady) {
+      const useNativeDriver = Platform.OS !== 'web';
       Animated.parallel([
         Animated.timing(scaleAnim, {
           toValue: 1,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver,
         }),
         Animated.timing(opacityAnim, {
           toValue: 1,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver,
         }),
       ]).start();
     }
@@ -185,6 +191,7 @@ export default function RootLayout() {
           <NolwaziFab />
           <StatusBar style="light" translucent />
         </AuthProvider>
+        <SupabaseRealtimeSync />
       </QueryClientProvider>
     </View>
   );

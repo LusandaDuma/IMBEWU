@@ -2,6 +2,7 @@
  * @fileoverview Create new course screen
  */
 
+import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { createCourse } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -35,6 +36,7 @@ export default function CreateCourseScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      invalidateAllCourseCatalogQueries(queryClient);
       Alert.alert('Success', 'Course created successfully!');
       router.back();
     },

@@ -13,7 +13,6 @@ import { useQuery } from '@tanstack/react-query';
 export function useCourses() {
   return useQuery({
     queryKey: ['courses', 'published'],
-    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const result = await getPublishedCourses();
       if (result.error) {
@@ -32,7 +31,6 @@ export function useCourse(courseId: string | null | undefined) {
   return useQuery({
     queryKey: ['course', courseId],
     enabled: Boolean(courseId),
-    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!courseId) {
         return null;
@@ -57,7 +55,6 @@ export function useProgress(courseId: string | null | undefined) {
   return useQuery({
     queryKey: ['course-progress', userId, courseId],
     enabled: Boolean(userId && courseId),
-    staleTime: 30 * 1000,
     queryFn: async () => {
       if (!userId || !courseId) {
         return [];

@@ -2,6 +2,7 @@
  * @fileoverview Student achievements screen
  */
 
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getStudentAchievementsData } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
@@ -11,11 +12,13 @@ import { ScrollView, Text, View } from 'react-native';
 
 export default function AchievementsScreen() {
   const { user } = useAuthStore();
-  const { data } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ['student-achievements', user?.id],
     queryFn: () => (user ? getStudentAchievementsData(user.id) : Promise.resolve(null)),
     enabled: !!user,
   });
+
+  useRefetchOnFocus(refetch, !!user);
 
   const achievements = data?.achievements ?? [];
   const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;

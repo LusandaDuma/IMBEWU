@@ -1,4 +1,5 @@
 import { Button } from '@/components/shared';
+import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { getCourseById, updateCourse } from '@/services/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,13 +39,13 @@ export default function CoordinatorCourseScreen() {
     mutationFn: async () =>
       updateCourse(courseId, {
         title: title.trim(),
-        description: description.trim() || null,
-        offline_url: offlineUrl.trim() || null,
+        description: description.trim() || undefined,
+        offline_url: offlineUrl.trim() || undefined,
         is_published: isPublished,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coordinator-course', courseId] });
-      queryClient.invalidateQueries({ queryKey: ['available-courses'] });
+      invalidateAllCourseCatalogQueries(queryClient);
       Alert.alert('Saved', 'Course details updated.');
     },
     onError: () => Alert.alert('Could not save', 'Please try again.'),

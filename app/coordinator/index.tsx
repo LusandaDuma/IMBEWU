@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Calendar, ChevronRight, Copy, Plus, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function CoordinatorDashboard() {
@@ -27,10 +28,18 @@ export default function CoordinatorDashboard() {
     queryFn: () => (user ? getClassesByCoordinator(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
-  const { data: courses = [] } = useQuery<Course[]>({
+  const { data: courses = [], refetch: refetchCatalog } = useQuery<Course[]>({
     queryKey: ['available-courses'],
     queryFn: getCourses,
   });
+
+  useRefetchOnFocus(
+    () => {
+      void refetch();
+      void refetchCatalog();
+    },
+    !!user
+  );
 
   const createClassMutation = useMutation({
     mutationFn: async () => {

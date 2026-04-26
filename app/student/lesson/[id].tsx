@@ -4,6 +4,7 @@
 
 import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -21,16 +22,24 @@ export default function LessonScreen() {
   const queryClient = useQueryClient();
   const [progress, setProgress] = useState(0);
 
-  const { data: lesson } = useQuery({
+  const { data: lesson, refetch: refetchLesson } = useQuery({
     queryKey: ['lesson', id],
     queryFn: () => getLessonById(id),
   });
 
-  const { data: existingProgress } = useQuery({
+  const { data: existingProgress, refetch: refetchProgress } = useQuery({
     queryKey: ['lesson-progress', user?.id, id],
     queryFn: () => (user ? getLessonProgress(user.id, id) : Promise.resolve(null)),
     enabled: !!user,
   });
+
+  useRefetchOnFocus(
+    () => {
+      void refetchLesson();
+      if (user) void refetchProgress();
+    },
+    Boolean(id)
+  );
 
   const existingPct = useMemo(() => existingProgress?.pct_complete ?? 0, [existingProgress]);
 

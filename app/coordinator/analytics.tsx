@@ -2,13 +2,14 @@
  * @fileoverview Coordinator analytics dashboard
  */
 
+import { getCoordinatorAnalytics } from '@/services/supabase';
+import { useAuthStore } from '@/store/auth';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
+import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, TrendingUp, Users } from 'lucide-react-native';
 import { useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
-import { getCoordinatorAnalytics } from '@/services/supabase';
-import { useAuthStore } from '@/store/auth';
 
 function formatRelativeTime(timestamp: string): string {
   const time = new Date(timestamp).getTime();
@@ -38,11 +39,13 @@ function formatRelativeTime(timestamp: string): string {
 
 export default function CoordinatorAnalyticsScreen() {
   const { user } = useAuthStore();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['coordinator-analytics', user?.id],
     queryFn: () => (user?.id ? getCoordinatorAnalytics(user.id) : Promise.resolve(null)),
     enabled: !!user?.id,
   });
+
+  useRefetchOnFocus(refetch, !!user?.id);
 
   const stats = useMemo(() => {
     const source = data?.stats;
