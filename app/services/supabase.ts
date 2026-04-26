@@ -191,6 +191,27 @@ export async function getLessonProgress(userId: string, lessonId: string): Promi
   return data;
 }
 
+/** Progress rows for many lessons in one round-trip (course outline / gating). */
+export async function getLessonProgressByLessonIds(
+  userId: string,
+  lessonIds: string[]
+): Promise<Map<string, LessonProgress>> {
+  if (!lessonIds.length) {
+    return new Map();
+  }
+  const { data, error } = await supabase
+    .from('lesson_progress')
+    .select('*')
+    .eq('user_id', userId)
+    .in('lesson_id', lessonIds);
+
+  if (error) {
+    console.error('Error fetching lesson progress batch:', error);
+    return new Map();
+  }
+  return new Map((data || []).map((row) => [row.lesson_id, row as LessonProgress]));
+}
+
 export type CourseProgressSummary = {
   courseId: string;
   totalLessons: number;

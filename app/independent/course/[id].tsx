@@ -5,18 +5,26 @@
 import { LessonRow, ScreenHeader } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { APP_BACKGROUND_COLOR, surfaceContentPanel } from '@/constants/theme';
-import { getCourseById, getLessonsByCourse } from '@/services/supabase';
+import { getCourseById, getLessonProgressByLessonIds, getLessonsByCourse } from '@/services/supabase';
+import { useAuthStore } from '@/store/auth';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { BookOpen } from 'lucide-react-native';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+function isLessonComplete(p: { is_completed: boolean; pct_complete: number } | undefined): boolean {
+  if (!p) return false;
+  return p.is_completed || p.pct_complete >= 100;
+}
+
 export default function IndependentCourseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { user } = useAuthStore();
 
   const { data: course, refetch: refetchCourse } = useQuery({
     queryKey: ['course', id],
@@ -28,10 +36,21 @@ export default function IndependentCourseScreen() {
     queryFn: () => getLessonsByCourse(id),
   });
 
+  const lessonIds = useMemo(() => lessons.map((l) => l.id), [lessons]);
+  const { data: progressByLesson = new Map(), refetch: refetchProgress } = useQuery({
+    queryKey: ['course-lesson-progress', user?.id, id, lessonIds],
+    queryFn: () =>
+      user && lessonIds.length
+        ? getLessonProgressByLessonIds(user.id, lessonIds)
+        : Promise.resolve(new Map()),
+    enabled: !!user && lessonIds.length > 0,
+  });
+
   useRefetchOnFocus(
     () => {
       void refetchCourse();
       void refetchLessons();
+      if (user && lessonIds.length) void refetchProgress();
     },
     Boolean(id)
   );
@@ -73,17 +92,20 @@ export default function IndependentCourseScreen() {
         </View>
 
         {lessons.map((lesson: Lesson, index: number) => {
-          const isLocked = index > 0;
+          const prev = index > 0 ? progressByLesson.get(lessons[index - 1]!.id) : undefined;
+          const unlocked = index === 0 || isLessonComplete(prev);
+          const selfProgress = progressByLesson.get(lesson.id);
+          const state = isLessonComplete(selfProgress) ? 'done' : unlocked ? 'open' : 'locked';
           return (
             <LessonRow
               key={lesson.id}
               index={index}
               title={lesson.title}
               durationMins={lesson.duration_mins}
-              state={isLocked ? 'locked' : 'open'}
+              state={state}
               surface="light"
               onPress={
-                isLocked
+                state === 'locked'
                   ? undefined
                   : () =>
                       router.push({

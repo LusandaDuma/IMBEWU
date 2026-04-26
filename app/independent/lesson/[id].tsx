@@ -5,12 +5,12 @@
 import { Button, LessonVideoCallout, ProgressBar, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR, surfaceProse } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
+import { getLessonById, getLessonProgress, getLessonsByCourse, updateLessonProgress } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { CheckCircle, Clock } from 'lucide-react-native';
+import { ArrowRight, CheckCircle, Clock } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,12 @@ export default function IndependentLessonScreen() {
   const { data: lesson, refetch: refetchLesson } = useQuery({
     queryKey: ['lesson', id],
     queryFn: () => getLessonById(id),
+  });
+
+  const { data: courseLessons = [] } = useQuery({
+    queryKey: ['course-lessons', lesson?.course_id],
+    queryFn: () => getLessonsByCourse(lesson!.course_id),
+    enabled: !!lesson?.course_id,
   });
 
   const { data: existingProgress, refetch: refetchProgress } = useQuery({
@@ -50,6 +56,7 @@ export default function IndependentLessonScreen() {
       if (!user || !lesson) return;
       queryClient.invalidateQueries({ queryKey: ['lesson-progress', user.id, id] });
       queryClient.invalidateQueries({ queryKey: ['independent-course-progress', user.id, lesson.course_id] });
+      queryClient.invalidateQueries({ queryKey: ['course-lesson-progress', user.id, lesson.course_id] });
       queryClient.invalidateQueries({ queryKey: ['independent-enrolments', user.id] });
     },
   });
@@ -64,6 +71,28 @@ export default function IndependentLessonScreen() {
     progressMutation.mutate(100);
   };
 
+  const nextLessonId = useMemo(() => {
+    if (!lesson || !courseLessons.length) return null;
+    const idx = courseLessons.findIndex((l) => l.id === lesson.id);
+    if (idx < 0 || idx >= courseLessons.length - 1) return null;
+    return courseLessons[idx + 1]!.id;
+  }, [lesson, courseLessons]);
+
+  const isComplete = progress >= 100;
+
+  const goToCourse = () => {
+    if (lesson?.course_id) {
+      router.push({ pathname: '/independent/course/[id]', params: { id: lesson.course_id } });
+    } else {
+      router.back();
+    }
+  };
+
+  const goToNextLesson = () => {
+    if (!nextLessonId) return;
+    router.replace({ pathname: '/independent/lesson/[id]', params: { id: nextLessonId } });
+  };
+
   return (
     <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -74,7 +103,7 @@ export default function IndependentLessonScreen() {
             title={lesson?.title ?? 'Lesson'}
             subtitle="Self-paced module — save progress as you go."
             variant="light"
-            onBack={() => router.back()}
+            onBack={goToCourse}
           />
         </SafeAreaView>
       </LinearGradient>
@@ -114,7 +143,20 @@ export default function IndependentLessonScreen() {
           size="lg"
           fullWidth
           leftIcon={CheckCircle}
+          disabled={isComplete}
         />
+        {isComplete && nextLessonId ? (
+          <View className="mt-3">
+            <Button
+              label="Next lesson"
+              onPress={goToNextLesson}
+              variant="secondary"
+              size="lg"
+              fullWidth
+              leftIcon={ArrowRight}
+            />
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
