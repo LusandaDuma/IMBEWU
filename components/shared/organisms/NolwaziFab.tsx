@@ -1,30 +1,63 @@
 /**
  * @fileoverview Global floating action button to open Nolwazi from anywhere.
+ * Sits above the bottom tab bar (role areas) and above the home indicator elsewhere.
  */
 
+import { getNolwaziFabBottomOffset, isRoleTabPathname } from '@/constants/theme';
 import { usePathname, useRouter } from 'expo-router';
 import { MessageCircle } from 'lucide-react-native';
-import { TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const FAB_H = 56;
+const RIGHT = 20;
 
 export function NolwaziFab() {
   const router = useRouter();
   const pathname = usePathname();
+  const insets = useSafeAreaInsets();
+  const hasTabBar = isRoleTabPathname(pathname);
+  const bottom = getNolwaziFabBottomOffset(insets, hasTabBar);
 
   if (pathname?.startsWith('/nolwazi')) {
     return null;
   }
 
   return (
-    <View className="absolute right-5 bottom-8 z-50">
+    <View
+      style={[styles.fabContainer, { right: RIGHT, bottom }]}
+      pointerEvents="box-none"
+    >
       <TouchableOpacity
         onPress={() => router.push('/nolwazi')}
-        className="w-14 h-14 rounded-full bg-primary-600 items-center justify-center shadow-2xl"
+        style={styles.fabButton}
         accessibilityRole="button"
         accessibilityLabel="Open Nolwazi chatbot"
         activeOpacity={0.9}
       >
-        <MessageCircle size={24} color="#ffffff" strokeWidth={1.8} />
+        <MessageCircle size={26} color="#ffffff" strokeWidth={1.8} />
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  fabContainer: {
+    position: 'absolute',
+    zIndex: 50,
+    elevation: 12,
+  },
+  fabButton: {
+    width: FAB_H,
+    height: FAB_H,
+    borderRadius: FAB_H / 2,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+});

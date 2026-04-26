@@ -2,12 +2,14 @@
  * @fileoverview Admin layout with bottom tabs
  */
 
+import { APP_BACKGROUND_COLOR, getTabBarStyle, TAB_ICON_SIZE } from '@/constants/theme';
 import { useAuthStore } from '@/store/auth';
-import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { Redirect, Tabs } from 'expo-router';
 import { BookOpen, LayoutDashboard, Settings, Users } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AdminLayout() {
+  const insets = useSafeAreaInsets();
   const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -25,14 +27,10 @@ export default function AdminLayout() {
         sceneStyle: {
           backgroundColor: APP_BACKGROUND_COLOR,
         },
-        tabBarStyle: {
-          backgroundColor: APP_BACKGROUND_COLOR,
-          borderTopColor: '#a8a29e',
-          borderTopWidth: 1,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 64,
-        },
+        tabBarStyle: getTabBarStyle(insets),
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
+        tabBarIconStyle: { marginTop: 2 },
+        tabBarItemStyle: { paddingVertical: 2 },
         tabBarActiveTintColor: '#16a34a',
         tabBarInactiveTintColor: '#1c1917',
       }}
@@ -41,36 +39,28 @@ export default function AdminLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <LayoutDashboard size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <LayoutDashboard size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="courses"
         options={{
           title: 'Courses',
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <BookOpen size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="users"
         options={{
           title: 'Users',
-          tabBarIcon: ({ color, size }) => (
-            <Users size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Users size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color, size }) => (
-            <Settings size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Settings size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen

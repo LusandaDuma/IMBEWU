@@ -2,12 +2,14 @@
  * @fileoverview Student layout with bottom tabs
  */
 
+import { APP_BACKGROUND_COLOR, getTabBarStyle, TAB_ICON_SIZE } from '@/constants/theme';
 import { useAuthStore } from '@/store/auth';
-import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { Redirect, Tabs } from 'expo-router';
 import { Award, BookOpen, GraduationCap, User } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function StudentLayout() {
+  const insets = useSafeAreaInsets();
   const { role, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -25,14 +27,10 @@ export default function StudentLayout() {
         sceneStyle: {
           backgroundColor: APP_BACKGROUND_COLOR,
         },
-        tabBarStyle: {
-          backgroundColor: APP_BACKGROUND_COLOR,
-          borderTopColor: '#a8a29e',
-          borderTopWidth: 1,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 64,
-        },
+        tabBarStyle: getTabBarStyle(insets),
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
+        tabBarIconStyle: { marginTop: 2 },
+        tabBarItemStyle: { paddingVertical: 2 },
         tabBarActiveTintColor: '#16a34a',
         tabBarInactiveTintColor: '#1c1917',
       }}
@@ -41,36 +39,28 @@ export default function StudentLayout() {
         name="index"
         options={{
           title: 'My Courses',
-          tabBarIcon: ({ color, size }) => (
-            <BookOpen size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <BookOpen size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="discover"
         options={{
           title: 'Discover',
-          tabBarIcon: ({ color, size }) => (
-            <GraduationCap size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <GraduationCap size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="achievements"
         options={{
           title: 'Achievements',
-          tabBarIcon: ({ color, size }) => (
-            <Award size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Award size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => (
-            <User size={size} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <User size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen name="course/[id]" options={{ href: null }} />
