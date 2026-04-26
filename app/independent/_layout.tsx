@@ -47,6 +47,12 @@ export default function IndependentLayout() {
         }}
       />
       <Tabs.Screen
+        name="learn"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="explore"
         options={{
           title: 'Explore',
