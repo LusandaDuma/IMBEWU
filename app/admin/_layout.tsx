@@ -80,6 +80,18 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
+        name="courses/new"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="courses/[id]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="activity"
         options={{
           href: null,

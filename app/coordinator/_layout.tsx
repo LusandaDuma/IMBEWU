@@ -7,6 +7,14 @@ import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { Redirect, Tabs } from 'expo-router';
 import { BarChart3, BookOpen, User, Users } from 'lucide-react-native';
 
+/** Stack-only routes must not appear as bottom tab targets (names come from the file tree). */
+function hideCoordinatorTabButton(routeName: string): boolean {
+  if (routeName === 'class/[id]') {
+    return true;
+  }
+  return routeName === 'course/[id]' || routeName.startsWith('course/[id]/');
+}
+
 export default function CoordinatorLayout() {
   const { role, isAuthenticated } = useAuthStore();
 
@@ -20,7 +28,7 @@ export default function CoordinatorLayout() {
 
   return (
     <Tabs
-      screenOptions={{
+      screenOptions={({ route }) => ({
         headerShown: false,
         sceneStyle: {
           backgroundColor: APP_BACKGROUND_COLOR,
@@ -35,7 +43,10 @@ export default function CoordinatorLayout() {
         },
         tabBarActiveTintColor: '#16a34a',
         tabBarInactiveTintColor: '#1c1917',
-      }}
+        ...(hideCoordinatorTabButton(route.name)
+          ? { tabBarButton: () => null, tabBarItemStyle: { display: 'none' } }
+          : {}),
+      })}
     >
       <Tabs.Screen
         name="index"
@@ -71,18 +82,6 @@ export default function CoordinatorLayout() {
           tabBarIcon: ({ color, size }) => (
             <User size={size} color={color} />
           ),
-        }}
-      />
-      <Tabs.Screen
-        name="class/[id]"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="course/[id]"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

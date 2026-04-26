@@ -3,26 +3,16 @@
  */
 
 import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
-import { fieldPlain, surfaceListCard } from '@/constants/theme';
 import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
+import { surfaceListCard } from '@/constants/theme';
 import { deleteCourse, getAllCourses, updateCourse } from '@/services/supabase';
 import type { Course } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Edit2, Eye, EyeOff, Plus, Sprout, Trash2 } from 'lucide-react-native';
+import { Edit2, Eye, EyeOff, Sprout, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import {
-  Alert,
-  FlatList,
-  Image,
-  Modal,
-  RefreshControl,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type CourseFilter = 'all' | 'published' | 'unpublished';
@@ -31,9 +21,6 @@ export default function AdminCoursesScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<CourseFilter>('all');
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
 
   const { data: courses = [], isLoading, refetch } = useQuery<Course[]>({
     queryKey: ['admin-courses'],
@@ -51,21 +38,6 @@ export default function AdminCoursesScreen() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       invalidateAllCourseCatalogQueries(queryClient);
-    },
-  });
-
-  const editCourseMutation = useMutation({
-    mutationFn: ({ id, title, description }: { id: string; title: string; description: string }) =>
-      updateCourse(id, { title, description }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
-      invalidateAllCourseCatalogQueries(queryClient);
-      setEditingCourse(null);
-      Alert.alert('Success', 'Course updated successfully.');
-    },
-    onError: () => {
-      Alert.alert('Error', 'Failed to update course. Please try again.');
     },
   });
 
@@ -87,39 +59,20 @@ export default function AdminCoursesScreen() {
   });
 
   const filteredCourses = useMemo(() => {
-    if (activeFilter === 'published') return courses.filter((course) => course.is_published);
-    if (activeFilter === 'unpublished') return courses.filter((course) => !course.is_published);
+    if (activeFilter === 'published') {
+      return courses.filter((c) => c.is_published);
+    }
+    if (activeFilter === 'unpublished') {
+      return courses.filter((c) => !c.is_published);
+    }
     return courses;
   }, [activeFilter, courses]);
 
-  const openEditModal = (course: Course) => {
-    setEditingCourse(course);
-    setEditTitle(course.title ?? '');
-    setEditDescription(course.description ?? '');
-  };
-
-  const handleUpdateCourse = () => {
-    if (!editingCourse) return;
-    if (!editTitle.trim() || !editDescription.trim()) {
-      Alert.alert('Missing fields', 'Please add both title and description.');
-      return;
-    }
-    editCourseMutation.mutate({
-      id: editingCourse.id,
-      title: editTitle.trim(),
-      description: editDescription.trim(),
-    });
-  };
-
   const confirmDeleteCourse = (course: Course) => {
-    Alert.alert(
-      'Delete course',
-      `Are you sure you want to delete "${course.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteCourseMutation.mutate(course.id) },
-      ]
-    );
+    Alert.alert('Delete course', `Are you sure you want to delete "${course.title}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteCourseMutation.mutate(course.id) },
+    ]);
   };
 
   const renderCourseCard = ({ item }: { item: Course }) => (
@@ -151,16 +104,16 @@ export default function AdminCoursesScreen() {
           className="flex-row items-center mr-3"
           activeOpacity={0.85}
         >
-          {item.is_published ? (
-            <EyeOff size={15} color="#78716c" />
-          ) : (
-            <Eye size={15} color="#16a34a" />
-          )}
+          {item.is_published ? <EyeOff size={15} color="#78716c" /> : <Eye size={15} color="#16a34a" />}
           <Text className="text-earth-600 text-xs ml-1">
             {item.is_published ? 'Unpublish' : 'Publish'}
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => openEditModal(item)} className="flex-row items-center mr-3" activeOpacity={0.85}>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: '/admin/courses/[id]', params: { id: item.id } })}
+          className="flex-row items-center mr-3"
+          activeOpacity={0.85}
+        >
           <Edit2 size={15} color="#0891b2" />
           <Text className="text-cyan-600 text-xs ml-1">Edit</Text>
         </TouchableOpacity>
@@ -175,19 +128,9 @@ export default function AdminCoursesScreen() {
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="px-5 pb-4 flex-row justify-between items-center">
-          <View>
-            <Text className="text-2xl font-bold text-black">All Courses</Text>
-            <Text className="text-earth-700">Manage platform courses</Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/admin/courses/new')}
-            className="w-12 h-12 rounded-full bg-primary-600/95 items-center justify-center"
-            style={{ elevation: 4 }}
-            activeOpacity={0.9}
-          >
-            <Plus size={24} color="white" />
-          </TouchableOpacity>
+        <View className="px-5 pb-4">
+          <Text className="text-2xl font-bold text-black">All Courses</Text>
+          <Text className="text-earth-700">Manage platform courses</Text>
         </View>
 
         <View className="px-5 mb-4">
@@ -217,9 +160,7 @@ export default function AdminCoursesScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderCourseCard}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#a78bfa" />
-          }
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#a78bfa" />}
           ListEmptyComponent={
             <View className="items-center justify-center py-12">
               <Sprout size={48} color="#94a3b8" />
@@ -227,41 +168,6 @@ export default function AdminCoursesScreen() {
             </View>
           }
         />
-
-        <Modal visible={!!editingCourse} transparent animationType="fade" onRequestClose={() => setEditingCourse(null)}>
-          <View className="flex-1 bg-black/50 justify-center px-5">
-            <View className="pt-1 pb-1">
-              <Text className="text-lg font-semibold text-earth-800 mb-3">Edit Course</Text>
-              <Text className="text-earth-700 text-sm mb-2">Title</Text>
-              <TextInput
-                value={editTitle}
-                onChangeText={setEditTitle}
-                className={fieldPlain}
-                placeholder="Course title"
-                placeholderTextColor="#a8a29e"
-              />
-              <Text className="text-earth-700 text-sm mt-3 mb-2">Description</Text>
-              <TextInput
-                value={editDescription}
-                onChangeText={setEditDescription}
-                className={fieldPlain}
-                placeholder="Course description"
-                placeholderTextColor="#a8a29e"
-                multiline
-                textAlignVertical="top"
-                style={{ minHeight: 90 }}
-              />
-              <View className="flex-row justify-end mt-4">
-                <TouchableOpacity onPress={() => setEditingCourse(null)} className="px-3 py-2 rounded-lg bg-earth-100 mr-2">
-                  <Text className="text-earth-700 text-xs">Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleUpdateCourse} className="px-3 py-2 rounded-lg bg-primary-600">
-                  <Text className="text-white text-xs">{editCourseMutation.isPending ? 'Saving...' : 'Save'}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );

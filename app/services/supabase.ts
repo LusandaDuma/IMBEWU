@@ -120,10 +120,14 @@ export async function updateCourse(courseId: string, updates: Partial<Course>): 
     .update(updates)
     .eq('id', courseId)
     .select()
-    .single();
-  
+    .maybeSingle();
+
   if (error) {
     console.error('Error updating course:', error);
+    return null;
+  }
+  if (data == null) {
+    console.error('Error updating course: no row returned (check id and RLS).');
     return null;
   }
   return data;

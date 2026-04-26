@@ -30,6 +30,11 @@ const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
     },
+    mutations: {
+      // React Native: without NetInfo, onlineManager often stays "offline" and mutations never run.
+      networkMode: 'always',
+      retry: 0,
+    },
   },
 });
 

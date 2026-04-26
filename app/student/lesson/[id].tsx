@@ -2,7 +2,7 @@
  * @fileoverview Lesson reader — progress, content, completion (LMS).
  */
 
-import { Button, ProgressBar, ScreenHeader } from '@/components/shared';
+import { Button, LessonVideoCallout, ProgressBar, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR, surfaceProse } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getLessonById, getLessonProgress, updateLessonProgress } from '@/services/supabase';
@@ -90,6 +90,8 @@ export default function LessonScreen() {
             {lesson?.duration_mins ?? '—'} minutes estimated
           </Text>
         </View>
+
+        <LessonVideoCallout videoUrl={lesson?.video_url} variant="primary" />
 
         <View className={surfaceProse}>
           <Text className="text-xl font-light text-earth-900 mb-3 tracking-tight">{lesson?.title}</Text>

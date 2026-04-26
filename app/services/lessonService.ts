@@ -12,7 +12,7 @@ type QuizWithQuestions = Pick<Quiz, 'id' | 'title' | 'pass_score' | 'max_attempt
 
 export type LessonWithQuiz = Pick<
   Lesson,
-  'id' | 'course_id' | 'order_index' | 'title' | 'description' | 'content' | 'duration_mins' | 'created_at' | 'updated_at'
+  'id' | 'course_id' | 'order_index' | 'title' | 'description' | 'content' | 'video_url' | 'duration_mins' | 'created_at' | 'updated_at'
 > & {
   quizzes: QuizWithQuestions[];
 };
@@ -23,10 +23,11 @@ export interface CreateLessonInput {
   title: string;
   description?: string | null;
   content?: string | null;
+  video_url?: string | null;
   duration_mins?: number | null;
 }
 
-export type UpdateLessonInput = Partial<Pick<Lesson, 'order_index' | 'title' | 'description' | 'content' | 'duration_mins'>>;
+export type UpdateLessonInput = Partial<Pick<Lesson, 'order_index' | 'title' | 'description' | 'content' | 'video_url' | 'duration_mins'>>;
 
 /**
  * Fetch a lesson and its quiz payload with a single nested query.
@@ -38,7 +39,7 @@ export async function getLessonById(lessonId: string): Promise<ServiceResult<Les
     const { data, error } = await supabase
       .from('lessons')
       .select(
-        'id, course_id, order_index, title, description, content, duration_mins, created_at, updated_at, quizzes(id, title, pass_score, max_attempts, due_date, created_at, questions(id, text, type, order_index))'
+        'id, course_id, order_index, title, description, content, video_url, duration_mins, created_at, updated_at, quizzes(id, title, pass_score, max_attempts, due_date, created_at, questions(id, text, type, order_index))'
       )
       .eq('id', lessonId)
       .order('order_index', { foreignTable: 'quizzes.questions', ascending: true })
@@ -61,7 +62,7 @@ export async function getLessonById(lessonId: string): Promise<ServiceResult<Les
  */
 export async function createLesson(input: CreateLessonInput): Promise<ServiceResult<Lesson>> {
   try {
-    const { data, error } = await supabase
+    const { data: rows, error } = await supabase
       .from('lessons')
       .insert({
         course_id: input.course_id,
@@ -69,16 +70,19 @@ export async function createLesson(input: CreateLessonInput): Promise<ServiceRes
         title: input.title,
         description: input.description ?? null,
         content: input.content ?? null,
+        video_url: input.video_url ?? null,
         duration_mins: input.duration_mins ?? null,
       })
-      .select('id, course_id, order_index, title, description, content, duration_mins, created_at, updated_at')
-      .single();
+      .select('id, course_id, order_index, title, description, content, video_url, duration_mins, created_at, updated_at');
 
     if (error) {
       return { data: null, error: error.message };
     }
-
-    return { data: data as Lesson, error: null };
+    const row = rows?.[0];
+    if (!row) {
+      return { data: null, error: 'No row returned after insert. Check RLS policy for select on lessons.' };
+    }
+    return { data: row as Lesson, error: null };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : 'Failed to create lesson.' };
   }
@@ -96,18 +100,20 @@ export async function updateLesson(lessonId: string, updates: UpdateLessonInput)
       return { data: null, error: 'No lesson changes provided.' };
     }
 
-    const { data, error } = await supabase
+    const { data: rows, error } = await supabase
       .from('lessons')
       .update(updates)
       .eq('id', lessonId)
-      .select('id, course_id, order_index, title, description, content, duration_mins, created_at, updated_at')
-      .single();
+      .select('id, course_id, order_index, title, description, content, video_url, duration_mins, created_at, updated_at');
 
     if (error) {
       return { data: null, error: error.message };
     }
-
-    return { data: data as Lesson, error: null };
+    const row = rows?.[0];
+    if (!row) {
+      return { data: null, error: 'No row returned after update. Check RLS and lesson id.' };
+    }
+    return { data: row as Lesson, error: null };
   } catch (error) {
     return { data: null, error: error instanceof Error ? error.message : 'Failed to update lesson.' };
   }
@@ -118,6 +124,23 @@ export async function updateLesson(lessonId: string, updates: UpdateLessonInput)
  * @param lessons - Lesson IDs with target order_index values.
  * @returns True if all updates succeeded.
  */
+/**
+ * Remove a lesson (quizzes and related rows cascade in the database when configured).
+ */
+export async function deleteLesson(lessonId: string): Promise<ServiceResult<null>> {
+  try {
+    const { error } = await supabase.from('lessons').delete().eq('id', lessonId);
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: error instanceof Error ? error.message : 'Failed to delete lesson.' };
+  }
+}
+
 export async function reorderLessons(lessons: Array<{ id: string; order_index: number }>): Promise<ServiceResult<boolean>> {
   try {
     if (lessons.length === 0) {

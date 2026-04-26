@@ -29,6 +29,9 @@ export const lessonSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   content: z.string().min(1, 'Content is required'),
   durationMinutes: z.number().min(1, 'Duration must be at least 1 minute'),
+  videoUrl: z
+    .union([z.string().url('Use a full URL, e.g. https://www.youtube.com/watch?v=…'), z.literal('')])
+    .optional(),
 });
 
 export const classSchema = z.object({

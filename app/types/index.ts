@@ -45,6 +45,8 @@ export interface Lesson {
   title: string;
   description: string;
   content: string;
+  /** Optional YouTube (or youtu.be) link shown to learners. */
+  video_url?: string | null;
   order_index: number;
   duration_mins: number;
   created_at: string;
