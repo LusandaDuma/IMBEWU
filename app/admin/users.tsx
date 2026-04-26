@@ -2,6 +2,7 @@
  * @fileoverview Admin users management
  */
 
+import { surfaceListCard } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getAdminUsers, updateAdminUserRole } from '@/services/adminService';
 import type { UserRole } from '@/types';
@@ -147,7 +148,7 @@ export default function AdminUsersScreen() {
     return (
       <TouchableOpacity
         onPress={() => handleUserCardPress(item)}
-        className="bg-white/95 rounded-2xl p-4 shadow-md mb-4"
+        className={`${surfaceListCard} mb-4`}
         activeOpacity={0.9}
       >
         <View className="flex-row items-center">
@@ -188,10 +189,10 @@ export default function AdminUsersScreen() {
           <View className="flex-row items-center flex-1 pr-3">
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-full bg-white/15 items-center justify-center"
+              className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
               activeOpacity={0.9}
             >
-              <ChevronLeft size={20} color="white" />
+              <ChevronLeft size={20} color="#1c1917" />
             </TouchableOpacity>
             <View className="ml-3">
               <Text className="text-2xl font-bold text-black">Users</Text>
@@ -209,7 +210,7 @@ export default function AdminUsersScreen() {
         </View>
 
         <View className="px-5 mb-3">
-          <View className="flex-row items-center bg-white rounded-xl px-4 py-3 shadow-sm">
+          <View className="flex-row items-center border-b border-earth-400/40 px-0 py-2">
             <Search size={20} color="#78716c" />
             <TextInput
               className="flex-1 ml-3 text-earth-800"
@@ -229,7 +230,7 @@ export default function AdminUsersScreen() {
                 <TouchableOpacity
                   key={filter.key}
                   onPress={() => setActiveFilter(filter.key)}
-                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-600' : 'bg-earth-300 border-earth-400'}`}
+                  className={`mr-2 px-3 py-1.5 rounded-full ${active ? 'bg-primary-600' : 'bg-earth-200/90'}`}
                   activeOpacity={0.9}
                 >
                   <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-black'}`}>{filter.label}</Text>
@@ -249,7 +250,7 @@ export default function AdminUsersScreen() {
           ListEmptyComponent={
             <View className="items-center justify-center py-8">
               <User size={48} color="#d6d3d1" />
-              <Text className="text-slate-300 mt-4">
+              <Text className="text-earth-700 mt-4">
                 {isError ? 'Could not load users. Pull to refresh.' : 'No users found'}
               </Text>
             </View>

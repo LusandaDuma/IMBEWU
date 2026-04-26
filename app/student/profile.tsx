@@ -2,6 +2,7 @@
  * @fileoverview Student profile screen
  */
 
+import { surfaceMenuShell } from '@/constants/theme';
 import { View, Text, TouchableOpacity, Alert, ScrollView, Image } from 'react-native';
 import { User, Mail, LogOut, ChevronRight } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,14 +53,14 @@ export default function ProfileScreen() {
               {profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}
             </Text>
           </View>
-          <Text className="text-xl font-bold text-earth-800">
+          <Text className="text-xl font-bold text-earth-900">
             {profile?.first_name} {profile?.last_name}
           </Text>
-          <Text className="text-earth-600 capitalize">{profile?.role}</Text>
+          <Text className="text-earth-500 capitalize">{profile?.role}</Text>
         </View>
 
         <View className="px-5">
-          <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
+          <View className={surfaceMenuShell}>
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               return (

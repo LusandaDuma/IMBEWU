@@ -62,14 +62,14 @@ export default function Index() {
               style={{ width: 192, height: 48, marginBottom: 8 }}
               resizeMode="contain"
             />
-            <Text className="text-slate-400 text-center text-base mb-12 max-w-xs font-light">
+            <Text className="text-black text-center text-base mb-12 max-w-xs font-light">
               Loading your learning experience
             </Text>
 
             <ActivityIndicator size="large" color="#16a34a" />
           </Animated.View>
 
-          <Text className="absolute bottom-12 text-slate-600 text-xs text-center max-w-xs font-light px-6">
+          <Text className="absolute bottom-12 text-earth-800 text-xs text-center max-w-xs font-light px-6">
             Catalogue opens for everyone — sign in only when you enrol or learn
           </Text>
         </View>

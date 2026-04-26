@@ -2,14 +2,15 @@
  * @fileoverview Available courses for coordinators
  */
 
+import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getCourses } from '@/services/supabase';
 import type { Course } from '@/types';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { BookOpen, ChevronRight, Sprout } from 'lucide-react-native';
-import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { BookOpen, ChevronRight } from 'lucide-react-native';
+import { FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 
 export default function CoordinatorCoursesScreen() {
   const router = useRouter();
@@ -24,18 +25,17 @@ export default function CoordinatorCoursesScreen() {
   const renderCourseCard = ({ item }: { item: Course }) => (
     <TouchableOpacity
       onPress={() => router.push(`/coordinator/course/${item.id}`)}
-      className="bg-slate-800 rounded-2xl p-4 shadow-lg mb-4 border border-slate-700"
-      style={{ elevation: 2 }}
+      className="py-4 mb-1 border-b border-earth-400/40"
     >
       <View className="flex-row items-center">
-        <View className="w-14 h-14 rounded-xl bg-primary-600 items-center justify-center">
-          <Sprout size={28} color="white" />
+        <View className="w-16 h-16 rounded-2xl overflow-hidden items-center justify-center bg-primary-500/10">
+          <Image source={COURSE_LOGO_THUMB} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
         </View>
         <View className="flex-1 ml-4">
-          <Text className="text-lg font-bold text-white" numberOfLines={1}>
+          <Text className="text-lg font-bold text-earth-900" numberOfLines={1}>
             {item.title}
           </Text>
-          <Text className="text-slate-400 text-sm mt-1" numberOfLines={2}>
+          <Text className="text-earth-600 text-sm mt-1" numberOfLines={2}>
             {item.description}
           </Text>
         </View>
@@ -47,8 +47,8 @@ export default function CoordinatorCoursesScreen() {
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-white">Available Courses</Text>
-        <Text className="text-slate-400">Browse and assign to classes</Text>
+        <Text className="text-2xl font-bold text-earth-900">Available courses</Text>
+        <Text className="text-earth-600">Browse and assign to classes</Text>
       </View>
 
       <FlatList
@@ -62,7 +62,7 @@ export default function CoordinatorCoursesScreen() {
         ListEmptyComponent={
           <View className="items-center justify-center py-12">
             <BookOpen size={48} color="#d6d3d1" />
-            <Text className="text-slate-400 mt-4">No courses available</Text>
+            <Text className="text-earth-500 mt-4">No courses available</Text>
           </View>
         }
       />

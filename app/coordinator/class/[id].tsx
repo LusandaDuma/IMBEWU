@@ -1,4 +1,5 @@
 import { Button } from '@/components/shared';
+import { fieldPlain } from '@/constants/theme';
 import {
   addStudentToClass,
   getClassById,
@@ -151,16 +152,19 @@ export default function CoordinatorClassScreen() {
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 py-4 flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white items-center justify-center">
-            <ChevronLeft size={20} color="#14532d" />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
+          >
+            <ChevronLeft size={22} color="#1c1917" strokeWidth={1.5} />
           </TouchableOpacity>
           <View className="ml-3 flex-1">
-            <Text className="text-earth-900 text-xl font-semibold">{classData.name}</Text>
-            <Text className="text-earth-500 text-sm">Class management</Text>
+            <Text className="text-black text-xl font-semibold">{classData.name}</Text>
+            <Text className="text-earth-800 text-sm">Class management</Text>
           </View>
           <TouchableOpacity
             onPress={() => Alert.alert('Join code', classData.join_code)}
-            className="bg-accent-500/12 px-3 py-2 rounded-full flex-row items-center"
+            className="px-0 py-1 border-b border-accent-600/40 flex-row items-center"
           >
             <Text className="text-accent-800 font-bold mr-2">{classData.join_code}</Text>
             <Copy size={14} color="#b45309" />
@@ -168,14 +172,14 @@ export default function CoordinatorClassScreen() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
-          <View className="bg-white/90 rounded-2xl p-5 mb-4">
+          <View className="mb-4 pb-4 border-b border-earth-400/40">
             <Text className="text-earth-900 font-semibold mb-3">Class details</Text>
             <TextInput
               value={className}
               onChangeText={setClassName}
               placeholder="Class name"
               placeholderTextColor="#a8a29e"
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 mb-3"
+              className={`${fieldPlain} mb-3`}
             />
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-earth-700">Active class</Text>
@@ -189,7 +193,7 @@ export default function CoordinatorClassScreen() {
             />
           </View>
 
-          <View className="bg-white/90 rounded-2xl p-5 mb-4">
+          <View className="mb-4 pb-4 border-b border-earth-400/40">
             <View className="flex-row items-center mb-2">
               <Users size={18} color="#166534" />
               <Text className="text-earth-900 font-semibold ml-2">Students and roster</Text>
@@ -205,27 +209,27 @@ export default function CoordinatorClassScreen() {
               }}
               placeholder="Search by name or surname"
               placeholderTextColor="#a8a29e"
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 mb-3"
+              className={`${fieldPlain} mb-3`}
               autoCapitalize="none"
               autoCorrect={false}
             />
             {selectedStudent ? (
-              <View className="mb-3 px-3 py-2 rounded-lg bg-primary-50 border border-primary-200">
+              <View className="mb-3 py-2 border-b border-primary-500/30">
                 <Text className="text-primary-800 text-sm font-medium">
                   Selected: {selectedStudent.first_name} {selectedStudent.last_name}
                 </Text>
               </View>
             ) : null}
             {studentSearchText.trim().length >= 2 ? (
-              <View className="mb-3 rounded-xl border border-stone-200 overflow-hidden">
-                {studentSearchResults.map((student) => (
+              <View className="mb-3 overflow-hidden border-b border-earth-400/30">
+                {studentSearchResults.map((student, si) => (
                   <TouchableOpacity
                     key={student.id}
                     onPress={() => {
                       setSelectedStudent(student);
                       setStudentSearchText(`${student.first_name} ${student.last_name}`);
                     }}
-                    className="px-4 py-3 bg-white border-b border-stone-100"
+                    className={`px-0 py-3 ${si < studentSearchResults.length - 1 ? 'border-b border-earth-400/30' : ''}`}
                   >
                     <Text className="text-earth-900 font-medium">
                       {student.first_name} {student.last_name}
@@ -247,8 +251,11 @@ export default function CoordinatorClassScreen() {
               fullWidth
             />
             <View className="mt-4">
-              {classMembers.map((member) => (
-                <View key={member.id} className="py-2 border-b border-stone-200">
+              {classMembers.map((member, mi) => (
+                <View
+                  key={member.id}
+                  className={`py-2 ${mi < classMembers.length - 1 ? 'border-b border-earth-100/80' : ''}`}
+                >
                   <Text className="text-earth-900 font-medium">
                     {member.profile
                       ? `${member.profile.first_name} ${member.profile.last_name}`
@@ -262,7 +269,7 @@ export default function CoordinatorClassScreen() {
             </View>
           </View>
 
-          <View className="bg-white/90 rounded-2xl p-5">
+          <View className="pt-1">
             <View className="flex-row items-center mb-2">
               <BookOpen size={18} color="#166534" />
               <Text className="text-earth-900 font-semibold ml-2">Class content</Text>
@@ -278,8 +285,11 @@ export default function CoordinatorClassScreen() {
               fullWidth
             />
             <View className="h-3" />
-            {lessons.map((lesson) => (
-              <View key={lesson.id} className="py-2 border-b border-stone-200">
+            {lessons.map((lesson, li) => (
+              <View
+                key={lesson.id}
+                className={`py-2 ${li < lessons.length - 1 ? 'border-b border-earth-100/80' : ''}`}
+              >
                 <Text className="text-earth-900">{lesson.order_index}. {lesson.title}</Text>
                 <Text className="text-earth-500 text-xs">{lesson.duration_mins || 0} mins</Text>
               </View>

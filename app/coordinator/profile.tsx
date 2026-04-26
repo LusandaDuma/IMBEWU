@@ -2,6 +2,7 @@
  * @fileoverview Coordinator profile screen
  */
 
+import { surfaceMenuShell } from '@/constants/theme';
 import { signOut } from '@/services/authService';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -63,7 +64,7 @@ export default function CoordinatorProfileScreen() {
         </View>
 
         <View className="px-5">
-          <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
+          <View className={surfaceMenuShell}>
             {menuItems.map((item, index) => {
               const Icon = item.icon;
               return (

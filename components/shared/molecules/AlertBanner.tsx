@@ -8,10 +8,10 @@ import { Text, TouchableOpacity, View } from 'react-native';
 export type AlertBannerVariant = 'error' | 'success' | 'warning' | 'info';
 
 const map: Record<AlertBannerVariant, { box: string; text: string; icon: string }> = {
-  error: { box: 'bg-red-100', text: 'text-black', icon: '#b91c1c' },
-  success: { box: 'bg-primary-600', text: 'text-white', icon: '#ffffff' },
-  warning: { box: 'bg-earth-300', text: 'text-black', icon: '#44403c' },
-  info: { box: 'bg-earth-200', text: 'text-black', icon: '#44403c' },
+  error: { box: 'border-l-4 border-l-red-600 bg-transparent pl-3', text: 'text-earth-900', icon: '#b91c1c' },
+  success: { box: 'border-l-4 border-l-primary-600 bg-transparent pl-3', text: 'text-earth-900', icon: '#15803d' },
+  warning: { box: 'border-l-4 border-l-accent-600 bg-transparent pl-3', text: 'text-earth-900', icon: '#44403c' },
+  info: { box: 'border-l-4 border-l-earth-500 bg-transparent pl-3', text: 'text-earth-800', icon: '#44403c' },
 };
 
 export interface AlertBannerProps {
@@ -26,7 +26,7 @@ export function AlertBanner({ message, variant = 'info', onDismiss, testID }: Al
   return (
     <View
       testID={testID}
-      className={`flex-row items-center rounded-3xl px-5 py-3.5 mb-5 ${s.box}`}
+      className={`flex-row items-center py-2 mb-5 ${s.box}`}
       accessibilityRole="alert"
     >
       <Text className={`flex-1 text-sm font-light leading-5 ${s.text}`}>{message}</Text>

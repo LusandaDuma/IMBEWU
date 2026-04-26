@@ -1,4 +1,5 @@
 import { Button } from '@/components/shared';
+import { fieldPlain } from '@/constants/theme';
 import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { getCourseById, updateCourse } from '@/services/supabase';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -84,23 +85,26 @@ export default function CoordinatorCourseScreen() {
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 py-4 flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="w-10 h-10 rounded-full bg-white items-center justify-center">
-            <ChevronLeft size={20} color="#14532d" />
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
+          >
+            <ChevronLeft size={22} color="#1c1917" strokeWidth={1.5} />
           </TouchableOpacity>
           <View className="ml-3 flex-1">
-            <Text className="text-earth-900 text-xl font-semibold">Edit course</Text>
-            <Text className="text-earth-500 text-sm">Update class-linked content settings</Text>
+            <Text className="text-black text-xl font-semibold">Edit course</Text>
+            <Text className="text-earth-800 text-sm">Update class-linked content settings</Text>
           </View>
         </View>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 30 }}>
-          <View className="bg-white/90 rounded-2xl p-5">
+          <View className="mb-2 pb-4 border-b border-earth-400/40">
             <Text className="text-earth-700 text-xs font-semibold uppercase tracking-wide mb-2">Title</Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
               placeholder="Course title"
               placeholderTextColor="#a8a29e"
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 mb-4"
+              className={`${fieldPlain} mb-4`}
             />
             <Text className="text-earth-700 text-xs font-semibold uppercase tracking-wide mb-2">Description</Text>
             <TextInput
@@ -109,7 +113,7 @@ export default function CoordinatorCourseScreen() {
               placeholder="Course description"
               placeholderTextColor="#a8a29e"
               multiline
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 min-h-[96px] mb-4"
+              className={`${fieldPlain} min-h-[96px] mb-4`}
             />
             <Text className="text-earth-700 text-xs font-semibold uppercase tracking-wide mb-2">Offline content URL</Text>
             <TextInput
@@ -119,7 +123,7 @@ export default function CoordinatorCourseScreen() {
               placeholderTextColor="#a8a29e"
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-stone-300 rounded-xl px-4 py-3 text-earth-900 mb-4"
+              className={`${fieldPlain} mb-4`}
             />
             <View className="flex-row items-center justify-between mb-5">
               <Text className="text-earth-700">Published</Text>

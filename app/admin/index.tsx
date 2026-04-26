@@ -52,7 +52,6 @@ export default function AdminDashboard() {
       value: `${data?.stats.totalUsers ?? 0}`,
       change: 'Live',
       icon: Users,
-      ring: 'bg-violet-500/12',
       iconColor: '#a78bfa',
     },
     {
@@ -60,7 +59,6 @@ export default function AdminDashboard() {
       value: `${data?.stats.totalCourses ?? 0}`,
       change: 'Live',
       icon: BookOpen,
-      ring: 'bg-primary-500/12',
       iconColor: '#4ade80',
     },
     {
@@ -68,7 +66,6 @@ export default function AdminDashboard() {
       value: `${data?.stats.activeLearners ?? 0}`,
       change: 'Live',
       icon: Users,
-      ring: 'bg-cyan-500/12',
       iconColor: '#22d3ee',
     },
     {
@@ -76,7 +73,6 @@ export default function AdminDashboard() {
       value: `${data?.stats.completionRate ?? 0}%`,
       change: 'Live',
       icon: TrendingUp,
-      ring: 'bg-accent-500/12',
       iconColor: '#fbbf24',
     },
   ];
@@ -91,7 +87,7 @@ export default function AdminDashboard() {
             <ScreenHeader
               title="Administration"
               subtitle="Courses, users, and platform health."
-              variant="dark"
+              variant="light"
             />
           </View>
           <TouchableOpacity
@@ -109,23 +105,23 @@ export default function AdminDashboard() {
               const Icon = stat.icon;
               return (
                 <View key={stat.label} className="w-1/2 px-2 mb-4">
-                  <View className={`rounded-3xl p-4 ${stat.ring}`}>
+                  <View className="pt-1 pb-4 border-b border-earth-400/30">
                     <View className="flex-row items-start justify-between">
-                      <View className="w-10 h-10 rounded-2xl items-center justify-center bg-white/6">
+                      <View className="w-10 h-10 items-center justify-center">
                         <Icon size={20} color={stat.iconColor} />
                       </View>
-                      <Text className="text-primary-300 text-xs font-bold">{isLoading ? 'Loading...' : stat.change}</Text>
+                      <Text className="text-primary-800 text-xs font-bold">{isLoading ? 'Loading...' : stat.change}</Text>
                     </View>
-                    <Text className="text-2xl font-light text-white mt-3 tracking-tight">{stat.value}</Text>
-                    <Text className="text-slate-400 text-xs font-light mt-1 tracking-wide">{stat.label}</Text>
+                    <Text className="text-2xl font-light text-black mt-3 tracking-tight">{stat.value}</Text>
+                    <Text className="text-earth-700 text-xs font-light mt-1 tracking-wide">{stat.label}</Text>
                   </View>
                 </View>
               );
             })}
           </View>
 
-          <View className="bg-white/6 rounded-3xl p-6 mb-6">
-            <Text className="text-white font-light text-base mb-5 tracking-tight">Quick actions</Text>
+          <View className="mb-6 pb-4 border-b border-earth-400/40">
+            <Text className="text-black font-light text-base mb-5 tracking-tight">Quick actions</Text>
             <View className="flex-row flex-wrap -mx-2">
               {[
                 { label: 'Add course', onPress: () => router.push('/admin/courses/new') },
@@ -136,10 +132,10 @@ export default function AdminDashboard() {
                 <View key={action.label} className="w-1/2 px-2 mb-3">
                   <TouchableOpacity
                     onPress={action.onPress}
-                    className="rounded-full py-3 px-2 bg-white/10 items-center"
+                    className="py-3 px-2 border-b border-earth-400/40 items-center"
                     activeOpacity={0.9}
                   >
-                    <Text className="text-white text-sm font-light text-center tracking-wide">{action.label}</Text>
+                    <Text className="text-black text-sm font-light text-center tracking-wide">{action.label}</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -147,29 +143,32 @@ export default function AdminDashboard() {
           </View>
 
           <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-slate-300 font-light text-base tracking-tight">Recent activity</Text>
+            <Text className="text-black font-light text-base tracking-tight">Recent activity</Text>
             <TouchableOpacity onPress={() => router.push('/admin/activity')} activeOpacity={0.9}>
-              <Text className="text-primary-300 text-sm font-medium">View all</Text>
+              <Text className="text-primary-800 text-sm font-medium">View all</Text>
             </TouchableOpacity>
           </View>
-          <View className="bg-white/6 rounded-3xl p-2 mb-10">
+          <View className="mb-10 pb-1 border-b border-earth-400/40">
             {isError ? (
-              <View className="px-4 py-3.5 rounded-2xl">
-                <Text className="text-rose-300 text-sm leading-5 font-light">
+              <View className="px-4 py-3.5">
+                <Text className="text-red-800 text-sm leading-5 font-light">
                   Unable to load analytics right now. Pull to refresh or try again in a moment.
                 </Text>
               </View>
             ) : recentActions.length === 0 ? (
-              <View className="px-4 py-3.5 rounded-2xl">
-                <Text className="text-slate-300 text-sm leading-5 font-light">
+              <View className="px-4 py-3.5">
+                <Text className="text-earth-700 text-sm leading-5 font-light">
                   {isLoading ? 'Loading recent activity...' : 'No recent activity yet.'}
                 </Text>
               </View>
             ) : (
-              recentActions.map((action) => (
-                <View key={action.id} className="px-4 py-3.5 rounded-2xl mb-1 last:mb-0">
-                  <Text className="text-white/95 text-sm leading-5 font-light">{action.text}</Text>
-                  <Text className="text-slate-500 text-xs mt-2 font-light tracking-wide">
+              recentActions.map((action, ri) => (
+                <View
+                  key={action.id}
+                  className={`px-4 py-3.5 ${ri < recentActions.length - 1 ? 'border-b border-earth-400/35' : ''}`}
+                >
+                  <Text className="text-black text-sm leading-5 font-light">{action.text}</Text>
+                  <Text className="text-earth-600 text-xs mt-2 font-light tracking-wide">
                     {formatRelativeTime(action.timestamp)}
                   </Text>
                 </View>

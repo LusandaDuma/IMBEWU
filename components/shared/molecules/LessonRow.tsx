@@ -1,9 +1,9 @@
 /**
- * @fileoverview Lesson rhythm — soft panels, no outlines.
+ * @fileoverview Lesson list rows — divider-only separation, no panels.
  */
 
 import { CheckCircle, Lock, Play } from 'lucide-react-native';
-import { Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 export interface LessonRowProps {
   index: number;
@@ -14,16 +14,6 @@ export interface LessonRowProps {
   surface?: 'light' | 'dark';
   testID?: string;
 }
-
-const rowShadow =
-  Platform.OS === 'ios'
-    ? {
-        shadowColor: '#1c1917',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.04,
-        shadowRadius: 24,
-      }
-    : { elevation: 1 };
 
 export function LessonRow({
   index,
@@ -36,30 +26,18 @@ export function LessonRow({
 }: LessonRowProps) {
   const Icon = state === 'done' ? CheckCircle : state === 'locked' ? Lock : Play;
   const iconColor =
-    surface === 'light'
-      ? state === 'done'
-        ? '#16a34a'
-        : state === 'locked'
-          ? '#a8a29e'
-          : '#16a34a'
-      : state === 'done'
-        ? '#86efac'
-        : state === 'locked'
-          ? '#94a3b8'
-          : '#bbf7d0';
+    state === 'done' ? '#16a34a' : state === 'locked' ? '#a8a29e' : '#16a34a';
 
-  const shell =
-    surface === 'light' ? 'bg-white/65' : 'bg-white/6';
+  const titleCls = 'text-black';
+  const subCls = 'text-earth-700';
 
-  const titleCls = surface === 'light' ? 'text-earth-900' : 'text-white';
-  const subCls = surface === 'light' ? 'text-earth-500' : 'text-slate-400';
-
-  const iconWrap = surface === 'light' ? 'bg-primary-500/10' : 'bg-white/10';
+  const iconWrap = 'bg-primary-500/8';
 
   const row = (
     <View
-      className={`flex-row items-center rounded-3xl p-4 mb-3 ${shell} ${state === 'locked' ? 'opacity-45' : ''}`}
-      style={surface === 'light' ? rowShadow : undefined}
+      className={`flex-row items-center py-3 mb-0 border-b border-earth-400/30 ${
+        state === 'locked' ? 'opacity-45' : ''
+      }`}
     >
       <View className={`w-11 h-11 rounded-full items-center justify-center ${iconWrap}`}>
         <Icon size={19} color={iconColor} strokeWidth={1.75} />

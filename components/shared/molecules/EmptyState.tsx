@@ -25,10 +25,11 @@ export function EmptyState({
   variant = 'light',
   testID,
 }: EmptyStateProps) {
-  const titleCls = variant === 'dark' ? 'text-white' : 'text-earth-900';
-  const descCls = variant === 'dark' ? 'text-slate-400' : 'text-earth-500';
-  const halo = variant === 'dark' ? 'bg-white/6' : 'bg-earth-900/4';
-  const ic = variant === 'dark' ? '#a7f3d0' : '#78716c';
+  // Grey app canvas: dark text for both variants (no white titles on grey).
+  const titleCls = 'text-black';
+  const descCls = 'text-earth-700';
+  const halo = 'bg-transparent';
+  const ic = '#57534e';
 
   return (
     <View testID={testID} className="items-center justify-center py-16 px-10">

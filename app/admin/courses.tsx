@@ -2,6 +2,8 @@
  * @fileoverview Admin courses management
  */
 
+import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
+import { fieldPlain, surfaceListCard } from '@/constants/theme';
 import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { deleteCourse, getAllCourses, updateCourse } from '@/services/supabase';
 import type { Course } from '@/types';
@@ -10,7 +12,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Edit2, Eye, EyeOff, Plus, Sprout, Trash2 } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
-import { Alert, FlatList, Modal, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  RefreshControl,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type CourseFilter = 'all' | 'published' | 'unpublished';
@@ -111,10 +123,10 @@ export default function AdminCoursesScreen() {
   };
 
   const renderCourseCard = ({ item }: { item: Course }) => (
-    <View className="bg-white rounded-2xl p-4 shadow-md mb-4">
+    <View className={`${surfaceListCard} mb-4`}>
       <View className="flex-row items-start">
-        <View className="w-16 h-16 rounded-xl bg-violet-100 items-center justify-center">
-          <Sprout size={28} color="#7c3aed" />
+        <View className="w-16 h-16 rounded-2xl overflow-hidden items-center justify-center bg-primary-500/10">
+          <Image source={COURSE_LOGO_THUMB} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
         </View>
         <View className="flex-1 ml-4">
           <Text className="text-lg font-bold text-earth-800" numberOfLines={1}>
@@ -190,7 +202,7 @@ export default function AdminCoursesScreen() {
                 <TouchableOpacity
                   key={filter.key}
                   onPress={() => setActiveFilter(filter.key as CourseFilter)}
-                  className={`mr-2 px-3 py-1.5 rounded-full border ${active ? 'bg-primary-600 border-primary-600' : 'bg-earth-300 border-earth-400'}`}
+                  className={`mr-2 px-3 py-1.5 rounded-full ${active ? 'bg-primary-600' : 'bg-earth-200/90'}`}
                   activeOpacity={0.9}
                 >
                   <Text className={`text-xs ${active ? 'text-white font-semibold' : 'text-black'}`}>{filter.label}</Text>
@@ -211,20 +223,20 @@ export default function AdminCoursesScreen() {
           ListEmptyComponent={
             <View className="items-center justify-center py-12">
               <Sprout size={48} color="#94a3b8" />
-              <Text className="text-slate-300 mt-4">No courses yet</Text>
+              <Text className="text-earth-700 mt-4">No courses yet</Text>
             </View>
           }
         />
 
         <Modal visible={!!editingCourse} transparent animationType="fade" onRequestClose={() => setEditingCourse(null)}>
           <View className="flex-1 bg-black/50 justify-center px-5">
-            <View className="bg-white rounded-2xl p-4">
+            <View className="pt-1 pb-1">
               <Text className="text-lg font-semibold text-earth-800 mb-3">Edit Course</Text>
               <Text className="text-earth-700 text-sm mb-2">Title</Text>
               <TextInput
                 value={editTitle}
                 onChangeText={setEditTitle}
-                className="bg-white rounded-xl px-4 py-2.5 text-earth-800 border border-earth-200"
+                className={fieldPlain}
                 placeholder="Course title"
                 placeholderTextColor="#a8a29e"
               />
@@ -232,7 +244,7 @@ export default function AdminCoursesScreen() {
               <TextInput
                 value={editDescription}
                 onChangeText={setEditDescription}
-                className="bg-white rounded-xl px-4 py-2.5 text-earth-800 border border-earth-200"
+                className={fieldPlain}
                 placeholder="Course description"
                 placeholderTextColor="#a8a29e"
                 multiline

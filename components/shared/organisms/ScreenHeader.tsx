@@ -15,13 +15,14 @@ export interface ScreenHeaderProps {
   testID?: string;
 }
 
+/** Grey canvas: dark text. Green/photo overlays: `transparent` is not used for that in-app — keep titles dark on grey. */
 export function ScreenHeader({ title, subtitle, onBack, rightSlot, variant = 'light', testID }: ScreenHeaderProps) {
-  const titleCls =
-    variant === 'dark' ? 'text-black' : variant === 'transparent' ? 'text-white' : 'text-earth-900';
-  const subCls =
-    variant === 'dark' ? 'text-earth-700' : variant === 'transparent' ? 'text-white/75' : 'text-earth-600';
+  const onGreyCanvas = variant === 'light' || variant === 'dark' || variant === 'transparent';
+  const titleCls = onGreyCanvas ? 'text-black' : 'text-white';
+  const subCls = onGreyCanvas ? 'text-earth-800' : 'text-white/80';
 
-  const backTint = variant === 'light' ? 'bg-earth-900/5' : 'bg-white/10';
+  const backTint = onGreyCanvas ? 'bg-earth-900/5' : 'bg-white/10';
+  const backIcon = onGreyCanvas ? '#1c1917' : '#ffffff';
 
   return (
     <View testID={testID} className="pt-3 pb-6 px-5">
@@ -33,7 +34,7 @@ export function ScreenHeader({ title, subtitle, onBack, rightSlot, variant = 'li
               className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${backTint}`}
               accessibilityLabel="Go back"
             >
-              <ChevronLeft size={22} color={variant === 'light' ? '#57534e' : '#ffffff'} strokeWidth={1.5} />
+              <ChevronLeft size={22} color={backIcon} strokeWidth={1.5} />
             </TouchableOpacity>
           ) : null}
           <View className="flex-1 min-w-0">

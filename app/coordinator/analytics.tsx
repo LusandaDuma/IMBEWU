@@ -82,8 +82,8 @@ export default function CoordinatorAnalyticsScreen() {
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-white">Analytics</Text>
-        <Text className="text-slate-400">Track your students&apos; real progress</Text>
+        <Text className="text-2xl font-bold text-earth-900">Analytics</Text>
+        <Text className="text-earth-600">Track your students&apos; real progress</Text>
       </View>
 
       <ScrollView className="flex-1 px-5">
@@ -92,7 +92,7 @@ export default function CoordinatorAnalyticsScreen() {
             const Icon = stat.icon;
             return (
               <View key={stat.label} className="w-1/2 px-2 mb-4">
-                <View className="bg-white rounded-2xl p-4 shadow-sm">
+                <View className="pb-4 border-b border-earth-400/35">
                   <View 
                     className="w-10 h-10 rounded-xl items-center justify-center mb-3"
                     style={{ backgroundColor: `${stat.color}20` }}
@@ -107,8 +107,8 @@ export default function CoordinatorAnalyticsScreen() {
           })}
         </View>
 
-        <Text className="text-lg font-bold text-white mt-4 mb-3">Recent Activity</Text>
-        <View className="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <Text className="text-lg font-bold text-earth-900 mt-4 mb-3">Recent activity</Text>
+        <View className="border-t border-earth-400/30 overflow-hidden">
           {isLoading ? (
             <View className="px-4 py-5">
               <Text className="text-earth-500">Loading analytics...</Text>

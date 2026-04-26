@@ -3,7 +3,7 @@
  */
 
 import { Button, ScreenHeader } from '@/components/shared';
-import { APP_BACKGROUND_COLOR } from '@/constants/theme';
+import { APP_BACKGROUND_COLOR, surfaceContentPanel } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getCourseById, getLessonsByCourse } from '@/services/supabase';
 import type { Lesson } from '@/types';
@@ -63,17 +63,18 @@ export default function PublicCoursePreviewScreen() {
       </LinearGradient>
 
       <ScrollView className="flex-1 px-5 -mt-6 pb-10" showsVerticalScrollIndicator={false}>
-        <View className="bg-white/75 rounded-3xl p-6 mb-6">
-          <View className="flex-row items-center mb-4">
+        <View className={surfaceContentPanel}>
+          <View className="flex-row items-center mb-3">
             <BookOpen size={18} color="#16a34a" strokeWidth={1.5} />
             <Text className="text-earth-800 font-light text-lg ml-2 tracking-tight">Outline</Text>
             <View className="flex-1" />
-            <View className="bg-primary-500/12 px-3 py-1.5 rounded-full">
-              <Text className="text-primary-900 text-[11px] font-medium">{lessons.length} lessons</Text>
-            </View>
+            <Text className="text-primary-800 text-xs font-medium">{lessons.length} lessons</Text>
           </View>
           {lessons.map((lesson: Lesson, i: number) => (
-            <View key={lesson.id} className="mb-2 rounded-2xl bg-earth-50/80 px-4 py-3">
+            <View
+              key={lesson.id}
+              className={`py-3 ${i < lessons.length - 1 ? 'border-b border-earth-400/30' : ''}`}
+            >
               <Text className="text-earth-800 font-light">
                 {i + 1}. {lesson.title}
               </Text>

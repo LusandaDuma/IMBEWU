@@ -3,6 +3,7 @@
  */
 
 import { Button, CourseCard, SearchBar } from '@/components/shared';
+import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { useCourses } from '@/hooks/useCourse';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -76,7 +77,7 @@ export function PublicCatalogHome() {
         </View>
 
         <View className="px-5 mb-3">
-          <SearchBar value={q} onChangeText={setQ} placeholder="Search courses…" icon={Search} variant="dark" />
+          <SearchBar value={q} onChangeText={setQ} placeholder="Search courses…" icon={Search} variant="light" />
         </View>
 
         <FlatList
@@ -88,18 +89,18 @@ export function PublicCatalogHome() {
           }
           ListHeaderComponent={
             <View>
-              <View className="bg-earth-200 rounded-3xl p-5 mb-5">
-                <Text className="text-black text-xl font-semibold">Course Marketplace</Text>
-                <Text className="text-earth-700 mt-1 leading-5">
+              <View className="mb-6 pb-4 border-b border-earth-400/35">
+                <Text className="text-earth-900 text-xl font-semibold">Course marketplace</Text>
+                <Text className="text-earth-600 mt-1 leading-5">
                   Browse featured learning tracks and enrol when ready.
                 </Text>
-                <View className="flex-row mt-4">
+                <View className="flex-row flex-wrap mt-3 gap-x-4 gap-y-1">
                   {categoryPills.map((pill) => {
                     const Icon = pill.icon;
                     return (
-                      <View key={pill.label} className="mr-2 px-3 py-2 rounded-full bg-primary-600 flex-row items-center">
-                        <Icon size={13} color="#ffffff" />
-                        <Text className="text-white text-xs ml-1">{pill.label}</Text>
+                      <View key={pill.label} className="flex-row items-center">
+                        <Icon size={14} color="#166534" />
+                        <Text className="text-earth-800 text-xs ml-1.5 font-medium">{pill.label}</Text>
                       </View>
                     );
                   })}
@@ -115,7 +116,7 @@ export function PublicCatalogHome() {
                       title={course.title}
                       description={course.description}
                       meta="Featured course"
-                      coverImageSource={require('../../assets/images/icon.png')}
+                      coverImageSource={COURSE_LOGO_THUMB}
                       variant="elevated"
                       onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
                       footer={
@@ -147,7 +148,7 @@ export function PublicCatalogHome() {
             <CourseCard
               title={item.title}
               description={item.description}
-              coverImageSource={require('../../assets/images/icon.png')}
+              coverImageSource={COURSE_LOGO_THUMB}
               variant="elevated"
               onPress={() => router.push({ pathname: '/course/[id]', params: { id: item.id } })}
               footer={

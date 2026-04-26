@@ -13,7 +13,7 @@ export interface FormFieldProps extends InputProps {
   helperText?: string;
   leftIcon?: LucideIcon;
   focused?: boolean;
-  appearance?: 'light' | 'dark';
+  appearance?: 'light' | 'dark' | 'blend';
   endSlot?: ReactNode;
 }
 
@@ -30,34 +30,46 @@ export function FormField({
 }: FormFieldProps) {
   const hasError = !!error;
   const isDark = appearance === 'dark';
+  const isBlend = appearance === 'blend';
 
-  const shell = isDark
+  const shell = isBlend
     ? hasError
-      ? 'bg-red-200'
+      ? 'border-b-2 border-red-500/90 bg-transparent'
       : focused
-        ? 'bg-earth-100'
-        : 'bg-earth-200'
-    : hasError
-      ? 'bg-red-500/8'
-      : focused
-        ? 'bg-white/95'
-        : 'bg-earth-50/90';
+        ? 'border-b-2 border-primary-600 bg-transparent'
+        : 'border-b border-earth-400/45 bg-transparent'
+    : isDark
+      ? hasError
+        ? 'bg-red-200'
+        : focused
+          ? 'bg-earth-100'
+          : 'bg-earth-200'
+      : hasError
+        ? 'bg-red-500/8'
+        : focused
+          ? 'bg-white/95'
+          : 'bg-earth-50/90';
 
   const labelCls = isDark ? 'text-earth-700' : 'text-earth-600';
-  const helperCls = isDark ? 'text-earth-600' : 'text-earth-500';
-  const iconMuted = isDark ? '#57534e' : '#78716c';
-  const inputCls = isDark ? `text-black ${className ?? ''}` : `text-earth-800 ${className ?? ''}`;
+  const helperCls = isDark || isBlend ? 'text-earth-600' : 'text-earth-500';
+  const iconMuted = isDark || isBlend ? '#57534e' : '#78716c';
+  const inputCls =
+    isDark || isBlend ? `text-earth-900 ${className ?? ''}` : `text-earth-800 ${className ?? ''}`;
+
+  const rowShape = isBlend
+    ? 'flex-row items-center py-1 rounded-none px-0'
+    : 'flex-row items-center rounded-full px-5 py-3';
 
   return (
     <View className="mb-4">
       {label ? (
         <Text className={`text-xs font-medium mb-2 tracking-[0.2em] uppercase ${labelCls}`}>{label}</Text>
       ) : null}
-      <View className={`flex-row items-center rounded-full px-5 py-3 ${shell}`}>
+      <View className={`${rowShape} ${shell}`}>
         {LeftIcon ? (
           <LeftIcon
             size={20}
-            color={focused ? (isDark ? '#86efac' : '#16a34a') : hasError ? '#f87171' : iconMuted}
+            color={focused ? '#16a34a' : hasError ? '#f87171' : iconMuted}
             style={{ marginRight: 12 }}
             strokeWidth={1.75}
           />
@@ -65,7 +77,7 @@ export function FormField({
         <Input
           {...inputProps}
           hasError={hasError}
-          placeholderTextColor={isDark ? '#78716c' : '#a8a29e'}
+          placeholderTextColor={isDark || isBlend ? '#78716c' : '#a8a29e'}
           className={inputCls}
         />
         {endSlot ? <View className="pl-1">{endSlot}</View> : null}
