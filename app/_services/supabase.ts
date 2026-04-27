@@ -601,7 +601,20 @@ export async function getClassMembers(classId: string): Promise<ClassMember[]> {
   }));
 }
 
-export async function addStudentToClass(classId: string, studentId: string): Promise<boolean> {
+export type AddStudentToClassResult =
+  | 'joined'
+  | 'already-in-class'
+  | 'already-enrolled'
+  | 'class-not-found'
+  | 'join-failed';
+
+export type RemoveStudentFromClassResult =
+  | 'removed'
+  | 'not-in-class'
+  | 'class-not-found'
+  | 'remove-failed';
+
+export async function addStudentToClass(classId: string, studentId: string): Promise<AddStudentToClassResult> {
   const { data: classData, error: classError } = await supabase
     .from('classes')
     .select('course_id')
@@ -610,7 +623,23 @@ export async function addStudentToClass(classId: string, studentId: string): Pro
 
   if (classError || !classData) {
     console.error('Error fetching class for add student:', classError);
-    return false;
+    return 'class-not-found';
+  }
+
+  const { data: existingEnrolment, error: enrolmentLookupError } = await supabase
+    .from('course_enrolments')
+    .select('id')
+    .eq('user_id', studentId)
+    .eq('course_id', classData.course_id)
+    .maybeSingle();
+
+  if (enrolmentLookupError) {
+    console.error('Error checking existing student course enrolment:', enrolmentLookupError);
+    return 'join-failed';
+  }
+
+  if (existingEnrolment) {
+    return 'already-enrolled';
   }
 
   const { error: memberError } = await supabase.from('class_members').insert({
@@ -619,9 +648,13 @@ export async function addStudentToClass(classId: string, studentId: string): Pro
     role: 'student',
   });
 
-  if (memberError && memberError.code !== '23505') {
+  if (memberError?.code === '23505') {
+    return 'already-in-class';
+  }
+
+  if (memberError) {
     console.error('Error adding class member:', memberError);
-    return false;
+    return 'join-failed';
   }
 
   const { error: enrolError } = await supabase.from('course_enrolments').insert({
@@ -630,12 +663,71 @@ export async function addStudentToClass(classId: string, studentId: string): Pro
     enrolment_type: 'class_based',
   });
 
-  if (enrolError && enrolError.code !== '23505') {
+  if (enrolError) {
     console.error('Error enrolling student in course:', enrolError);
-    return false;
+    return 'join-failed';
   }
 
-  return true;
+  return 'joined';
+}
+
+export async function removeStudentFromClass(
+  classId: string,
+  studentId: string
+): Promise<RemoveStudentFromClassResult> {
+  const { data: classData, error: classError } = await supabase
+    .from('classes')
+    .select('course_id')
+    .eq('id', classId)
+    .single();
+
+  if (classError || !classData) {
+    console.error('Error fetching class for remove student:', classError);
+    return 'class-not-found';
+  }
+
+  const { data: memberData, error: memberLookupError } = await supabase
+    .from('class_members')
+    .select('id')
+    .eq('class_id', classId)
+    .eq('user_id', studentId)
+    .eq('role', 'student')
+    .maybeSingle();
+
+  if (memberLookupError) {
+    console.error('Error checking class member before removal:', memberLookupError);
+    return 'remove-failed';
+  }
+
+  if (!memberData) {
+    return 'not-in-class';
+  }
+
+  const { error: memberDeleteError } = await supabase
+    .from('class_members')
+    .delete()
+    .eq('class_id', classId)
+    .eq('user_id', studentId)
+    .eq('role', 'student');
+
+  if (memberDeleteError) {
+    console.error('Error removing class member:', memberDeleteError);
+    return 'remove-failed';
+  }
+
+  const { error: enrolDeleteError } = await supabase
+    .from('course_enrolments')
+    .delete()
+    .eq('user_id', studentId)
+    .eq('course_id', classData.course_id)
+    .eq('enrolment_type', 'class_based');
+
+  if (enrolDeleteError) {
+    console.error('Error removing class-based enrolment:', enrolDeleteError);
+    return 'remove-failed';
+  }
+
+  return 'removed';
 }
 
 export async function searchStudentsByName(searchText: string): Promise<StudentSearchResult[]> {

@@ -6,6 +6,7 @@ import {
   getClassMembers,
   getCourseById,
   getLessonsByCourse,
+  removeStudentFromClass,
   searchStudentsByName,
   type StudentSearchResult,
   updateClass,
@@ -95,8 +96,19 @@ export default function CoordinatorClassScreen() {
 
   const addStudentMutation = useMutation({
     mutationFn: async () => addStudentToClass(classId, selectedStudent!.id),
-    onSuccess: (ok) => {
-      if (!ok) {
+    onSuccess: (result) => {
+      if (result === 'already-enrolled') {
+        Alert.alert(
+          'Already enrolled',
+          'This student is already enrolled in this course and cannot be added to another class for it.'
+        );
+        return;
+      }
+      if (result === 'already-in-class') {
+        Alert.alert('Already in class', 'This student is already in this class.');
+        return;
+      }
+      if (result !== 'joined') {
         Alert.alert('Could not add student', 'Please try again.');
         return;
       }
@@ -106,6 +118,22 @@ export default function CoordinatorClassScreen() {
       Alert.alert('Student added', 'Student added to class and enrolled in the course.');
     },
     onError: () => Alert.alert('Could not add student', 'Please try again.'),
+  });
+  const removeStudentMutation = useMutation({
+    mutationFn: async (studentId: string) => removeStudentFromClass(classId, studentId),
+    onSuccess: (result) => {
+      if (result === 'not-in-class') {
+        Alert.alert('Student not in class', 'This student is no longer part of this class.');
+        return;
+      }
+      if (result !== 'removed') {
+        Alert.alert('Could not remove student', 'Please try again.');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
+      Alert.alert('Student removed', 'Student has been removed from the class.');
+    },
+    onError: () => Alert.alert('Could not remove student', 'Please try again.'),
   });
 
   if (classLoading) {
@@ -146,6 +174,25 @@ export default function CoordinatorClassScreen() {
       return;
     }
     addStudentMutation.mutate();
+  };
+
+  const onRemoveStudent = (member: ClassMember) => {
+    if (member.role !== 'student') return;
+    const studentName = member.profile
+      ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
+      : 'this student';
+    Alert.alert(
+      'Remove student',
+      `Remove ${studentName} from this class?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => removeStudentMutation.mutate(member.user_id),
+        },
+      ]
+    );
   };
 
   return (
@@ -256,14 +303,29 @@ export default function CoordinatorClassScreen() {
                   key={member.id}
                   className={`py-2 ${mi < classMembers.length - 1 ? 'border-b border-earth-100/80' : ''}`}
                 >
-                  <Text className="text-earth-900 font-medium">
-                    {member.profile
-                      ? `${member.profile.first_name} ${member.profile.last_name}`
-                      : member.user_id}
-                  </Text>
-                  <Text className="text-earth-500 text-xs">
-                    {member.role} · joined {new Date(member.joined_at).toLocaleDateString()}
-                  </Text>
+                  <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-1">
+                      <Text className="text-earth-900 font-medium">
+                        {member.profile
+                          ? `${member.profile.first_name} ${member.profile.last_name}`
+                          : member.user_id}
+                      </Text>
+                      <Text className="text-earth-500 text-xs">
+                        {member.role} · joined {new Date(member.joined_at).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    {member.role === 'student' ? (
+                      <Button
+                        label={
+                          removeStudentMutation.isPending ? 'Removing...' : 'Remove'
+                        }
+                        variant="danger"
+                        size="sm"
+                        onPress={() => onRemoveStudent(member)}
+                        disabled={removeStudentMutation.isPending}
+                      />
+                    ) : null}
+                  </View>
                 </View>
               ))}
             </View>

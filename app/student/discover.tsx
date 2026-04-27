@@ -1,55 +1,25 @@
 /**
- * @fileoverview Student course discovery — search, catalogue enrol, join class.
+ * @fileoverview Student class join screen.
  */
 
-import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
+import { Button, ScreenHeader } from '@/components/shared';
 import {
   addStudentToClass,
-  enrollInCourse,
   getClassByJoinCode,
-  getCourses,
-  getEnrolmentsByUser,
 } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Plus, Search, Sprout, Users } from 'lucide-react-native';
-import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
+import { Plus, Users } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, FlatList, RefreshControl, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DiscoverScreen() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [showJoinInput, setShowJoinInput] = useState(false);
-
-  const { data: courses = [], isLoading, refetch } = useQuery({
-    queryKey: ['available-courses'],
-    queryFn: getCourses,
-  });
-  const { data: enrolments = [] } = useQuery({
-    queryKey: ['user-enrolments', user?.id],
-    queryFn: () => (user ? getEnrolmentsByUser(user.id) : Promise.resolve([])),
-    enabled: Boolean(user),
-  });
-
-  useRefetchOnFocus(refetch, true);
-
-  const enrollMutation = useMutation({
-    mutationFn: (courseId: string) =>
-      user ? enrollInCourse(user.id, courseId, 'independent') : Promise.resolve(null),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
-      queryClient.invalidateQueries({ queryKey: ['user-enrolments', user?.id] });
-      Alert.alert('Enrolled', 'You are now enrolled in this course.');
-    },
-    onError: () => {
-      Alert.alert('Could not enrol', 'Please try again in a moment.');
-    },
-  });
 
   const joinClassMutation = useMutation({
     mutationFn: async (rawCode: string) => {
@@ -58,8 +28,8 @@ export default function DiscoverScreen() {
       const classData = await getClassByJoinCode(rawCode.trim().toUpperCase());
       if (!classData) return { ok: false as const, reason: 'invalid-code' };
 
-      const joined = await addStudentToClass(classData.id, user.id);
-      if (!joined) return { ok: false as const, reason: 'join-failed' };
+      const result = await addStudentToClass(classData.id, user.id);
+      if (result !== 'joined') return { ok: false as const, reason: result };
 
       return { ok: true as const };
     },
@@ -70,12 +40,24 @@ export default function DiscoverScreen() {
           return;
         }
 
+        if (result.reason === 'already-enrolled') {
+          Alert.alert(
+            'Already enrolled',
+            'You are already enrolled in this course, so you cannot join another class for it.'
+          );
+          return;
+        }
+
+        if (result.reason === 'already-in-class') {
+          Alert.alert('Already in class', 'You are already a member of this class.');
+          return;
+        }
+
         Alert.alert('Could not join class', 'Please try again in a moment.');
         return;
       }
 
       queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
-      queryClient.invalidateQueries({ queryKey: ['user-enrolments', user?.id] });
       Alert.alert('Welcome', 'You have joined the class.');
       setJoinCode('');
       setShowJoinInput(false);
@@ -90,34 +72,19 @@ export default function DiscoverScreen() {
     joinClassMutation.mutate(joinCode);
   };
 
-  const enrolledCourseIds = new Set(enrolments.map((enrolment) => enrolment.course_id));
-  const filteredCourses = courses.filter(
-    (course) =>
-      !enrolledCourseIds.has(course.id) &&
-      (course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
         <ScreenHeader
-          title="Discover"
-          subtitle="Search the catalogue or join a class with a code."
+          title="Join class"
+          subtitle="Students join courses using a class code from a coordinator."
           variant="light"
         />
 
-        <View className="px-5 mb-4">
-          <SearchBar
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search by course title or topic…"
-            icon={Search}
-            variant="light"
-          />
-        </View>
-
-        <View className="px-5 mb-4">
+        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}>
+          <Text className="text-earth-700 text-sm mb-4">
+            Students cannot self-enrol into courses. Ask your coordinator for a class code to join.
+          </Text>
           {!showJoinInput ? (
             <TouchableOpacity
               onPress={() => setShowJoinInput(true)}
@@ -129,7 +96,7 @@ export default function DiscoverScreen() {
               </View>
               <View className="flex-1 ml-3">
                 <Text className="font-medium text-earth-900 text-base tracking-tight">Join a class</Text>
-                <Text className="text-earth-600 text-sm mt-0.5">Use the six-character code from your coordinator</Text>
+                <Text className="text-earth-600 text-sm mt-0.5">Use the code from your coordinator</Text>
               </View>
               <Plus size={22} color="#b45309" />
             </TouchableOpacity>
@@ -160,41 +127,7 @@ export default function DiscoverScreen() {
               </TouchableOpacity>
             </View>
           )}
-        </View>
-
-        <FlatList
-          data={filteredCourses}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 28 }}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor="#22c55e" />
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon={Sprout}
-              title="No courses match"
-              description="Try another search term or pull to refresh the catalogue."
-              variant="light"
-            />
-          }
-          renderItem={({ item }) => (
-            <CourseCard
-              title={item.title}
-              description={item.description}
-              variant="elevated"
-              footer={
-                <Button
-                  label={enrollMutation.isPending ? 'Enrolling…' : 'Enrol in course'}
-                  onPress={() => enrollMutation.mutate(item.id)}
-                  isLoading={enrollMutation.isPending}
-                  disabled={enrollMutation.isPending}
-                  variant="primary"
-                  fullWidth
-                />
-              }
-            />
-          )}
-        />
+        </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
