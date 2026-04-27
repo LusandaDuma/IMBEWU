@@ -8,9 +8,23 @@ import { invokeCopilotTool } from '@/services/copilotApi';
 import { CLIENT_ONLY_COPILOT_TOOLS, runCopilotNavigateTo, runCopilotSignOut } from '@/services/copilotClientTools';
 import type { Router } from 'expo-router';
 
-const DEFAULT_MODEL = 'gemini-flash-latest';
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const;
+const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
 const MAX_TOOL_ROUNDS = 8;
+
+function normalizeGeminiError(message: string): string {
+  const lower = message.toLowerCase();
+  const isQuota =
+    lower.includes('quota exceeded') ||
+    lower.includes('rate limit') ||
+    lower.includes('resource_exhausted');
+  if (!isQuota) {
+    return message;
+  }
+  const retryMatch = message.match(/retry in\s+([\d.]+)s/i);
+  const waitText = retryMatch ? ` Please retry in about ${Math.ceil(Number(retryMatch[1]))}s.` : '';
+  return `Nolwazi is temporarily busy due to Gemini API quota limits.${waitText}`;
+}
 
 /** Gemini 1.5/2 REST content (includes tool parts). */
 export type CopilotContentPart = {
@@ -168,7 +182,7 @@ async function oneGenerateRound(
     },
     generationConfig: {
       temperature: 0.55,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 768,
     },
   };
 
@@ -178,11 +192,14 @@ async function oneGenerateRound(
   for (const m of modelsToTry) {
     const r = await callGenerateContent(key, m, body);
     if (!r.ok) {
-      lastErr = r.error;
+      lastErr = normalizeGeminiError(r.error);
       if (r.status === 429 || r.status === 503 || r.status === 404) {
+        if (r.status === 429 && lastErr.includes('quota limits')) {
+          return { kind: 'error', error: lastErr };
+        }
         continue;
       }
-      return { kind: 'error', error: r.error };
+      return { kind: 'error', error: normalizeGeminiError(r.error) };
     }
 
     const content = (r.json.candidates as { content: CopilotContent }[] | undefined)?.[0]?.content;
@@ -211,10 +228,23 @@ async function oneGenerateRound(
     return { kind: 'error', error: 'Empty model output.' };
   }
 
-  return { kind: 'error', error: lastErr };
+  return { kind: 'error', error: normalizeGeminiError(lastErr) };
 }
 
 export type ToolLogEntry = { name: string; ok: boolean; summary: string };
+
+function buildToolFallbackReply(toolLog: ToolLogEntry[]): string {
+  const success = toolLog.filter((t) => t.ok);
+  if (!success.length) {
+    return 'I could not complete that request right now. Please try again.';
+  }
+  if (success.some((t) => t.name === 'getProgressForCourse')) {
+    const latestProgress = [...success].reverse().find((t) => t.name === 'getProgressForCourse');
+    return `${latestProgress?.summary ?? 'I fetched your course progress.'} I can also explain the lesson step-by-step if you want.`;
+  }
+  const latest = success[success.length - 1];
+  return `${latest?.summary ?? 'I completed the requested action.'} Tell me if you want a deeper explanation.`;
+}
 
 function summarizeResponse(name: string, payload: Record<string, unknown>): string {
   if (payload.error && typeof payload.error === 'string') {
@@ -259,7 +289,7 @@ export type RunCopilotParams = {
    */
   priorContents: CopilotContent[];
   getAccessToken: () => string | null;
-  router: Pick<Router, 'push'>;
+  router: Pick<Router, 'push' | 'replace'>;
 };
 
 /**
@@ -281,8 +311,9 @@ export async function runCopilotTurn(params: RunCopilotParams): Promise<{
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const res = await oneGenerateRound(systemInstruction, contents);
     if (res.kind === 'error') {
+      const fallbackText = toolLog.length ? buildToolFallbackReply(toolLog) : null;
       return {
-        assistantText: `Something went wrong: ${res.error}`,
+        assistantText: fallbackText ?? `Something went wrong: ${res.error}`,
         toolLog,
         finalContents: contents,
       };
@@ -304,7 +335,8 @@ export async function runCopilotTurn(params: RunCopilotParams): Promise<{
     if (CLIENT_ONLY_COPILOT_TOOLS.has(name)) {
       if (name === 'navigateTo') {
         const path = typeof args.path === 'string' ? args.path : '';
-        const nav = runCopilotNavigateTo(path, (href) => router.push(href));
+        // Replace the chatbot route with the destination so users immediately see the action.
+        const nav = runCopilotNavigateTo(path, (href) => router.replace(href));
         toolPayload = nav;
         const ok = Boolean(nav.navigated) && !nav.error;
         pushLog(name, toolPayload, ok);

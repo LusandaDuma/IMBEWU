@@ -14,6 +14,7 @@ import type {
     QuestionOption,
     Quiz
 } from '@/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -39,6 +40,40 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export { supabase };
 export default supabase;
 
+const COURSE_CACHE_KEY = 'cache:courses:v1';
+const COURSE_CACHE_MAX = 300;
+
+type CachedCoursesPayload = {
+  updatedAt: string;
+  items: Course[];
+};
+
+async function readCachedCourses(): Promise<Course[]> {
+  try {
+    const raw = await AsyncStorage.getItem(COURSE_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as CachedCoursesPayload;
+    if (!parsed || !Array.isArray(parsed.items)) return [];
+    return parsed.items;
+  } catch {
+    return [];
+  }
+}
+
+async function writeCachedCourses(courses: Course[]): Promise<void> {
+  try {
+    const unique = new Map<string, Course>();
+    for (const course of courses) {
+      if (course?.id) unique.set(course.id, course);
+    }
+    const items = [...unique.values()].slice(0, COURSE_CACHE_MAX);
+    const payload: CachedCoursesPayload = { updatedAt: new Date().toISOString(), items };
+    await AsyncStorage.setItem(COURSE_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore cache write failures.
+  }
+}
+
 export async function getProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await supabase
     .from('profiles')
@@ -63,9 +98,12 @@ export async function getCourses(): Promise<Course[]> {
   
   if (error) {
     console.error('Error fetching courses:', error);
-    return [];
+    const cached = await readCachedCourses();
+    return cached.filter((course) => course.is_published);
   }
-  return data || [];
+  const courses = (data || []) as Course[];
+  void writeCachedCourses(courses);
+  return courses;
 }
 
 export async function getAllCourses(): Promise<Course[]> {
@@ -76,23 +114,39 @@ export async function getAllCourses(): Promise<Course[]> {
   
   if (error) {
     console.error('Error fetching all courses:', error);
-    return [];
+    return readCachedCourses();
   }
-  return data || [];
+  const courses = (data || []) as Course[];
+  void writeCachedCourses(courses);
+  return courses;
 }
 
 export async function getCourseById(courseId: string): Promise<Course | null> {
+  if (!courseId?.trim()) {
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('courses')
     .select('*')
     .eq('id', courseId)
-    .single();
-  
+    .maybeSingle();
+
   if (error) {
     console.error('Error fetching course:', error);
-    return null;
+    const cached = await readCachedCourses();
+    return cached.find((course) => course.id === courseId) ?? null;
   }
-  return data;
+
+  if (!data) {
+    const cached = await readCachedCourses();
+    return cached.find((course) => course.id === courseId) ?? null;
+  }
+
+  const found = data as Course;
+  const cached = await readCachedCourses();
+  await writeCachedCourses([found, ...cached]);
+  return found;
 }
 
 type CreateCoursePayload = {
