@@ -3,22 +3,74 @@
  */
 
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { getStudentAchievementsData } from '@/services/supabase';
+import { downloadBadgeTemplate, shareBadgeTemplate } from '@/services/badgeTemplateService';
+import {
+  checkAndAwardCourseBadges,
+  getCourseProgressSummary,
+  getEarnedCourseBadges,
+  getEnrolmentsByUser,
+  getStudentAchievementsData,
+} from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
-import { ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, ScrollView, Text, View } from 'react-native';
+import { Button, CompletionBadgeTemplate } from '@/components/shared';
 
 export default function AchievementsScreen() {
-  const { user } = useAuthStore();
+  const { user, profile } = useAuthStore();
+  const badgeRef = useRef<View>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { data, refetch } = useQuery({
     queryKey: ['student-achievements', user?.id],
     queryFn: () => (user ? getStudentAchievementsData(user.id) : Promise.resolve(null)),
     enabled: !!user,
   });
+  const { data: earnedBadges = [], refetch: refetchEarnedBadges } = useQuery({
+    queryKey: ['earned-course-badges', user?.id],
+    queryFn: () => (user ? getEarnedCourseBadges(user.id) : Promise.resolve([])),
+    enabled: !!user,
+  });
+  const { data: completedCourses = [] } = useQuery({
+    queryKey: ['completed-courses', 'student', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const enrolments = await getEnrolmentsByUser(user.id);
+      const summaries = await Promise.all(
+        enrolments.map(async (enrolment) => {
+          const summary = await getCourseProgressSummary(user.id, enrolment.course_id);
+          return { courseId: enrolment.course_id, title: enrolment.courses?.title ?? 'Course', summary };
+        })
+      );
+
+      return summaries
+        .filter((item) => item.summary.totalLessons > 0 && item.summary.completedLessons === item.summary.totalLessons)
+        .map((item) => ({ courseId: item.courseId, courseTitle: item.title }));
+    },
+    enabled: !!user,
+  });
 
   useRefetchOnFocus(refetch, !!user);
+  useRefetchOnFocus(refetchEarnedBadges, !!user);
+  useEffect(() => {
+    if (!user || completedCourses.length === 0) return;
+    let active = true;
+
+    const ensureAwarded = async () => {
+      await Promise.all(completedCourses.map((course) => checkAndAwardCourseBadges(user.id, course.courseId)));
+      if (active) {
+        void refetchEarnedBadges();
+      }
+    };
+
+    void ensureAwarded();
+    return () => {
+      active = false;
+    };
+  }, [user, completedCourses, refetchEarnedBadges]);
 
   const achievements = data?.achievements ?? [];
   const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
@@ -30,6 +82,43 @@ export default function AchievementsScreen() {
   ];
   const weeklyActivity = data?.weeklyActivity ?? [];
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
+  const fallbackBadges = useMemo(
+    () =>
+      completedCourses.map((course) => ({
+        id: `fallback-${course.courseId}`,
+        badge_name: 'Course Completion',
+        course_title: course.courseTitle,
+        awarded_at: new Date().toISOString(),
+      })),
+    [completedCourses]
+  );
+  const effectiveBadges = earnedBadges.length > 0 ? earnedBadges : fallbackBadges;
+  const latestEarnedBadge = effectiveBadges[0];
+  const hasCourseCompletionBadge = effectiveBadges.length > 0;
+  const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
+
+  const onShareBadge = async () => {
+    try {
+      setIsSharing(true);
+      await shareBadgeTemplate(badgeRef, learnerName);
+    } catch (error) {
+      Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share badge right now.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const onDownloadBadge = async () => {
+    try {
+      setIsDownloading(true);
+      const uri = await downloadBadgeTemplate(badgeRef, learnerName);
+      Alert.alert('Badge saved', `Saved to:\n${uri}`);
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save badge right now.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
@@ -121,6 +210,44 @@ export default function AchievementsScreen() {
             </View>
           );
         })}
+
+        {hasCourseCompletionBadge ? (
+          <View className="mt-6 mb-10">
+            <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Template</Text>
+            <View className="mb-3">
+              {effectiveBadges.map((badge) => (
+                <View key={badge.id} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
+                  <Text className="text-earth-800 font-medium">{badge.badge_name}</Text>
+                  <Text className="text-earth-500 text-xs">{badge.course_title}</Text>
+                </View>
+              ))}
+            </View>
+            <View ref={badgeRef} collapsable={false}>
+              <CompletionBadgeTemplate
+                learnerName={learnerName}
+                courseTitle={latestEarnedBadge?.course_title}
+                awardedAt={latestEarnedBadge?.awarded_at ?? new Date().toISOString()}
+              />
+            </View>
+            <View className="mt-3 gap-2">
+              <Button
+                label={isSharing ? 'Sharing…' : 'Share badge'}
+                onPress={onShareBadge}
+                isLoading={isSharing}
+                disabled={isSharing || isDownloading}
+                fullWidth
+              />
+              <Button
+                label={isDownloading ? 'Saving…' : 'Download badge'}
+                onPress={onDownloadBadge}
+                isLoading={isDownloading}
+                disabled={isDownloading || isSharing}
+                variant="secondary"
+                fullWidth
+              />
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
     </LinearGradient>
   );

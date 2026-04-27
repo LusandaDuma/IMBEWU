@@ -24,6 +24,11 @@ The app has four roles:
 3. student — joins a class via 6-char join_code, works through lessons and quizzes, earns badges.
 4. independent — self-paced learner. Enrols directly on a course, no class, no coordinator.
 
+Branding rules:
+- `assets/images/icon.png` is the default icon and favicon.
+- If `name.png` is used in a view, pair it with `icon.png` and do not also render `logo.png` in that same view.
+- `logo.png` can be used as a standalone lockup where `name.png` is not rendered separately.
+
 Database is Supabase (Postgres). Key tables:
 - auth.users (Supabase managed)
 - profiles (id FK→auth.users, first_name, last_name, role, language, is_active, last_login, updated_at)

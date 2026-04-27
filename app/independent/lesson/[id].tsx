@@ -5,14 +5,20 @@
 import { Button, LessonVideoCallout, ProgressBar, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR, surfaceProse } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { getLessonById, getLessonProgress, getLessonsByCourse, updateLessonProgress } from '@/services/supabase';
+import {
+  checkAndAwardCourseBadges,
+  getLessonById,
+  getLessonProgress,
+  getLessonsByCourse,
+  updateLessonProgress,
+} from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRight, CheckCircle, Clock } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function IndependentLessonScreen() {
@@ -50,14 +56,25 @@ export default function IndependentLessonScreen() {
   const existingPct = useMemo(() => existingProgress?.pct_complete ?? 0, [existingProgress]);
 
   const progressMutation = useMutation({
-    mutationFn: (percentage: number) =>
-      user ? updateLessonProgress(user.id, id, percentage) : Promise.resolve(null),
-    onSuccess: () => {
+    mutationFn: async (percentage: number) => {
+      if (!user) return { awardedCount: 0 };
+      const progressRow = await updateLessonProgress(user.id, id, percentage);
+      let awardedCount = 0;
+      if (progressRow && percentage >= 100 && lesson?.course_id) {
+        awardedCount = await checkAndAwardCourseBadges(user.id, lesson.course_id);
+      }
+      return { awardedCount };
+    },
+    onSuccess: ({ awardedCount }) => {
       if (!user || !lesson) return;
       queryClient.invalidateQueries({ queryKey: ['lesson-progress', user.id, id] });
       queryClient.invalidateQueries({ queryKey: ['independent-course-progress', user.id, lesson.course_id] });
       queryClient.invalidateQueries({ queryKey: ['course-lesson-progress', user.id, lesson.course_id] });
       queryClient.invalidateQueries({ queryKey: ['independent-enrolments', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['earned-course-badges', user.id] });
+      if (awardedCount > 0) {
+        Alert.alert('Completion badge earned', 'You completed this course and unlocked your course badge.');
+      }
     },
   });
 

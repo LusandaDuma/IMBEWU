@@ -7,6 +7,7 @@ import '../global.css';
 
 import { SupabaseRealtimeSync } from '@/components/SupabaseRealtimeSync';
 import { NolwaziFab } from '@/components/shared';
+import { BRAND_ICON, BRAND_NAME } from '@/constants/brandAssets';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getSession } from '@/services/authService';
 import { getProfile } from '@/services/profileService';
@@ -137,17 +138,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
             ]}
             className="items-center"
           >
-            <Image
-              source={require('../assets/images/logo.png')}
-              style={{ width: 224, height: 80, marginBottom: 16 }}
-              resizeMode="contain"
-            />
-
-            <Image
-              source={require('../assets/images/name.png')}
-              style={{ width: 192, height: 48, marginBottom: 8 }}
-              resizeMode="contain"
-            />
+            <Image source={BRAND_ICON} style={{ width: 74, height: 74, marginBottom: 12 }} resizeMode="contain" />
+            <Image source={BRAND_NAME} style={{ width: 192, height: 48, marginBottom: 8 }} resizeMode="contain" />
             <Text className="text-black text-center text-base mb-12 max-w-xs">
               Initializing your learning platform
             </Text>

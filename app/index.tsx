@@ -3,6 +3,7 @@
  */
 
 import { PublicCatalogHome } from '@/components/screens/PublicCatalogHome';
+import { BRAND_ICON, BRAND_NAME } from '@/constants/brandAssets';
 import { getHomeHrefForRole } from '@/constants/routing';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { useAuthStore } from '@/store/auth';
@@ -51,17 +52,8 @@ export default function Index() {
             ]}
             className="items-center"
           >
-            <Image
-              source={require('../assets/images/logo.png')}
-              style={{ width: 224, height: 80, marginBottom: 16 }}
-              resizeMode="contain"
-            />
-
-            <Image
-              source={require('../assets/images/name.png')}
-              style={{ width: 192, height: 48, marginBottom: 8 }}
-              resizeMode="contain"
-            />
+            <Image source={BRAND_ICON} style={{ width: 74, height: 74, marginBottom: 12 }} resizeMode="contain" />
+            <Image source={BRAND_NAME} style={{ width: 192, height: 48, marginBottom: 8 }} resizeMode="contain" />
             <Text className="text-black text-center text-base mb-12 max-w-xs font-light">
               Loading your learning experience
             </Text>
