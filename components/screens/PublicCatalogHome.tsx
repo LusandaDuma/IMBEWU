@@ -3,6 +3,7 @@
  */
 
 import { Button, CourseCard, SearchBar } from '@/components/shared';
+import { BRAND_ICON, BRAND_NAME } from '@/constants/brandAssets';
 import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { useCourses } from '@/hooks/useCourse';
@@ -49,11 +50,10 @@ export function PublicCatalogHome() {
       <SafeAreaView className="flex-1" edges={['top']}>
         <View className="px-5 pt-2 pb-4 flex-row items-center justify-between">
           <View className="flex-1 pr-3">
-            <Image
-              source={require('../../assets/images/name.png')}
-              style={{ width: 152, height: 42 }}
-              resizeMode="contain"
-            />
+            <View className="flex-row items-center">
+              <Image source={BRAND_ICON} style={{ width: 28, height: 28, marginRight: 8 }} resizeMode="contain" />
+              <Image source={BRAND_NAME} style={{ width: 152, height: 42 }} resizeMode="contain" />
+            </View>
             <Text className="text-earth-700 text-sm mt-1">
               Discover practical courses, curated like a learning marketplace.
             </Text>

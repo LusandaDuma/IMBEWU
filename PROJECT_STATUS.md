@@ -237,6 +237,22 @@ Enterprise-style **governed copilot**: the model may only call **registered tool
 2. `supabase functions deploy copilot` (requires CLI + linked project).
 3. App env unchanged: **`EXPO_PUBLIC_SUPABASE_URL`**, **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**, **`EXPO_PUBLIC_GEMINI_API_KEY`**.
 
+### 4.11 Branding + completion badge template (April 2026)
+
+- Added centralized brand assets in `app/_constants/brandAssets.ts` for `icon.png`, `logo.png`, and `name.png`.
+- Enforced logo rule in key entry surfaces:
+  - when **name** is shown, the UI now uses **icon + name** instead of logo + name.
+  - favicon/app icon remains **`assets/images/icon.png`** (`app.json`).
+- Added sharable/downloadable course-completion badge template for **student** and **independent** achievement flows:
+  - Template component: `components/shared/molecules/CompletionBadgeTemplate.tsx`
+  - Export service: `app/_services/badgeTemplateService.ts`
+  - Screen integration: `app/student/achievements.tsx`, `app/independent/achievements.tsx`
+- Badge export implementation:
+  - captures template as PNG (`react-native-view-shot`)
+  - shares via native share sheet (`expo-sharing`)
+  - saves a copy into app documents (`expo-file-system`)
+  - actions are shown when course completion achievement is unlocked.
+
 ---
 
 ## 5. How to run locally

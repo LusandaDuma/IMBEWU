@@ -325,6 +325,55 @@ export async function updateLessonProgress(
   return data;
 }
 
+export type EarnedCourseBadge = {
+  id: string;
+  awarded_at: string;
+  badge_id: string;
+  badge_name: string;
+  course_id: string;
+  course_title: string;
+  criteria: string | null;
+};
+
+export async function checkAndAwardCourseBadges(userId: string, courseId: string): Promise<number> {
+  const { data, error } = await supabase.rpc('check_and_award_badges', {
+    p_user_id: userId,
+    p_course_id: courseId,
+  });
+
+  if (error) {
+    console.error('Error awarding course badges:', error);
+    return 0;
+  }
+
+  const row = Array.isArray(data) ? data[0] : null;
+  const awardedCount = typeof row?.awarded_count === 'number' ? row.awarded_count : 0;
+  return awardedCount;
+}
+
+export async function getEarnedCourseBadges(userId: string): Promise<EarnedCourseBadge[]> {
+  const { data, error } = await supabase
+    .from('student_badges')
+    .select('id, awarded_at, badges!inner(id, name, criteria, course_id, courses!inner(title))')
+    .eq('user_id', userId)
+    .order('awarded_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching earned course badges:', error);
+    return [];
+  }
+
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    awarded_at: row.awarded_at,
+    badge_id: row.badges.id,
+    badge_name: row.badges.name,
+    course_id: row.badges.course_id,
+    course_title: row.badges.courses.title,
+    criteria: row.badges.criteria ?? null,
+  }));
+}
+
 // Quiz services
 export async function getQuizByLesson(lessonId: string): Promise<Quiz | null> {
   const { data, error } = await supabase

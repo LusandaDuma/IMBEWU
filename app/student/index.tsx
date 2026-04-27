@@ -7,6 +7,7 @@ import { getLearnerDashboardStats } from '@/services/learnerDashboardStats';
 import { getCourseProgressSummary, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Course, CourseEnrolment } from '@/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -104,6 +105,19 @@ export default function StudentDashboard() {
     [dashStats, enrolments, progressByCourseId],
   );
 
+  const openStudentCourse = async (courseId: string, averagePctComplete: number) => {
+    if (averagePctComplete >= 100 && user?.id) {
+      const badgeSeenKey = `badge-first-opened:student:${user.id}:${courseId}`;
+      const hasSeenBadge = await AsyncStorage.getItem(badgeSeenKey);
+      if (!hasSeenBadge) {
+        await AsyncStorage.setItem(badgeSeenKey, '1');
+        router.push('/student/achievements');
+        return;
+      }
+    }
+    router.push({ pathname: '/student/course/[id]', params: { id: courseId } });
+  };
+
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
@@ -139,32 +153,40 @@ export default function StudentDashboard() {
             />
           }
           renderItem={({ item }) => (
-            <CourseCard
-              title={item.courses?.title ?? 'Course'}
-              description={item.courses?.description}
-              coverImageUri={item.courses?.cover_image ?? undefined}
-              progress={Math.max(0, Math.min(100, progressByCourseId.get(item.course_id)?.averagePctComplete ?? 0))}
-              meta={
-                (progressByCourseId.get(item.course_id)?.totalLessons ?? 0) > 0
-                  ? `${progressByCourseId.get(item.course_id)?.completedLessons ?? 0}/${progressByCourseId.get(item.course_id)?.totalLessons ?? 0} lessons complete`
-                  : 'No lessons yet'
-              }
-              variant="elevated"
-              onPress={() =>
-                router.push({ pathname: '/student/course/[id]', params: { id: item.course_id } })
-              }
-              footer={
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center">
-                    <Clock size={14} color="#78716c" />
-                    <Text className="text-earth-500 text-xs ml-1.5 font-medium">
-                      Enrolled {new Date(item.enrolled_at).toLocaleDateString()}
-                    </Text>
-                  </View>
-                  <ChevronRight size={20} color="#16a34a" />
-                </View>
-              }
-            />
+            (() => {
+              const summary = progressByCourseId.get(item.course_id);
+              const averagePctComplete = Math.max(0, Math.min(100, summary?.averagePctComplete ?? 0));
+              const isCompleted = averagePctComplete >= 100;
+              const lessonMeta =
+                (summary?.totalLessons ?? 0) > 0
+                  ? `${summary?.completedLessons ?? 0}/${summary?.totalLessons ?? 0} lessons complete`
+                  : 'No lessons yet';
+
+              return (
+                <CourseCard
+                  title={item.courses?.title ?? 'Course'}
+                  description={item.courses?.description}
+                  coverImageUri={item.courses?.cover_image ?? undefined}
+                  progress={averagePctComplete}
+                  meta={isCompleted ? `Completed • ${lessonMeta}` : lessonMeta}
+                  variant="elevated"
+                  onPress={() => {
+                    void openStudentCourse(item.course_id, averagePctComplete);
+                  }}
+                  footer={
+                    <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center">
+                        <Clock size={14} color="#78716c" />
+                        <Text className="text-earth-500 text-xs ml-1.5 font-medium">
+                          Enrolled {new Date(item.enrolled_at).toLocaleDateString()}
+                        </Text>
+                      </View>
+                      <ChevronRight size={20} color="#16a34a" />
+                    </View>
+                  }
+                />
+              );
+            })()
           )}
         />
       </SafeAreaView>
