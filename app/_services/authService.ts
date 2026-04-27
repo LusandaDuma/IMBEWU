@@ -14,6 +14,11 @@ interface ServiceResult<T> {
   error: string | null;
 }
 
+interface SignUpResult {
+  session: Session | null;
+  requiresEmailConfirmation: boolean;
+}
+
 function mapAuthError(message?: string, code?: string): string {
   const normalized = message?.toLowerCase() ?? '';
   const raw = message?.trim() || 'Unknown authentication error';
@@ -24,6 +29,10 @@ function mapAuthError(message?: string, code?: string): string {
 
   if (normalized.includes('already registered') || normalized.includes('already exists')) {
     return AUTH_ERROR_MESSAGES.EMAIL_EXISTS;
+  }
+
+  if (normalized.includes('email not confirmed') || normalized.includes('email not confirmed yet')) {
+    return 'Please verify your email before signing in.';
   }
 
   if (normalized.includes('network') || normalized.includes('failed to fetch')) {
@@ -51,7 +60,7 @@ export async function signUp(
   firstName: string,
   lastName: string,
   role: UserRole,
-): Promise<ServiceResult<Session>> {
+): Promise<ServiceResult<SignUpResult>> {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -75,7 +84,13 @@ export async function signUp(
       return { data: null, error: mapAuthError(error.message, error.code) };
     }
 
-    return { data: data.session, error: null };
+    return {
+      data: {
+        session: data.session,
+        requiresEmailConfirmation: Boolean(data.user && !data.session),
+      },
+      error: null,
+    };
   } catch (error) {
     console.error('[authService.signUp] Unexpected exception:', error);
     return {

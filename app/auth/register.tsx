@@ -62,7 +62,7 @@ export default function RegisterScreen() {
     setBanner(null);
     setIsSubmitting(true);
 
-    const { data: session, error } = await signUp(
+    const { data: signUpResult, error } = await signUp(
       values.email,
       values.password,
       values.firstName,
@@ -76,9 +76,9 @@ export default function RegisterScreen() {
       return;
     }
 
-    if (session?.user) {
+    if (signUpResult?.session?.user) {
       const profileResult = await createProfile({
-        id: session.user.id,
+        id: signUpResult.session.user.id,
         firstName: values.firstName,
         lastName: values.lastName,
         role: values.role,
@@ -91,7 +91,14 @@ export default function RegisterScreen() {
       }
     }
 
-    setBanner({ message: 'Account created. You can sign in now.', variant: 'success' });
+    if (signUpResult?.requiresEmailConfirmation) {
+      setBanner({
+        message: 'Account created. Please check your inbox and confirm your email before signing in.',
+        variant: 'success',
+      });
+    } else {
+      setBanner({ message: 'Account created. You can sign in now.', variant: 'success' });
+    }
     setIsSubmitting(false);
     router.replace('/auth/login');
   };

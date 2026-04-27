@@ -3,7 +3,7 @@
  */
 
 import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
-import { enrollInCourse, getCourses } from '@/services/supabase';
+import { enrollInCourse, getCourses, getEnrolmentsByUser } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +27,11 @@ export default function ExploreScreen() {
     queryKey: ['explore-courses'],
     queryFn: getCourses,
   });
+  const { data: enrolments = [] } = useQuery({
+    queryKey: ['user-enrolments', user?.id],
+    queryFn: () => (user ? getEnrolmentsByUser(user.id) : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
 
   useRefetchOnFocus(refetch, true);
 
@@ -35,12 +40,15 @@ export default function ExploreScreen() {
       user ? enrollInCourse(user.id, courseId, 'independent') : Promise.resolve(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['independent-enrolments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-enrolments', user?.id] });
       Alert.alert('Enrolled', 'Open the course from your Learn tab to begin.');
     },
     onError: () => Alert.alert('Enrolment failed', 'Try again shortly.'),
   });
 
+  const enrolledCourseIds = new Set(enrolments.map((enrolment) => enrolment.course_id));
   const filteredCourses = courses.filter((course) => {
+    if (enrolledCourseIds.has(course.id)) return false;
     const matchesText =
       course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.description.toLowerCase().includes(searchQuery.toLowerCase());

@@ -3,7 +3,13 @@
  */
 
 import { Button, CourseCard, EmptyState, SearchBar, ScreenHeader } from '@/components/shared';
-import { addStudentToClass, enrollInCourse, getClassByJoinCode, getCourses } from '@/services/supabase';
+import {
+  addStudentToClass,
+  enrollInCourse,
+  getClassByJoinCode,
+  getCourses,
+  getEnrolmentsByUser,
+} from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +30,11 @@ export default function DiscoverScreen() {
     queryKey: ['available-courses'],
     queryFn: getCourses,
   });
+  const { data: enrolments = [] } = useQuery({
+    queryKey: ['user-enrolments', user?.id],
+    queryFn: () => (user ? getEnrolmentsByUser(user.id) : Promise.resolve([])),
+    enabled: Boolean(user),
+  });
 
   useRefetchOnFocus(refetch, true);
 
@@ -32,6 +43,7 @@ export default function DiscoverScreen() {
       user ? enrollInCourse(user.id, courseId, 'independent') : Promise.resolve(null),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-enrolments', user?.id] });
       Alert.alert('Enrolled', 'You are now enrolled in this course.');
     },
     onError: () => {
@@ -63,6 +75,7 @@ export default function DiscoverScreen() {
       }
 
       queryClient.invalidateQueries({ queryKey: ['student-enrolments'] });
+      queryClient.invalidateQueries({ queryKey: ['user-enrolments', user?.id] });
       Alert.alert('Welcome', 'You have joined the class.');
       setJoinCode('');
       setShowJoinInput(false);
@@ -77,10 +90,12 @@ export default function DiscoverScreen() {
     joinClassMutation.mutate(joinCode);
   };
 
+  const enrolledCourseIds = new Set(enrolments.map((enrolment) => enrolment.course_id));
   const filteredCourses = courses.filter(
     (course) =>
-      course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.description.toLowerCase().includes(searchQuery.toLowerCase())
+      !enrolledCourseIds.has(course.id) &&
+      (course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        course.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
