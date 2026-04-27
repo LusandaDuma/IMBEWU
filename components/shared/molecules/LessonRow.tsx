@@ -2,7 +2,7 @@
  * @fileoverview Lesson list rows — divider-only separation, no panels.
  */
 
-import { CheckCircle, Lock, Play } from 'lucide-react-native';
+import { CheckCircle, Lock, MessageCircle, Play } from 'lucide-react-native';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 export interface LessonRowProps {
@@ -13,6 +13,7 @@ export interface LessonRowProps {
   onPress?: () => void;
   surface?: 'light' | 'dark';
   testID?: string;
+  onAskNolwazi?: () => void;
 }
 
 export function LessonRow({
@@ -23,6 +24,7 @@ export function LessonRow({
   onPress,
   surface = 'dark',
   testID,
+  onAskNolwazi,
 }: LessonRowProps) {
   const Icon = state === 'done' ? CheckCircle : state === 'locked' ? Lock : Play;
   const iconColor =
@@ -50,6 +52,17 @@ export function LessonRow({
           <Text className={`text-xs mt-1 font-light ${subCls}`}>{durationMins} min</Text>
         ) : null}
       </View>
+      {onAskNolwazi ? (
+        <TouchableOpacity
+          onPress={onAskNolwazi}
+          className="ml-3 w-10 h-10 rounded-full items-center justify-center bg-primary-500/10"
+          accessibilityRole="button"
+          accessibilityLabel="Ask Nolwazi about this lesson"
+          activeOpacity={0.85}
+        >
+          <MessageCircle size={17} color="#16a34a" strokeWidth={1.8} />
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 

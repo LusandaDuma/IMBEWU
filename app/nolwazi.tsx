@@ -8,9 +8,9 @@ import { runCopilotTurn, type CopilotContent, type ToolLogEntry } from '@/servic
 import { useAuthStore } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, SendHorizontal, Sparkles, Wrench } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -20,7 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Msg = {
   id: string;
@@ -47,11 +47,13 @@ What would you like to grow today?`;
 
 export default function NolwaziScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ q?: string }>();
   const queryClient = useQueryClient();
   const { profile, role, isAuthenticated, session } = useAuthStore();
   const userFirstName = profile?.first_name ?? null;
   const userLastName = profile?.last_name ?? null;
   const displayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim() || userFirstName;
+  const insets = useSafeAreaInsets();
 
   const apiContentsRef = useRef<CopilotContent[]>([]);
 
@@ -80,6 +82,7 @@ export default function NolwaziScreen() {
   ]);
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
+  const consumedPrefillRef = useRef(false);
 
   const getAccessToken = useCallback(
     () => session?.access_token ?? useAuthStore.getState().session?.access_token ?? null,
@@ -144,9 +147,16 @@ export default function NolwaziScreen() {
     }
   }, [getAccessToken, input, personalizedSystemInstruction, queryClient, router]);
 
+  useEffect(() => {
+    const q = typeof params.q === 'string' ? params.q.trim() : '';
+    if (!q || consumedPrefillRef.current) return;
+    setInput((prev) => (prev.trim().length ? prev : q));
+    consumedPrefillRef.current = true;
+  }, [params.q]);
+
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <KeyboardAvoidingView
           className="flex-1"
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -211,7 +221,7 @@ export default function NolwaziScreen() {
             )}
           />
 
-          <View className="px-5 pb-4 pt-2 gap-2">
+          <View className="px-5 pt-2 gap-2" style={{ paddingBottom: Math.max(insets.bottom, 12) + 16 }}>
             {sending ? (
               <View className="flex-row items-center gap-2 px-1">
                 <ActivityIndicator color="#16a34a" />

@@ -2,7 +2,7 @@
  * @fileoverview Independent learner lesson reader (same LMS flow as student).
  */
 
-import { Button, LessonVideoCallout, ProgressBar, ScreenHeader } from '@/components/shared';
+import { Button, LessonVideoCallout, NolwaziActionsModal, ProgressBar, ScreenHeader } from '@/components/shared';
 import { APP_BACKGROUND_COLOR, surfaceProse } from '@/constants/theme';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import {
@@ -16,17 +16,19 @@ import { useAuthStore } from '@/store/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowRight, CheckCircle, Clock } from 'lucide-react-native';
+import { ArrowRight, CheckCircle, Clock, MessageCircle } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function IndependentLessonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [progress, setProgress] = useState(0);
+  const [nolwaziContextLabel, setNolwaziContextLabel] = useState<string | null>(null);
 
   const { data: lesson, refetch: refetchLesson } = useQuery({
     queryKey: ['lesson', id],
@@ -82,10 +84,17 @@ export default function IndependentLessonScreen() {
     setProgress(existingPct);
   }, [existingPct]);
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (progress >= 100 || progressMutation.isPending) return;
     setProgress(100);
-    progressMutation.mutate(100);
+    try {
+      await progressMutation.mutateAsync(100);
+      if (nextLessonId) {
+        goToNextLesson();
+      }
+    } catch {
+      // Error feedback is handled by mutation/query state; keep user on current lesson.
+    }
   };
 
   const nextLessonId = useMemo(() => {
@@ -110,6 +119,20 @@ export default function IndependentLessonScreen() {
     router.replace({ pathname: '/independent/lesson/[id]', params: { id: nextLessonId } });
   };
 
+  const openNolwaziActions = () => {
+    const courseIdNote = lesson?.course_id ? ` (courseId: ${lesson.course_id})` : '';
+    const contextLabel = `lesson "${lesson?.title ?? 'this lesson'}" in course "${lesson?.course_id ?? 'current course'}"${courseIdNote}`;
+    setNolwaziContextLabel(contextLabel);
+  };
+
+  const handleNolwaziAction = (prompt: string) => {
+    setNolwaziContextLabel(null);
+    router.push({
+      pathname: '/nolwazi',
+      params: { q: prompt },
+    });
+  };
+
   return (
     <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -129,12 +152,24 @@ export default function IndependentLessonScreen() {
         <ProgressBar value={progress} tone="primary" showLabel />
       </View>
 
-      <ScrollView className="flex-1 px-5 py-6" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1 px-5 py-6"
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 96 }}
+        showsVerticalScrollIndicator={false}
+      >
         <View className="flex-row items-center mb-4">
           <Clock size={16} color="#78716c" />
           <Text className="text-earth-500 text-sm ml-2 font-light">
             {lesson?.duration_mins ?? '—'} minutes estimated
           </Text>
+          <View className="flex-1" />
+          <Button
+            label="Nolwazi"
+            onPress={openNolwaziActions}
+            variant="ghost"
+            size="sm"
+            leftIcon={MessageCircle}
+          />
         </View>
 
         <LessonVideoCallout videoUrl={lesson?.video_url} variant="accent" />
@@ -175,6 +210,12 @@ export default function IndependentLessonScreen() {
           </View>
         ) : null}
       </ScrollView>
+      <NolwaziActionsModal
+        visible={Boolean(nolwaziContextLabel)}
+        contextLabel={nolwaziContextLabel ?? ''}
+        onClose={() => setNolwaziContextLabel(null)}
+        onSelect={(action) => handleNolwaziAction(action.prompt)}
+      />
     </View>
   );
 }

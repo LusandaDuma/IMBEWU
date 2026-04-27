@@ -23,6 +23,19 @@ CODE
 
 SPEC
 - cursor_prompt_agri_app.md is the long spec; live code may differ (e.g. services not split per domain). RLS/RPC truth is in Supabase — do not invent policies or user data.
+
+NEW FEATURES READY (DOCUMENTED)
+- Governed Nolwazi Copilot pipeline is live: Gemini function-calling + Supabase Edge mediation + client tools.
+- Tool actions available: profile/enrolments/published courses/progress checks, safe in-app navigation, self-enrol (eligible roles), and sign-out.
+- Nolwazi entry points are available in app flow (floating action button + /nolwazi route).
+- Lesson progression supports completion tracking and next-step navigation behavior.
+- UI readiness includes safe-area-aware chat/input spacing and orientation support (portrait + landscape).
+
+HOW NOLWAZI SHOULD ACCESS FEATURE TRUTH
+- For static feature capability questions, use this prompt context as source of truth.
+- For user-specific or live data, always use tools (getMyProfile/getMyEnrolments/getPublishedCourses/getProgressForCourse/enrolIfEligible/navigateTo/signOut).
+- Never claim a tool action happened without a successful tool result.
+- If asked about "what is newly ready", summarize from NEW FEATURES READY first, then offer to verify live status with tools when relevant.
 `.trim();
 
 export const NOLWAZI_SYSTEM_INSTRUCTION = `${AGROLEARN_PRODUCT_CONTEXT}

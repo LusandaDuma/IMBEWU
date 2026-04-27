@@ -2,18 +2,18 @@
  * @fileoverview Independent learner course outline — mirrors student syllabus UX with cyan accents.
  */
 
-import { LessonRow, ScreenHeader } from '@/components/shared';
+import { LessonRow, NolwaziActionsModal, ScreenHeader } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { APP_BACKGROUND_COLOR, surfaceContentPanel } from '@/constants/theme';
 import { getCourseById, getLessonProgressByLessonIds, getLessonsByCourse } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { BookOpen } from 'lucide-react-native';
-import { ScrollView, Text, View } from 'react-native';
+import { BookOpen, MessageCircle } from 'lucide-react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 function isLessonComplete(p: { is_completed: boolean; pct_complete: number } | undefined): boolean {
@@ -25,6 +25,7 @@ export default function IndependentCourseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuthStore();
+  const [nolwaziContextLabel, setNolwaziContextLabel] = useState<string | null>(null);
 
   const { data: course, refetch: refetchCourse } = useQuery({
     queryKey: ['course', id],
@@ -54,6 +55,28 @@ export default function IndependentCourseScreen() {
     },
     Boolean(id)
   );
+
+  const openNolwaziActions = (scope: { lessonTitle?: string; lessonIndex?: number }) => {
+    const courseId = course?.id ?? (typeof id === 'string' ? id : '');
+    const courseIdNote = courseId ? ` (courseId: ${courseId})` : '';
+    const lessonPart =
+      scope.lessonTitle != null && scope.lessonIndex != null
+        ? `lesson ${scope.lessonIndex + 1}: "${scope.lessonTitle}"`
+        : null;
+    const contextLabel = lessonPart
+      ? `course "${course?.title ?? 'this course'}"${courseIdNote}, ${lessonPart}`
+      : `course "${course?.title ?? 'this course'}"${courseIdNote}`;
+
+    setNolwaziContextLabel(contextLabel);
+  };
+
+  const handleNolwaziAction = (prompt: string) => {
+    setNolwaziContextLabel(null);
+    router.push({
+      pathname: '/nolwazi',
+      params: { q: prompt },
+    });
+  };
 
   return (
     <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
@@ -89,6 +112,18 @@ export default function IndependentCourseScreen() {
           <Text className="text-earth-500 text-sm leading-5">
             Work through lessons in order. Quizzes may appear after selected modules.
           </Text>
+          <View className="mt-3 items-start">
+            <TouchableOpacity
+              onPress={() => openNolwaziActions({})}
+              className="flex-row items-center bg-cyan-500/12 px-3 py-2 rounded-full"
+              accessibilityRole="button"
+              accessibilityLabel="Ask Nolwazi about this course"
+              activeOpacity={0.85}
+            >
+              <MessageCircle size={16} color="#0891b2" strokeWidth={1.8} />
+              <Text className="text-cyan-900 text-xs font-medium ml-2">Ask Nolwazi about this course</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {lessons.map((lesson: Lesson, index: number) => {
@@ -113,10 +148,18 @@ export default function IndependentCourseScreen() {
                         params: { id: lesson.id },
                       })
               }
+              onAskNolwazi={() => openNolwaziActions({ lessonTitle: lesson.title, lessonIndex: index })}
             />
           );
         })}
       </ScrollView>
+
+      <NolwaziActionsModal
+        visible={Boolean(nolwaziContextLabel)}
+        contextLabel={nolwaziContextLabel ?? ''}
+        onClose={() => setNolwaziContextLabel(null)}
+        onSelect={(action) => handleNolwaziAction(action.prompt)}
+      />
     </View>
   );
 }

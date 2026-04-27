@@ -7,7 +7,7 @@ import Constants from 'expo-constants';
 /** Points at current Flash; avoids 2.0-flash free-tier quota issues seen on some keys. */
 const DEFAULT_MODEL = 'gemini-flash-latest';
 
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const;
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
 
 export function getGeminiApiKey(): string | undefined {
   return (

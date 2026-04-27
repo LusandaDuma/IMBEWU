@@ -3,7 +3,7 @@
     "name": "AgroLearn",
     "slug": "3o4bq7h4h6y6o7bt197k4",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
     "userInterfaceStyle": "automatic",
