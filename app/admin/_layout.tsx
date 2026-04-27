@@ -76,7 +76,19 @@ export default function AdminLayout() {
         }}
       />
       <Tabs.Screen
-        name="courses/[id]"
+        name="courses/[id]/index"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="courses/[id]/lesson/[lessonId]"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="courses/[id]/lesson-quiz/[lessonId]"
         options={{
           href: null,
         }}

@@ -3,7 +3,7 @@ import { fieldPlain } from '@/constants/theme';
 import { withTimeout } from '@/lib/asyncTimeout';
 import { asSingleParam } from '@/lib/expoParams';
 import { parseLessonVideoUrlInput } from '@/lib/lessonVideoUrl';
-import { getLessonById, getLessonsByCourse } from '@/services/supabase';
+import { createLessonQuiz, getLessonById, getLessonsByCourse, getQuizBundleByLesson } from '@/services/supabase';
 import { createLesson, deleteLesson, updateLesson } from '@/services/lessonService';
 import { useAuthStore } from '@/store/auth';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -45,6 +45,14 @@ export default function CoordinatorEditLessonScreen() {
   const [content, setContent] = useState('');
   const [durationText, setDurationText] = useState('');
   const [videoText, setVideoText] = useState('');
+  const [quizTitle, setQuizTitle] = useState('');
+  const [quizQuestion, setQuizQuestion] = useState('');
+  const [quizPassScore, setQuizPassScore] = useState('60');
+  const [optionA, setOptionA] = useState('');
+  const [optionB, setOptionB] = useState('');
+  const [optionC, setOptionC] = useState('');
+  const [optionD, setOptionD] = useState('');
+  const [correctOption, setCorrectOption] = useState<'A' | 'B' | 'C' | 'D'>('A');
 
   const { data: lessons = [] } = useQuery({
     queryKey: ['coordinator-course-lessons', courseId],
@@ -57,6 +65,11 @@ export default function CoordinatorEditLessonScreen() {
     queryFn: () => getLessonById(lessonId!),
     enabled: !isNew && !!lessonId,
   });
+  const { data: existingQuiz, refetch: refetchQuiz } = useQuery({
+    queryKey: ['lesson-quiz-bundle', lessonId],
+    queryFn: () => getQuizBundleByLesson(lessonId),
+    enabled: !isNew && !!lessonId,
+  });
 
   useEffect(() => {
     if (isNew) {
@@ -66,6 +79,14 @@ export default function CoordinatorEditLessonScreen() {
       setContent('');
       setDurationText('');
       setVideoText('');
+      setQuizTitle('');
+      setQuizQuestion('');
+      setQuizPassScore('60');
+      setOptionA('');
+      setOptionB('');
+      setOptionC('');
+      setOptionD('');
+      setCorrectOption('A');
       return;
     }
     if (!existing) {
@@ -90,6 +111,7 @@ export default function CoordinatorEditLessonScreen() {
   /** Avoid @tanstack/react-query useMutation: on RN, mutations can stay "pending" when online detection is wrong. */
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCreatingQuiz, setIsCreatingQuiz] = useState(false);
 
   const onSave = async () => {
     if (!user?.id) {
@@ -202,6 +224,67 @@ export default function CoordinatorEditLessonScreen() {
         },
       },
     ]);
+  };
+
+  const onCreateQuiz = async () => {
+    if (isNew || !lessonId) {
+      Alert.alert('Save lesson first', 'Create the lesson first, then add a quiz.');
+      return;
+    }
+    if (existingQuiz) {
+      Alert.alert('Quiz already exists', 'This lesson already has a quiz.');
+      return;
+    }
+    const titleTrimmed = quizTitle.trim();
+    const questionTrimmed = quizQuestion.trim();
+    if (!titleTrimmed || !questionTrimmed) {
+      Alert.alert('Missing fields', 'Please add a quiz title and at least one question.');
+      return;
+    }
+    const passScore = Number.parseInt(quizPassScore.trim(), 10);
+    if (!Number.isFinite(passScore) || passScore < 0 || passScore > 100) {
+      Alert.alert('Invalid pass score', 'Pass score must be between 0 and 100.');
+      return;
+    }
+
+    const optionMap = [
+      { key: 'A' as const, text: optionA.trim() },
+      { key: 'B' as const, text: optionB.trim() },
+      { key: 'C' as const, text: optionC.trim() },
+      { key: 'D' as const, text: optionD.trim() },
+    ];
+    const options = optionMap
+      .filter((option) => option.text.length > 0)
+      .map((option) => ({ text: option.text, isCorrect: option.key === correctOption }));
+    if (options.length < 2) {
+      Alert.alert('More options needed', 'Please provide at least two answer options.');
+      return;
+    }
+    if (!options.some((option) => option.isCorrect)) {
+      Alert.alert('Select correct answer', 'Choose which option is correct.');
+      return;
+    }
+
+    setIsCreatingQuiz(true);
+    try {
+      const created = await createLessonQuiz({
+        lessonId,
+        title: titleTrimmed,
+        passScore,
+        questionText: questionTrimmed,
+        options,
+      });
+      if (!created) {
+        throw new Error('Quiz could not be created.');
+      }
+      await refetchQuiz();
+      Alert.alert('Quiz created', 'Students can now answer this quiz in the lesson flow.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      Alert.alert('Could not create quiz', message);
+    } finally {
+      setIsCreatingQuiz(false);
+    }
   };
 
   if (!courseId) {
@@ -323,6 +406,77 @@ export default function CoordinatorEditLessonScreen() {
               />
             </View>
           ) : null}
+
+          <View className="mt-8 pt-5 border-t border-earth-300/60">
+            <Text className="text-earth-900 text-base font-semibold mb-1">Lesson quiz</Text>
+            <Text className="text-earth-600 text-sm mb-4">
+              Add one auto-graded multiple-choice quiz so students can answer after this lesson.
+            </Text>
+
+            {isNew ? (
+              <Text className="text-earth-500 text-sm">Save this lesson first, then create its quiz.</Text>
+            ) : existingQuiz ? (
+              <View className="rounded-xl border border-earth-300/60 p-3">
+                <Text className="text-earth-900 font-medium">{existingQuiz.title}</Text>
+                <Text className="text-earth-600 text-xs mt-1">
+                  Pass score: {existingQuiz.pass_score}% · Questions: {existingQuiz.questions.length}
+                </Text>
+                <Text className="text-earth-600 text-xs mt-1">
+                  A quiz already exists for this lesson.
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <TextInput
+                  value={quizTitle}
+                  onChangeText={setQuizTitle}
+                  placeholder="Quiz title"
+                  placeholderTextColor="#a8a29e"
+                  className={`${fieldPlain} mb-3`}
+                />
+                <TextInput
+                  value={quizQuestion}
+                  onChangeText={setQuizQuestion}
+                  placeholder="Question"
+                  placeholderTextColor="#a8a29e"
+                  className={`${fieldPlain} mb-3`}
+                />
+                <TextInput
+                  value={quizPassScore}
+                  onChangeText={setQuizPassScore}
+                  placeholder="Pass score (0-100)"
+                  placeholderTextColor="#a8a29e"
+                  keyboardType="number-pad"
+                  className={`${fieldPlain} mb-3`}
+                />
+                <TextInput value={optionA} onChangeText={setOptionA} placeholder="Option A" placeholderTextColor="#a8a29e" className={`${fieldPlain} mb-2`} />
+                <TextInput value={optionB} onChangeText={setOptionB} placeholder="Option B" placeholderTextColor="#a8a29e" className={`${fieldPlain} mb-2`} />
+                <TextInput value={optionC} onChangeText={setOptionC} placeholder="Option C (optional)" placeholderTextColor="#a8a29e" className={`${fieldPlain} mb-2`} />
+                <TextInput value={optionD} onChangeText={setOptionD} placeholder="Option D (optional)" placeholderTextColor="#a8a29e" className={`${fieldPlain} mb-3`} />
+                <View className="flex-row flex-wrap mb-4">
+                  {(['A', 'B', 'C', 'D'] as const).map((choice) => (
+                    <TouchableOpacity
+                      key={choice}
+                      onPress={() => setCorrectOption(choice)}
+                      className={`mr-2 mb-2 px-3 py-2 rounded-full border ${correctOption === choice ? 'bg-primary-600 border-primary-600' : 'border-earth-400/60'}`}
+                    >
+                      <Text className={correctOption === choice ? 'text-white font-medium' : 'text-earth-700'}>
+                        Correct: {choice}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Button
+                  label={isCreatingQuiz ? 'Creating quiz...' : 'Create quiz'}
+                  onPress={() => {
+                    void onCreateQuiz();
+                  }}
+                  disabled={isCreatingQuiz}
+                  fullWidth
+                />
+              </View>
+            )}
+          </View>
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>

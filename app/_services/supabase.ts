@@ -417,6 +417,384 @@ export async function getQuestionOptions(questionId: string): Promise<QuestionOp
   return data || [];
 }
 
+export type QuizQuestionWithOptions = Question & {
+  options: Array<Pick<QuestionOption, 'id' | 'text' | 'order_index'>>;
+};
+
+export type LessonQuizBundle = Quiz & {
+  questions: QuizQuestionWithOptions[];
+};
+
+export type QuizEditorOption = Pick<QuestionOption, 'id' | 'text' | 'order_index'> & { is_correct: boolean };
+export type QuizEditorQuestion = Question & { options: QuizEditorOption[] };
+export type LessonQuizEditorBundle = Quiz & { questions: QuizEditorQuestion[] };
+
+export async function getQuizBundleByLesson(lessonId: string): Promise<LessonQuizBundle | null> {
+  const { data, error } = await supabase
+    .from('quizzes')
+    .select('id, lesson_id, title, pass_score, max_attempts, due_date, created_at, questions(id, quiz_id, text, type, order_index, question_options(id, text, order_index))')
+    .eq('lesson_id', lessonId)
+    .order('order_index', { foreignTable: 'questions', ascending: true })
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching quiz bundle:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  const normalizedQuestions = ((data as any).questions ?? []).map((question: any) => ({
+    id: question.id,
+    quiz_id: question.quiz_id,
+    text: question.text,
+    type: question.type,
+    order_index: question.order_index,
+    options: (question.question_options ?? []).map((option: any) => ({
+      id: option.id,
+      text: option.text,
+      order_index: option.order_index,
+    })),
+  }));
+
+  return {
+    id: (data as any).id,
+    lesson_id: (data as any).lesson_id,
+    title: (data as any).title,
+    pass_score: (data as any).pass_score,
+    max_attempts: (data as any).max_attempts,
+    due_date: (data as any).due_date,
+    created_at: (data as any).created_at,
+    questions: normalizedQuestions,
+  };
+}
+
+export async function getQuizEditorBundleByLesson(lessonId: string): Promise<LessonQuizEditorBundle | null> {
+  const { data, error } = await supabase
+    .from('quizzes')
+    .select(
+      'id, lesson_id, title, pass_score, max_attempts, due_date, created_at, questions(id, quiz_id, text, type, order_index, question_options(id, text, is_correct, order_index))'
+    )
+    .eq('lesson_id', lessonId)
+    .order('order_index', { foreignTable: 'questions', ascending: true })
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching quiz editor bundle:', error);
+    return null;
+  }
+
+  if (!data) return null;
+
+  const normalizedQuestions = ((data as any).questions ?? []).map((question: any) => ({
+    id: question.id,
+    quiz_id: question.quiz_id,
+    text: question.text,
+    type: question.type,
+    order_index: question.order_index,
+    options: (question.question_options ?? []).map((option: any) => ({
+      id: option.id,
+      text: option.text,
+      is_correct: Boolean(option.is_correct),
+      order_index: option.order_index,
+    })),
+  }));
+
+  return {
+    id: (data as any).id,
+    lesson_id: (data as any).lesson_id,
+    title: (data as any).title,
+    pass_score: (data as any).pass_score,
+    max_attempts: (data as any).max_attempts,
+    due_date: (data as any).due_date,
+    created_at: (data as any).created_at,
+    questions: normalizedQuestions,
+  };
+}
+
+export interface CreateLessonQuizInput {
+  lessonId: string;
+  title: string;
+  passScore: number;
+  maxAttempts?: number | null;
+  questions: Array<{
+    text: string;
+    options: Array<{ text: string; isCorrect: boolean }>;
+  }>;
+}
+
+export async function createLessonQuiz(input: CreateLessonQuizInput): Promise<boolean> {
+  const questionRows = input.questions
+    .map((question, questionIndex) => ({
+      text: question.text.trim(),
+      order_index: questionIndex,
+      options: question.options
+        .map((option, optionIndex) => ({
+          text: option.text.trim(),
+          is_correct: option.isCorrect,
+          order_index: optionIndex,
+        }))
+        .filter((option) => option.text.length > 0),
+    }))
+    .filter((question) => question.text.length > 0);
+
+  if (questionRows.length === 0) {
+    console.error('Quiz creation failed: need at least one question.');
+    return false;
+  }
+
+  for (const question of questionRows) {
+    if (question.options.length < 2) {
+      console.error('Quiz creation failed: each question needs at least two options.');
+      return false;
+    }
+    if (!question.options.some((option) => option.is_correct)) {
+      console.error('Quiz creation failed: each question needs one correct option.');
+      return false;
+    }
+  }
+
+  const { data: quizData, error: quizError } = await supabase
+    .from('quizzes')
+    .insert({
+      lesson_id: input.lessonId,
+      title: input.title.trim(),
+      pass_score: input.passScore,
+      max_attempts: input.maxAttempts ?? 3,
+    })
+    .select('id')
+    .single();
+
+  if (quizError || !quizData) {
+    console.error('Error creating quiz:', quizError);
+    return false;
+  }
+
+  for (const question of questionRows) {
+    const { data: questionData, error: questionError } = await supabase
+      .from('questions')
+      .insert({
+        quiz_id: quizData.id,
+        text: question.text,
+        type: 'mcq',
+        order_index: question.order_index,
+      })
+      .select('id')
+      .single();
+
+    if (questionError || !questionData) {
+      console.error('Error creating quiz question:', questionError);
+      return false;
+    }
+
+    const { error: optionsError } = await supabase.from('question_options').insert(
+      question.options.map((option) => ({
+        question_id: questionData.id,
+        text: option.text,
+        is_correct: option.is_correct,
+        order_index: option.order_index,
+      }))
+    );
+
+    if (optionsError) {
+      console.error('Error creating quiz options:', optionsError);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export interface UpdateLessonQuizInput {
+  quizId: string;
+  title: string;
+  passScore: number;
+  questions: Array<{
+    id?: string;
+    text: string;
+    options: Array<{ text: string; isCorrect: boolean }>;
+  }>;
+}
+
+export async function updateLessonQuiz(input: UpdateLessonQuizInput): Promise<boolean> {
+  const questionRows = input.questions
+    .map((question, questionIndex) => ({
+      id: question.id,
+      text: question.text.trim(),
+      order_index: questionIndex,
+      options: question.options
+        .map((option, optionIndex) => ({
+          text: option.text.trim(),
+          is_correct: option.isCorrect,
+          order_index: optionIndex,
+        }))
+        .filter((option) => option.text.length > 0),
+    }))
+    .filter((question) => question.text.length > 0);
+
+  if (questionRows.length === 0) {
+    console.error('Quiz update failed: need at least one question.');
+    return false;
+  }
+
+  for (const question of questionRows) {
+    if (question.options.length < 2) {
+      console.error('Quiz update failed: each question needs at least two options.');
+      return false;
+    }
+    if (!question.options.some((option) => option.is_correct)) {
+      console.error('Quiz update failed: each question needs one correct option.');
+      return false;
+    }
+  }
+
+  const { error: quizError } = await supabase
+    .from('quizzes')
+    .update({
+      title: input.title.trim(),
+      pass_score: input.passScore,
+    })
+    .eq('id', input.quizId);
+
+  if (quizError) {
+    console.error('Error updating quiz:', quizError);
+    return false;
+  }
+
+  const { data: existingQuestions, error: existingQuestionsError } = await supabase
+    .from('questions')
+    .select('id')
+    .eq('quiz_id', input.quizId);
+
+  if (existingQuestionsError) {
+    console.error('Error fetching existing quiz questions:', existingQuestionsError);
+    return false;
+  }
+
+  const keptQuestionIds = new Set<string>();
+  for (const question of questionRows) {
+    if (question.id) {
+      const { error: questionUpdateError } = await supabase
+        .from('questions')
+        .update({
+          text: question.text,
+          order_index: question.order_index,
+        })
+        .eq('id', question.id);
+
+      if (questionUpdateError) {
+        console.error('Error updating quiz question:', questionUpdateError);
+        return false;
+      }
+      keptQuestionIds.add(question.id);
+
+      const { error: deleteOptionsError } = await supabase
+        .from('question_options')
+        .delete()
+        .eq('question_id', question.id);
+
+      if (deleteOptionsError) {
+        console.error('Error replacing quiz options:', deleteOptionsError);
+        return false;
+      }
+
+      const { error: insertOptionsError } = await supabase.from('question_options').insert(
+        question.options.map((option) => ({
+          question_id: question.id,
+          text: option.text,
+          is_correct: option.is_correct,
+          order_index: option.order_index,
+        }))
+      );
+
+      if (insertOptionsError) {
+        console.error('Error creating quiz options:', insertOptionsError);
+        return false;
+      }
+      continue;
+    }
+
+    const { data: questionData, error: questionInsertError } = await supabase
+      .from('questions')
+      .insert({
+        quiz_id: input.quizId,
+        text: question.text,
+        type: 'mcq',
+        order_index: question.order_index,
+      })
+      .select('id')
+      .single();
+
+    if (questionInsertError || !questionData) {
+      console.error('Error creating quiz question:', questionInsertError);
+      return false;
+    }
+    keptQuestionIds.add(questionData.id);
+
+    const { error: insertOptionsError } = await supabase.from('question_options').insert(
+      question.options.map((option) => ({
+        question_id: questionData.id,
+        text: option.text,
+        is_correct: option.is_correct,
+        order_index: option.order_index,
+      }))
+    );
+
+    if (insertOptionsError) {
+      console.error('Error creating quiz options:', insertOptionsError);
+      return false;
+    }
+  }
+
+  const removedQuestionIds = (existingQuestions ?? [])
+    .map((question) => question.id)
+    .filter((questionId) => !keptQuestionIds.has(questionId));
+  for (const removedQuestionId of removedQuestionIds) {
+    const { error: deleteQuestionError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('id', removedQuestionId);
+    if (deleteQuestionError) {
+      console.error('Error deleting removed quiz question:', deleteQuestionError);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+export interface SubmitQuizAnswerInput {
+  question_id: string;
+  option_id?: string;
+  text_answer?: string;
+}
+
+export async function submitQuizAttempt(
+  userId: string,
+  quizId: string,
+  answers: SubmitQuizAnswerInput[]
+): Promise<{ score: number; passed: boolean; attemptNumber: number } | null> {
+  const { data, error } = await supabase.rpc('submit_quiz_attempt', {
+    p_user_id: userId,
+    p_quiz_id: quizId,
+    p_answers: answers,
+  });
+
+  if (error) {
+    console.error('Error submitting quiz attempt:', error);
+    return null;
+  }
+
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) return null;
+
+  return {
+    score: Number(row.score ?? 0),
+    passed: Boolean(row.passed),
+    attemptNumber: Number(row.attempt_number ?? 1),
+  };
+}
+
 // Enrolment services
 export async function getEnrolmentsByUser(userId: string): Promise<(CourseEnrolment & { courses: Course })[]> {
   const { data, error } = await supabase

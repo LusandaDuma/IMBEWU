@@ -10,6 +10,8 @@ import {
   getLessonById,
   getLessonProgress,
   getLessonsByCourse,
+  getQuizBundleByLesson,
+  submitQuizAttempt,
   updateLessonProgress,
 } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
@@ -18,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowRight, CheckCircle, Clock } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LessonScreen() {
@@ -44,11 +46,18 @@ export default function LessonScreen() {
     queryFn: () => (user ? getLessonProgress(user.id, id) : Promise.resolve(null)),
     enabled: !!user,
   });
+  const { data: quizBundle, refetch: refetchQuiz } = useQuery({
+    queryKey: ['lesson-quiz-bundle', id],
+    queryFn: () => getQuizBundleByLesson(id),
+  });
+  const [selectedOptionByQuestionId, setSelectedOptionByQuestionId] = useState<Record<string, string>>({});
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
 
   useRefetchOnFocus(
     () => {
       void refetchLesson();
       if (user) void refetchProgress();
+      void refetchQuiz();
     },
     Boolean(id)
   );
@@ -110,6 +119,39 @@ export default function LessonScreen() {
     router.replace({ pathname: '/student/lesson/[id]', params: { id: nextLessonId } });
   };
 
+  const handleSubmitQuiz = async () => {
+    if (!quizBundle || !user) return;
+    if (!isComplete) {
+      Alert.alert('Complete lesson first', 'Mark this lesson as complete before writing the quiz.');
+      return;
+    }
+    const unanswered = quizBundle.questions.some(
+      (question) => question.type !== 'short_answer' && !selectedOptionByQuestionId[question.id]
+    );
+    if (unanswered) {
+      Alert.alert('Quiz incomplete', 'Please answer all quiz questions first.');
+      return;
+    }
+    setIsSubmittingQuiz(true);
+    try {
+      const answers = quizBundle.questions.map((question) => ({
+        question_id: question.id,
+        option_id: selectedOptionByQuestionId[question.id],
+      }));
+      const result = await submitQuizAttempt(user.id, quizBundle.id, answers);
+      if (!result) {
+        Alert.alert('Could not submit quiz', 'Please try again.');
+        return;
+      }
+      Alert.alert(
+        result.passed ? 'Quiz passed' : 'Quiz submitted',
+        `Score: ${result.score}% (Attempt ${result.attemptNumber})`
+      );
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
   return (
     <View className="flex-1" style={{ backgroundColor: APP_BACKGROUND_COLOR }}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -152,6 +194,51 @@ export default function LessonScreen() {
               Summary
             </Text>
             <Text className="text-earth-700 leading-6 text-sm font-light">{lesson.description}</Text>
+          </View>
+        ) : null}
+
+        {quizBundle ? (
+          <View className="mb-8 rounded-2xl border border-earth-300/60 p-4">
+            <Text className="text-earth-900 font-semibold text-base mb-1">{quizBundle.title}</Text>
+            <Text className="text-earth-600 text-sm mb-4">Pass score: {quizBundle.pass_score}%</Text>
+            {quizBundle.questions.map((question, questionIndex) => (
+              <View key={question.id} className="mb-4">
+                <Text className="text-earth-800 font-medium mb-2">
+                  {questionIndex + 1}. {question.text}
+                </Text>
+                {question.options.map((option) => {
+                  const isSelected = selectedOptionByQuestionId[question.id] === option.id;
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      onPress={() =>
+                        setSelectedOptionByQuestionId((prev) => ({
+                          ...prev,
+                          [question.id]: option.id,
+                        }))
+                      }
+                      className={`mb-2 rounded-xl px-3 py-2 border ${isSelected ? 'border-primary-600 bg-primary-600/10' : 'border-earth-300/70'}`}
+                    >
+                      <Text className={isSelected ? 'text-primary-900 font-medium' : 'text-earth-700'}>
+                        {option.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
+            <Button
+              label={isSubmittingQuiz ? 'Submitting quiz...' : 'Submit quiz'}
+              onPress={() => {
+                void handleSubmitQuiz();
+              }}
+              disabled={isSubmittingQuiz || !isComplete}
+              variant="primary"
+              fullWidth
+            />
+            {!isComplete ? (
+              <Text className="text-earth-500 text-xs mt-2">Complete the lesson first to unlock quiz submission.</Text>
+            ) : null}
           </View>
         ) : null}
 

@@ -110,7 +110,7 @@ export default function AdminCoursesScreen() {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: '/admin/courses/[id]', params: { id: item.id } })}
+          onPress={() => router.push(`/admin/courses/${item.id}`)}
           className="flex-row items-center mr-3"
           activeOpacity={0.85}
         >
