@@ -1,3 +1,600 @@
+# Imbewu GitHub Project Kanban Stories (Copy-Ready)
+
+Each story is in a fenced `md` block so you can copy one card at a time (same style idea as `cursor_prompt_agri_app.md` prompt blocks).
+
+## Board Columns
+
+- **Backlog** (1/5)
+- **In progress** (0/3)
+- **In review** (0/5)
+- **Done** (0)
+
+---
+
+## Stories 01-35
+
+### Story 01
+```md
+Title: Harden copilot tool audit logging
+Column: Backlog
+Description:
+Add structured audit logging for every Copilot tool call in `supabase/functions/copilot/index.ts` with fields for `user_id`, `role`, `tool`, `allowed/denied`, `timestamp`, and sanitized args.
+Acceptance Criteria:
+- One log entry per tool call.
+- Denied calls include explicit reason.
+- Logs are queryable by user and tool.
+```
+
+### Story 02
+```md
+Title: Add security tests for RLS policy regressions
+Column: Backlog
+Description:
+Create migration/API checks for `profiles`, `course_enrolments`, `lesson_progress`, `student_badges` RLS behavior.
+Acceptance Criteria:
+- Own-row access allowed, cross-user denied.
+- Role differences tested.
+- CI fails on policy regression.
+```
+
+### Story 03
+```md
+Title: Finalize per-domain service split from legacy supabase.ts
+Column: Backlog
+Description:
+Refactor remaining logic in `app/_services/supabase.ts` into dedicated domain services.
+```
+
+### Story 04
+```md
+Title: Add coordinator join-code copy UX with clipboard
+Column: Backlog
+Description:
+Implement one-tap join code copy with confirmation feedback in coordinator screens.
+```
+
+### Story 05
+```md
+Title: Enforce CI quality gate with coverage threshold
+Column: Backlog
+Description:
+Set up GitHub Actions lint/type-check/test pipeline with minimum coverage threshold.
+```
+
+### Story 06
+```md
+Title: Security review for public Gemini key exposure
+Column: Backlog
+Description:
+Document and implement abuse controls around `EXPO_PUBLIC_GEMINI_API_KEY` usage.
+```
+
+### Story 07
+```md
+Title: Badge issuance consistency checker job
+Column: Backlog
+Description:
+Add a reconciliation job to detect completed courses missing `student_badges` and safely repair.
+```
+
+### Story 08
+```md
+Title: Course completion event telemetry
+Column: Backlog
+Description:
+Emit `course_completed`, `badge_awarded`, `badge_viewed` events with role and course context.
+```
+
+### Story 09
+```md
+Title: Add SECURITY_THREAT_MODEL.md
+Column: Backlog
+Description:
+Create threat model mapping JWT, RBAC, RLS, mediation API, and client boundaries.
+```
+
+### Story 10
+```md
+Title: Implement secure error-mapping catalog
+Column: Backlog
+Description:
+Centralize Supabase/API errors into safe, human-friendly product messages.
+```
+
+### Story 11
+```md
+Title: Course completion badge reliability hardening
+Column: In progress
+Description:
+Finalize fallback/retry logic so all fully completed courses reliably show badges.
+```
+
+### Story 12
+```md
+Title: Completed-course first-click badge reveal flow
+Column: In progress
+Description:
+Ensure first click of completed course opens achievements first, then normal navigation afterward.
+```
+
+### Story 13
+```md
+Title: Branding compliance sweep across remaining screens
+Column: In progress
+Description:
+Apply `icon`, `name`, `logo` usage rules consistently across remaining routes.
+```
+
+### Story 14
+```md
+Title: Governed Nolwazi copilot via Supabase Edge mediation
+Column: In review
+Description:
+Review JWT checks, role allowlist, and RLS-safe server execution in `copilot`.
+```
+
+### Story 15
+```md
+Title: Public-first catalog with auth-required enrolment gate
+Column: In review
+Description:
+Review guest browse path and sign-in gating for enrolment mutations.
+```
+
+### Story 16
+```md
+Title: Shared component library adoption pass
+Column: In review
+Description:
+Review consistency and duplication reduction after migration to shared components.
+```
+
+### Story 17
+```md
+Title: NativeWind + Tailwind v3 stabilization for web
+Column: In review
+Description:
+Verify web/native style stability and document cache-clear startup path.
+```
+
+### Story 18
+```md
+Title: Seed and migration baseline verification
+Column: In review
+Description:
+Verify seed data idempotency and non-empty baseline for demo environment.
+```
+
+### Story 19
+```md
+Title: Role-based routing alignment with profile roles
+Column: Done
+Description:
+Implemented route alignment for admin/coordinator/student/independent.
+```
+
+### Story 20
+```md
+Title: NativeWind migration and Tailwind v3 compatibility
+Column: Done
+Description:
+Completed NativeWind stack setup and compatibility fixes.
+```
+
+### Story 21
+```md
+Title: Shared LMS component system scaffolded and adopted
+Column: Done
+Description:
+Implemented and adopted shared atoms/molecules/organisms across core screens.
+```
+
+### Story 22
+```md
+Title: Public catalog home and guest flow implemented
+Column: Done
+Description:
+Guests can browse courses; enrolment actions route to sign-in.
+```
+
+### Story 23
+```md
+Title: Nolwazi assistant integrated with Gemini + tool orchestration
+Column: Done
+Description:
+Integrated assistant with orchestration loop, tools, and fallback model flow.
+```
+
+### Story 24
+```md
+Title: Copilot Edge mediation API with RBAC and allowlist
+Column: Done
+Description:
+Implemented secure tool mediation through Supabase Edge function.
+```
+
+### Story 25
+```md
+Title: Course enrolments RLS updates for copilot flows
+Column: Done
+Description:
+Added migration for controlled self-enrolment and role-safe access.
+```
+
+### Story 26
+```md
+Title: Branding asset rule implementation
+Column: Done
+Description:
+Added centralized brand assets and enforced icon/name/logo rules.
+```
+
+### Story 27
+```md
+Title: Downloadable/shareable completion badge template
+Column: Done
+Description:
+Implemented completion badge template with share and download actions.
+```
+
+### Story 28
+```md
+Title: Lesson-completion driven course badge award trigger
+Column: Done
+Description:
+Added badge awarding checks to lesson completion flows.
+```
+
+### Story 29
+```md
+Title: Completed-course first-click badge-first UX
+Column: Done
+Description:
+Implemented one-time badge-first redirect for completed courses.
+```
+
+### Story 30
+```md
+Title: Badge reliability fallback for already-completed courses
+Column: Done
+Description:
+Added achievements-side reconciliation and fallback badge visibility.
+```
+
+### Story 31
+```md
+Title: Add learner notifications center
+Column: Backlog
+Description:
+Create learner notifications screen with unread/read state and event categories.
+```
+
+### Story 32
+```md
+Title: Add coordinator broadcast announcement tool
+Column: Backlog
+Description:
+Allow coordinators to post class announcements to enrolled learners.
+```
+
+### Story 33
+```md
+Title: Add lesson bookmark and resume
+Column: Backlog
+Description:
+Enable bookmarking and resume position inside lesson content.
+```
+
+### Story 34
+```md
+Title: Add offline lesson cache indicators
+Column: Backlog
+Description:
+Show clear offline/downloaded state per lesson.
+```
+
+### Story 35
+```md
+Title: Add badge gallery by course
+Column: Backlog
+Description:
+Display earned and locked badges grouped by course.
+```
+
+---
+
+## Stories 36-70
+
+### Story 36
+```md
+Title: Add profile edit for display name and language
+Column: Backlog
+Description:
+Implement profile update flow for first/last name and language preferences.
+```
+
+### Story 37
+```md
+Title: Add class roster export (CSV)
+Column: Backlog
+Description:
+Provide coordinator CSV export for roster and progress.
+```
+
+### Story 38
+```md
+Title: Add admin user disable/reactivate controls
+Column: Backlog
+Description:
+Allow admin to deactivate/reactivate accounts with confirm flow.
+```
+
+### Story 39
+```md
+Title: Add audit trail screen for admin actions
+Column: Backlog
+Description:
+Track admin actions with actor, target, and timestamp.
+```
+
+### Story 40
+```md
+Title: Add lesson quality checklist in admin editor
+Column: Backlog
+Description:
+Add quality prompts before lesson publish action.
+```
+
+### Story 41
+```md
+Title: Add quiz question randomization option
+Column: Backlog
+Description:
+Support optional randomized question order per attempt.
+```
+
+### Story 42
+```md
+Title: Add quiz attempt cooldown settings
+Column: Backlog
+Description:
+Add configurable cooldown between failed quiz attempts.
+```
+
+### Story 43
+```md
+Title: Add pass-score override per class
+Column: Backlog
+Description:
+Allow class-level pass-score overrides under policy constraints.
+```
+
+### Story 44
+```md
+Title: Add learner streak decay logic
+Column: Backlog
+Description:
+Improve streak logic with timezone-safe behavior and reset messaging.
+```
+
+### Story 45
+```md
+Title: Add achievement timeline view
+Column: Backlog
+Description:
+Show chronological timeline for learner milestones.
+```
+
+### Story 46
+```md
+Title: Add metrics card for badge conversion rate
+Column: Backlog
+Description:
+Track enrolment-to-badge conversion KPI.
+```
+
+### Story 47
+```md
+Title: Add course drop-off analytics funnel
+Column: Backlog
+Description:
+Create lesson-by-lesson drop-off funnel for content optimization.
+```
+
+### Story 48
+```md
+Title: Add search indexing for large course catalog
+Column: Backlog
+Description:
+Optimize search relevance and performance for larger datasets.
+```
+
+### Story 49
+```md
+Title: Add pagination for admin user list
+Column: Backlog
+Description:
+Implement server-backed pagination/filtering for admin user management.
+```
+
+### Story 50
+```md
+Title: Add skeleton loaders for all dashboards
+Column: Backlog
+Description:
+Replace spinner-heavy loading states with skeleton placeholders.
+```
+
+### Story 51
+```md
+Title: Add i18n scaffold for multilingual UI
+Column: Backlog
+Description:
+Set up translation architecture with extensible language packs.
+```
+
+### Story 52
+```md
+Title: Add accessibility pass for forms and badges
+Column: Backlog
+Description:
+Improve labels, focus order, semantic roles, and contrast.
+```
+
+### Story 53
+```md
+Title: Add e2e smoke tests for all four roles
+Column: Backlog
+Description:
+Automate role-based smoke tests for core flows.
+```
+
+### Story 54
+```md
+Title: Add robust empty/error states standardization
+Column: Backlog
+Description:
+Standardize empty/error UX patterns across key screens.
+```
+
+### Story 55
+```md
+Title: Add stale query invalidation map documentation
+Column: Backlog
+Description:
+Document React Query key strategy and invalidation matrix.
+```
+
+### Story 56
+```md
+Title: Add feature flags for experimental flows
+Column: Backlog
+Description:
+Introduce feature toggles for safe gradual rollout.
+```
+
+### Story 57
+```md
+Title: Add release checklist markdown for mobile/web
+Column: Backlog
+Description:
+Create release checklist for envs, migration, QA, and rollback.
+```
+
+### Story 58
+```md
+Title: Add incident playbook for auth outages
+Column: Backlog
+Description:
+Define user-facing fallback and operational response for auth outages.
+```
+
+### Story 59
+```md
+Title: Add security scan for dependency vulnerabilities
+Column: Backlog
+Description:
+Integrate dependency vulnerability scanning into CI.
+```
+
+### Story 60
+```md
+Title: Add JWT expiry and refresh resilience tests
+Column: Backlog
+Description:
+Test long-lived session expiry/refresh stability across app lifecycle.
+```
+
+### Story 61
+```md
+Title: Add strict schema validation for copilot tool args
+Column: Backlog
+Description:
+Validate tool args at runtime and return explicit errors on malformed payloads.
+```
+
+### Story 62
+```md
+Title: Add anomaly alerting for enrolment spikes
+Column: Backlog
+Description:
+Detect unusual enrolment spikes and notify maintainers.
+```
+
+### Story 63
+```md
+Title: Add safe-mode toggle to disable AI tools quickly
+Column: Backlog
+Description:
+Provide emergency read-only mode for AI tooling.
+```
+
+### Story 64
+```md
+Title: Add backup and recovery runbook for Supabase data
+Column: Backlog
+Description:
+Document backup cadence, recovery drills, and RTO/RPO targets.
+```
+
+### Story 65
+```md
+Title: Add penetration test prep checklist
+Column: Backlog
+Description:
+Prepare scope, test identities, and reporting workflow for external pentest.
+```
+
+### Story 66
+```md
+Title: Add security changelog section per release
+Column: Backlog
+Description:
+Track security-impacting changes in each release cycle.
+```
+
+### Story 67
+```md
+Title: Add data retention policy for activity logs
+Column: Backlog
+Description:
+Define retention and purge policy for logs and telemetry.
+```
+
+### Story 68
+```md
+Title: Add privacy request workflow (export/delete)
+Column: Backlog
+Description:
+Implement DSAR workflow for export/delete requests.
+```
+
+### Story 69
+```md
+Title: Add secure config validation on app startup
+Column: Backlog
+Description:
+Validate required env vars with safe, actionable startup errors.
+```
+
+### Story 70
+```md
+Title: Add red-team prompt injection test suite
+Column: Backlog
+Description:
+Build adversarial prompt suite to verify anti-exfiltration and policy enforcement.
+```
+
+---
+
+## Suggested Quick Fill For Your Current Board Limits
+
+```md
+Backlog (5): 01, 02, 03, 05, 09
+In progress (3): 11, 12, 13
+In review (5): 14, 15, 16, 17, 18
+Done: 19-30
+```
 # Imbewu GitHub Project Kanban Stories
 
 Use this file to quickly copy-paste story titles and descriptions into GitHub Issues/Project items.
