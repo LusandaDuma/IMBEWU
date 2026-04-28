@@ -3,7 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start --tunnel",
+    "start": "expo start --lan",
+    "start-tunnel": "expo start --tunnel",
     "start-web": "expo start --web",
     "start-web-dev": "expo start --web -c",
     "lint": "expo lint"

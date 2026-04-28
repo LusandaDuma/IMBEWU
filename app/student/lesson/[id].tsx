@@ -64,7 +64,15 @@ export default function LessonScreen() {
     Boolean(id)
   );
 
-  const existingPct = useMemo(() => existingProgress?.pct_complete ?? 0, [existingProgress]);
+  useEffect(() => {
+    setProgress(0);
+    setSelectedOptionByQuestionId({});
+  }, [id]);
+
+  const existingPct = useMemo(() => {
+    if (existingProgress?.is_completed) return 100;
+    return existingProgress?.pct_complete ?? 0;
+  }, [existingProgress]);
 
   const progressMutation = useMutation({
     mutationFn: async (percentage: number) => {
@@ -90,7 +98,7 @@ export default function LessonScreen() {
   });
 
   useEffect(() => {
-    setProgress(existingPct);
+    setProgress((prev) => Math.max(prev, existingPct));
   }, [existingPct]);
 
   const handleComplete = async () => {
@@ -113,7 +121,7 @@ export default function LessonScreen() {
     return courseLessons[idx + 1]!.id;
   }, [lesson, courseLessons]);
 
-  const isComplete = progress >= 100;
+  const isComplete = progress >= 100 || Boolean(existingProgress?.is_completed);
 
   const goToCourse = () => {
     if (lesson?.course_id) {
@@ -196,7 +204,7 @@ export default function LessonScreen() {
 
       <ScrollView
         className="flex-1 px-5 py-6"
-        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 96 }}
+        contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 16) + 168 }}
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center mb-4">
@@ -277,27 +285,30 @@ export default function LessonScreen() {
           </View>
         ) : null}
 
-        <Button
-          label="Mark as complete"
-          onPress={handleComplete}
-          variant="primary"
-          size="lg"
-          fullWidth
-          leftIcon={CheckCircle}
-          disabled={isComplete}
-        />
-        {isComplete && nextLessonId ? (
-          <View className="mt-3">
-            <Button
-              label="Next lesson"
-              onPress={goToNextLesson}
-              variant="secondary"
-              size="lg"
-              fullWidth
-              leftIcon={ArrowRight}
-            />
-          </View>
-        ) : null}
+        <View className="mb-8">
+          <Button
+            label="Mark as complete"
+            onPress={handleComplete}
+            variant="primary"
+            size="lg"
+            fullWidth
+            leftIcon={CheckCircle}
+            disabled={isComplete}
+          />
+          {isComplete && nextLessonId ? (
+            <View className="mt-3">
+              <Button
+                label="Next lesson"
+                onPress={goToNextLesson}
+                variant="secondary"
+                size="lg"
+                fullWidth
+                leftIcon={ArrowRight}
+                disabled={false}
+              />
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
       <NolwaziActionsModal
         visible={Boolean(nolwaziContextLabel)}
