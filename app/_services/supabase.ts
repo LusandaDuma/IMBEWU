@@ -408,7 +408,7 @@ export async function checkAndAwardCourseBadges(userId: string, courseId: string
 export async function getEarnedCourseBadges(userId: string): Promise<EarnedCourseBadge[]> {
   const { data, error } = await supabase
     .from('student_badges')
-    .select('id, awarded_at, badges!inner(id, name, criteria, course_id, courses!inner(title))')
+    .select('id, awarded_at, badges!inner(id, name, criteria, course_id, courses(title))')
     .eq('user_id', userId)
     .order('awarded_at', { ascending: false });
 
@@ -423,7 +423,7 @@ export async function getEarnedCourseBadges(userId: string): Promise<EarnedCours
     badge_id: row.badges.id,
     badge_name: row.badges.name,
     course_id: row.badges.course_id,
-    course_title: row.badges.courses.title,
+    course_title: row.badges.courses?.title ?? 'Course',
     criteria: row.badges.criteria ?? null,
   }));
 }
@@ -883,9 +883,40 @@ export async function syncAndGetEarnedCourseBadges(
     return getEarnedCourseBadges(userId);
   }
 
-  const courseIds = [...new Set((enrolments || []).map((item) => item.course_id))];
+  const enrolmentCourseIds = [...new Set((enrolments || []).map((item) => item.course_id))];
+  let courseIds = enrolmentCourseIds;
   if (!courseIds.length) {
-    return [];
+    // Fallback for historical data where enrolment rows are missing:
+    // infer candidate courses from completed lesson progress.
+    const { data: completedProgress, error: completedProgressError } = await supabase
+      .from('lesson_progress')
+      .select('lesson_id')
+      .eq('user_id', userId)
+      .eq('is_completed', true);
+
+    if (completedProgressError) {
+      console.error('Error fetching completed progress for badge sync fallback:', completedProgressError);
+      return getEarnedCourseBadges(userId);
+    }
+
+    const lessonIds = [...new Set((completedProgress || []).map((row) => row.lesson_id))];
+    if (lessonIds.length > 0) {
+      const { data: lessons, error: lessonsError } = await supabase
+        .from('lessons')
+        .select('course_id')
+        .in('id', lessonIds);
+
+      if (lessonsError) {
+        console.error('Error fetching lessons for badge sync fallback:', lessonsError);
+        return getEarnedCourseBadges(userId);
+      }
+
+      courseIds = [...new Set((lessons || []).map((lesson) => lesson.course_id))];
+    }
+  }
+
+  if (!courseIds.length) {
+    return getEarnedCourseBadges(userId);
   }
 
   const summaries = await Promise.all(
@@ -904,12 +935,14 @@ export async function syncAndGetEarnedCourseBadges(
   }
 
   const earnedBadges = await getEarnedCourseBadges(userId);
+
   if (!enrolmentType) {
     return earnedBadges;
   }
 
-  const eligibleCourseIds = new Set(courseIds);
-  return earnedBadges.filter((badge) => eligibleCourseIds.has(badge.course_id));
+  const eligibleCourseIds = new Set(enrolmentCourseIds.length > 0 ? enrolmentCourseIds : courseIds);
+  const badgesForType = earnedBadges.filter((badge) => eligibleCourseIds.has(badge.course_id));
+  return badgesForType.length > 0 ? badgesForType : earnedBadges;
 }
 
 export async function enrollInCourse(
