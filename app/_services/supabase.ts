@@ -863,6 +863,55 @@ export async function getEnrolmentsByUser(userId: string): Promise<(CourseEnrolm
   return data || [];
 }
 
+export async function syncAndGetEarnedCourseBadges(
+  userId: string,
+  enrolmentType?: 'independent' | 'class_based'
+): Promise<EarnedCourseBadge[]> {
+  const enrolmentQuery = supabase
+    .from('course_enrolments')
+    .select('course_id')
+    .eq('user_id', userId);
+
+  if (enrolmentType) {
+    enrolmentQuery.eq('enrolment_type', enrolmentType);
+  }
+
+  const { data: enrolments, error: enrolmentsError } = await enrolmentQuery;
+
+  if (enrolmentsError) {
+    console.error('Error fetching enrolments for badge sync:', enrolmentsError);
+    return getEarnedCourseBadges(userId);
+  }
+
+  const courseIds = [...new Set((enrolments || []).map((item) => item.course_id))];
+  if (!courseIds.length) {
+    return [];
+  }
+
+  const summaries = await Promise.all(
+    courseIds.map(async (courseId) => {
+      const summary = await getCourseProgressSummary(userId, courseId);
+      return { courseId, summary };
+    })
+  );
+
+  const completedCourseIds = summaries
+    .filter((item) => item.summary.totalLessons > 0 && item.summary.completedLessons === item.summary.totalLessons)
+    .map((item) => item.courseId);
+
+  if (completedCourseIds.length > 0) {
+    await Promise.all(completedCourseIds.map((courseId) => checkAndAwardCourseBadges(userId, courseId)));
+  }
+
+  const earnedBadges = await getEarnedCourseBadges(userId);
+  if (!enrolmentType) {
+    return earnedBadges;
+  }
+
+  const eligibleCourseIds = new Set(courseIds);
+  return earnedBadges.filter((badge) => eligibleCourseIds.has(badge.course_id));
+}
+
 export async function enrollInCourse(
   userId: string, 
   courseId: string, 

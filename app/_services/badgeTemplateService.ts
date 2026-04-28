@@ -16,25 +16,52 @@ async function captureBadge(ref: React.RefObject<View | null>): Promise<string> 
   return captureRef(ref, {
     format: 'png',
     quality: 1,
-    result: 'tmpfile',
+    result: Platform.OS === 'web' ? 'data-uri' : 'tmpfile',
   });
+}
+
+function createBadgeFileName(learnerName: string, courseTitle?: string): string {
+  const safeName = learnerName.trim().replace(/\s+/g, '-').toLowerCase() || 'learner';
+  const safeCourse = courseTitle?.trim().replace(/\s+/g, '-').toLowerCase();
+  const courseSegment = safeCourse ? `-${safeCourse}` : '';
+  return `imbewu-course-badge-${safeName}${courseSegment}-${getFileStamp()}.png`;
 }
 
 export async function downloadBadgeTemplate(
   ref: React.RefObject<View | null>,
-  learnerName: string
+  learnerName: string,
+  courseTitle?: string
 ): Promise<string> {
   const tempUri = await captureBadge(ref);
+  const fileName = createBadgeFileName(learnerName, courseTitle);
+
+  if (Platform.OS === 'web') {
+    const link = document.createElement('a');
+    link.href = tempUri;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return fileName;
+  }
+
   const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
   if (!baseDir) {
     return tempUri;
   }
   const exportDir = `${baseDir}badges`;
   await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
-  const safeName = learnerName.trim().replace(/\s+/g, '-').toLowerCase() || 'learner';
-  const targetUri = `${exportDir}/imbewu-course-badge-${safeName}-${getFileStamp()}.png`;
+  const targetUri = `${exportDir}/${fileName}`;
   await FileSystem.copyAsync({ from: tempUri, to: targetUri });
   return targetUri;
+}
+
+export async function downloadBadgeTemplates(
+  badges: Array<{ ref: React.RefObject<View | null>; courseTitle?: string }>,
+  learnerName: string
+): Promise<string[]> {
+  const downloads = await Promise.all(badges.map((badge) => downloadBadgeTemplate(badge.ref, learnerName, badge.courseTitle)));
+  return downloads;
 }
 
 export async function shareBadgeTemplate(ref: React.RefObject<View | null>, learnerName: string): Promise<void> {

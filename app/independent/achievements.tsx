@@ -5,17 +5,14 @@
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { downloadBadgeTemplate, shareBadgeTemplate } from '@/services/badgeTemplateService';
 import {
-  checkAndAwardCourseBadges,
-  getCourseProgressSummary,
-  getEarnedCourseBadges,
-  getEnrolmentsByUser,
   getIndependentAchievementsData,
+  syncAndGetEarnedCourseBadges,
 } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { Button, CompletionBadgeTemplate } from '@/components/shared';
 
@@ -32,46 +29,12 @@ export default function ProgressScreen() {
   });
   const { data: earnedBadges = [], refetch: refetchEarnedBadges } = useQuery({
     queryKey: ['earned-course-badges', user?.id],
-    queryFn: () => (user ? getEarnedCourseBadges(user.id) : Promise.resolve([])),
-    enabled: !!user,
-  });
-  const { data: completedCourses = [] } = useQuery({
-    queryKey: ['completed-courses', 'independent', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const enrolments = await getEnrolmentsByUser(user.id);
-      const summaries = await Promise.all(
-        enrolments.map(async (enrolment) => {
-          const summary = await getCourseProgressSummary(user.id, enrolment.course_id);
-          return { courseId: enrolment.course_id, title: enrolment.courses?.title ?? 'Course', summary };
-        })
-      );
-
-      return summaries
-        .filter((item) => item.summary.totalLessons > 0 && item.summary.completedLessons === item.summary.totalLessons)
-        .map((item) => ({ courseId: item.courseId, courseTitle: item.title }));
-    },
+    queryFn: () => (user ? syncAndGetEarnedCourseBadges(user.id, 'independent') : Promise.resolve([])),
     enabled: !!user,
   });
 
   useRefetchOnFocus(refetch, !!user);
   useRefetchOnFocus(refetchEarnedBadges, !!user);
-  useEffect(() => {
-    if (!user || completedCourses.length === 0) return;
-    let active = true;
-
-    const ensureAwarded = async () => {
-      await Promise.all(completedCourses.map((course) => checkAndAwardCourseBadges(user.id, course.courseId)));
-      if (active) {
-        void refetchEarnedBadges();
-      }
-    };
-
-    void ensureAwarded();
-    return () => {
-      active = false;
-    };
-  }, [user, completedCourses, refetchEarnedBadges]);
 
   const stats = [
     { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
@@ -82,17 +45,7 @@ export default function ProgressScreen() {
   const weeklyActivity = data?.weeklyActivity ?? [];
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const achievements = data?.achievements ?? [];
-  const fallbackBadges = useMemo(
-    () =>
-      completedCourses.map((course) => ({
-        id: `fallback-${course.courseId}`,
-        badge_name: 'Course Completion',
-        course_title: course.courseTitle,
-        awarded_at: new Date().toISOString(),
-      })),
-    [completedCourses]
-  );
-  const effectiveBadges = earnedBadges.length > 0 ? earnedBadges : fallbackBadges;
+  const effectiveBadges = earnedBadges;
   const latestEarnedBadge = effectiveBadges[0];
   const hasCourseCompletionBadge = effectiveBadges.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
