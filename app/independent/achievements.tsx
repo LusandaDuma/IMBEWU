@@ -2,25 +2,28 @@
  * @fileoverview Independent learner progress screen
  */
 
+import { Button, CompletionBadgeTemplate } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { downloadBadgeTemplate, shareBadgeTemplate } from '@/services/badgeTemplateService';
 import {
-  getIndependentAchievementsData,
-  syncAndGetEarnedCourseBadges,
+    checkAndAwardCourseBadges,
+    getCourseProgressSummary,
+    getEarnedCourseBadges,
+    getEnrolmentsByUser,
+    getIndependentAchievementsData,
 } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { Button, CompletionBadgeTemplate } from '@/components/shared';
 
 export default function ProgressScreen() {
   const { user, profile } = useAuthStore();
-  const badgeRef = useRef<View>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const badgeRefs = useRef<Record<string, View | null>>({});
+  const [sharingBadgeId, setSharingBadgeId] = useState<string | null>(null);
+  const [downloadingBadgeId, setDownloadingBadgeId] = useState<string | null>(null);
 
   const { data, refetch } = useQuery({
     queryKey: ['independent-achievements', user?.id],
@@ -29,12 +32,46 @@ export default function ProgressScreen() {
   });
   const { data: earnedBadges = [], refetch: refetchEarnedBadges } = useQuery({
     queryKey: ['earned-course-badges', user?.id],
-    queryFn: () => (user ? syncAndGetEarnedCourseBadges(user.id, 'independent') : Promise.resolve([])),
+    queryFn: () => (user ? getEarnedCourseBadges(user.id) : Promise.resolve([])),
+    enabled: !!user,
+  });
+  const { data: completedCourses = [] } = useQuery({
+    queryKey: ['completed-courses', 'independent', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const enrolments = await getEnrolmentsByUser(user.id);
+      const summaries = await Promise.all(
+        enrolments.map(async (enrolment) => {
+          const summary = await getCourseProgressSummary(user.id, enrolment.course_id);
+          return { courseId: enrolment.course_id, title: enrolment.courses?.title ?? 'Course', summary };
+        })
+      );
+
+      return summaries
+        .filter((item) => item.summary.totalLessons > 0 && item.summary.completedLessons === item.summary.totalLessons)
+        .map((item) => ({ courseId: item.courseId, courseTitle: item.title }));
+    },
     enabled: !!user,
   });
 
   useRefetchOnFocus(refetch, !!user);
   useRefetchOnFocus(refetchEarnedBadges, !!user);
+  useEffect(() => {
+    if (!user || completedCourses.length === 0) return;
+    let active = true;
+
+    const ensureAwarded = async () => {
+      await Promise.all(completedCourses.map((course) => checkAndAwardCourseBadges(user.id, course.courseId)));
+      if (active) {
+        void refetchEarnedBadges();
+      }
+    };
+
+    void ensureAwarded();
+    return () => {
+      active = false;
+    };
+  }, [user, completedCourses, refetchEarnedBadges]);
 
   const stats = [
     { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
@@ -45,31 +82,57 @@ export default function ProgressScreen() {
   const weeklyActivity = data?.weeklyActivity ?? [];
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const achievements = data?.achievements ?? [];
-  const effectiveBadges = earnedBadges;
-  const latestEarnedBadge = effectiveBadges[0];
+  const fallbackBadges = useMemo(
+    () =>
+      completedCourses.map((course) => ({
+        id: `fallback-${course.courseId}`,
+        course_id: course.courseId,
+        badge_name: 'Course Completion',
+        course_title: course.courseTitle,
+        awarded_at: new Date().toISOString(),
+      })),
+    [completedCourses]
+  );
+  const effectiveBadges = useMemo(() => {
+    const earnedCourseIds = new Set(earnedBadges.map((badge) => badge.course_id));
+    const missingFallbackBadges = fallbackBadges.filter((badge) => !earnedCourseIds.has(badge.course_id));
+    return [...earnedBadges, ...missingFallbackBadges];
+  }, [earnedBadges, fallbackBadges]);
   const hasCourseCompletionBadge = effectiveBadges.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
 
-  const onShareBadge = async () => {
+  const onShareBadge = async (badgeId: string) => {
+    const badgeNode = badgeRefs.current[badgeId];
+    if (!badgeNode) {
+      Alert.alert('Share failed', 'Badge preview is not ready yet. Please try again.');
+      return;
+    }
+
     try {
-      setIsSharing(true);
-      await shareBadgeTemplate(badgeRef, learnerName);
+      setSharingBadgeId(badgeId);
+      await shareBadgeTemplate({ current: badgeNode }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share badge right now.');
     } finally {
-      setIsSharing(false);
+      setSharingBadgeId(null);
     }
   };
 
-  const onDownloadBadge = async () => {
+  const onDownloadBadge = async (badgeId: string) => {
+    const badgeNode = badgeRefs.current[badgeId];
+    if (!badgeNode) {
+      Alert.alert('Download failed', 'Badge preview is not ready yet. Please try again.');
+      return;
+    }
+
     try {
-      setIsDownloading(true);
-      const uri = await downloadBadgeTemplate(badgeRef, learnerName);
+      setDownloadingBadgeId(badgeId);
+      const uri = await downloadBadgeTemplate({ current: badgeNode }, learnerName);
       Alert.alert('Badge saved', `Saved to:\n${uri}`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save badge right now.');
     } finally {
-      setIsDownloading(false);
+      setDownloadingBadgeId(null);
     }
   };
 
@@ -149,36 +212,48 @@ export default function ProgressScreen() {
           <View className="mt-6 mb-10">
             <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Template</Text>
             <View className="mb-3">
-              {effectiveBadges.map((badge) => (
-                <View key={badge.id} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
-                  <Text className="text-earth-800 font-medium">{badge.badge_name}</Text>
-                  <Text className="text-earth-500 text-xs">{badge.course_title}</Text>
-                </View>
-              ))}
-            </View>
-            <View ref={badgeRef} collapsable={false}>
-              <CompletionBadgeTemplate
-                learnerName={learnerName}
-                courseTitle={latestEarnedBadge?.course_title}
-                awardedAt={latestEarnedBadge?.awarded_at ?? new Date().toISOString()}
-              />
-            </View>
-            <View className="mt-3 gap-2">
-              <Button
-                label={isSharing ? 'Sharing…' : 'Share badge'}
-                onPress={onShareBadge}
-                isLoading={isSharing}
-                disabled={isSharing || isDownloading}
-                fullWidth
-              />
-              <Button
-                label={isDownloading ? 'Saving…' : 'Download badge'}
-                onPress={onDownloadBadge}
-                isLoading={isDownloading}
-                disabled={isDownloading || isSharing}
-                variant="secondary"
-                fullWidth
-              />
+              {effectiveBadges.map((badge) => {
+                const isSharing = sharingBadgeId === badge.id;
+                const isDownloading = downloadingBadgeId === badge.id;
+                const isBusy = isSharing || isDownloading;
+                return (
+                  <View key={badge.id} className="border-b border-earth-400/30 py-3">
+                    <View className="flex-row items-center justify-between mb-2">
+                      <Text className="text-earth-800 font-medium">{badge.badge_name}</Text>
+                      <Text className="text-earth-500 text-xs">{badge.course_title}</Text>
+                    </View>
+                    <View
+                      ref={(node) => {
+                        badgeRefs.current[badge.id] = node;
+                      }}
+                      collapsable={false}
+                    >
+                      <CompletionBadgeTemplate
+                        learnerName={learnerName}
+                        courseTitle={badge.course_title}
+                        awardedAt={badge.awarded_at ?? new Date().toISOString()}
+                      />
+                    </View>
+                    <View className="mt-3 gap-2">
+                      <Button
+                        label={isSharing ? 'Sharing…' : 'Share badge'}
+                        onPress={() => onShareBadge(badge.id)}
+                        isLoading={isSharing}
+                        disabled={isBusy}
+                        fullWidth
+                      />
+                      <Button
+                        label={isDownloading ? 'Saving…' : 'Download badge'}
+                        onPress={() => onDownloadBadge(badge.id)}
+                        isLoading={isDownloading}
+                        disabled={isBusy}
+                        variant="secondary"
+                        fullWidth
+                      />
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           </View>
         ) : null}
