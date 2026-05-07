@@ -1382,6 +1382,15 @@ export type CoordinatorAnalytics = {
   recentActivity: CoordinatorActivityItem[];
 };
 
+export type CoordinatorCertificateRecipient = {
+  id: string;
+  student_id: string;
+  student_name: string;
+  course_id: string;
+  course_title: string;
+  completed_at: string;
+};
+
 export type IndependentAchievementItem = {
   id: string;
   name: string;
@@ -1734,4 +1743,138 @@ export async function getCoordinatorAnalytics(coordinatorId: string): Promise<Co
     },
     recentActivity,
   };
+}
+
+export async function getCoordinatorCertificateRecipients(
+  coordinatorId: string
+): Promise<CoordinatorCertificateRecipient[]> {
+  const classes = await getClassesByCoordinator(coordinatorId);
+  if (!classes.length) {
+    return [];
+  }
+
+  const classIds = classes.map((item) => item.id);
+  const classCourseIds = [...new Set(classes.map((item) => item.course_id))];
+
+  const { data: classMembersData, error: classMembersError } = await supabase
+    .from('class_members')
+    .select('user_id')
+    .in('class_id', classIds)
+    .eq('role', 'student');
+  if (classMembersError) {
+    console.error('Error fetching class members for certificates:', classMembersError);
+    return [];
+  }
+
+  const studentIds = [...new Set((classMembersData || []).map((item) => item.user_id))];
+  if (!studentIds.length || !classCourseIds.length) {
+    return [];
+  }
+
+  const { data: enrolmentsData, error: enrolmentsError } = await supabase
+    .from('course_enrolments')
+    .select('user_id, course_id')
+    .in('user_id', studentIds)
+    .in('course_id', classCourseIds)
+    .eq('enrolment_type', 'class_based');
+  if (enrolmentsError) {
+    console.error('Error fetching enrolments for certificates:', enrolmentsError);
+    return [];
+  }
+
+  const enrolmentPairs = (enrolmentsData || []).map((row) => `${row.user_id}:${row.course_id}`);
+  if (!enrolmentPairs.length) {
+    return [];
+  }
+
+  const { data: lessonsData, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, course_id')
+    .in('course_id', classCourseIds);
+  if (lessonsError) {
+    console.error('Error fetching lessons for coordinator certificates:', lessonsError);
+    return [];
+  }
+
+  const lessons = lessonsData || [];
+  const lessonIds = lessons.map((lesson) => lesson.id);
+  if (!lessonIds.length) {
+    return [];
+  }
+
+  const { data: progressData, error: progressError } = await supabase
+    .from('lesson_progress')
+    .select('user_id, lesson_id, is_completed, completed_at')
+    .in('user_id', studentIds)
+    .in('lesson_id', lessonIds)
+    .eq('is_completed', true);
+  if (progressError) {
+    console.error('Error fetching progress for coordinator certificates:', progressError);
+    return [];
+  }
+
+  const { data: profilesData, error: profilesError } = await supabase
+    .from('profiles')
+    .select('id, first_name, last_name')
+    .in('id', studentIds);
+  if (profilesError) {
+    console.error('Error fetching student profiles for certificates:', profilesError);
+    return [];
+  }
+
+  const { data: coursesData, error: coursesError } = await supabase
+    .from('courses')
+    .select('id, title')
+    .in('id', classCourseIds);
+  if (coursesError) {
+    console.error('Error fetching courses for certificates:', coursesError);
+    return [];
+  }
+
+  const totalLessonsByCourse = new Map<string, number>();
+  const lessonToCourse = new Map<string, string>();
+  for (const lesson of lessons) {
+    totalLessonsByCourse.set(lesson.course_id, (totalLessonsByCourse.get(lesson.course_id) || 0) + 1);
+    lessonToCourse.set(lesson.id, lesson.course_id);
+  }
+
+  const completedCountByPair = new Map<string, number>();
+  const latestCompletedAtByPair = new Map<string, string>();
+  for (const row of progressData || []) {
+    const courseId = lessonToCourse.get(row.lesson_id);
+    if (!courseId) continue;
+    const key = `${row.user_id}:${courseId}`;
+    completedCountByPair.set(key, (completedCountByPair.get(key) || 0) + 1);
+    const completedAt = row.completed_at || '';
+    const current = latestCompletedAtByPair.get(key);
+    if (completedAt && (!current || new Date(completedAt).getTime() > new Date(current).getTime())) {
+      latestCompletedAtByPair.set(key, completedAt);
+    }
+  }
+
+  const studentNameById = new Map(
+    (profilesData || []).map((profile) => [
+      profile.id,
+      `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim() || 'Student',
+    ])
+  );
+  const courseTitleById = new Map((coursesData || []).map((course) => [course.id, course.title || 'Course']));
+
+  const recipients: CoordinatorCertificateRecipient[] = [];
+  for (const pair of enrolmentPairs) {
+    const [studentId, courseId] = pair.split(':');
+    const totalLessons = totalLessonsByCourse.get(courseId) || 0;
+    const completedLessons = completedCountByPair.get(pair) || 0;
+    if (totalLessons === 0 || completedLessons !== totalLessons) continue;
+    recipients.push({
+      id: pair,
+      student_id: studentId,
+      student_name: studentNameById.get(studentId) || 'Student',
+      course_id: courseId,
+      course_title: courseTitleById.get(courseId) || 'Course',
+      completed_at: latestCompletedAtByPair.get(pair) || new Date().toISOString(),
+    });
+  }
+
+  return recipients.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
 }

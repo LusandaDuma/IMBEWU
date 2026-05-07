@@ -5,7 +5,7 @@
 import { APP_BACKGROUND_COLOR, getTabBarStyle, TAB_ICON_SIZE } from '@/constants/theme';
 import { useAuthStore } from '@/store/auth';
 import { Redirect, Tabs } from 'expo-router';
-import { BarChart3, BookOpen, User, Users } from 'lucide-react-native';
+import { Award, BarChart3, BookOpen, User, Users } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /** Stack-only routes must not appear as bottom tab targets (names come from the file tree). */
@@ -67,6 +67,13 @@ export default function CoordinatorLayout() {
         options={{
           title: 'Analytics',
           tabBarIcon: ({ color }) => <BarChart3 size={TAB_ICON_SIZE} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="certificates"
+        options={{
+          title: 'Certificates',
+          tabBarIcon: ({ color }) => <Award size={TAB_ICON_SIZE} color={color} />,
         }}
       />
       <Tabs.Screen
