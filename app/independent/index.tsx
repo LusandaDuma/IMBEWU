@@ -12,14 +12,21 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { BookOpen, ChevronRight, Clock, ListChecks, Play, Sprout, Target } from 'lucide-react-native';
-import { Fragment, useCallback, useMemo } from 'react';
-import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { Fragment, useCallback, useMemo, useState } from 'react';
+import { Alert, FlatList, Linking, Modal, Platform, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const PAYSTACK_TEST_PUBLIC_KEY = 'pk_test_0553ae959cc7caa09e540a64fef7a6e62cbbbe43';
+const PAYSTACK_TEST_CHECKOUT_URL = `https://paystack.com/?pk=${PAYSTACK_TEST_PUBLIC_KEY}`;
 
 export default function IndependentDashboard() {
   const { user, profile } = useAuthStore();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [paymentCourseId, setPaymentCourseId] = useState<string | null>(null);
+  const [paymentProgressPct, setPaymentProgressPct] = useState(0);
+  const [paymentWindowOpened, setPaymentWindowOpened] = useState(false);
 
   const { data: enrolments = [], isLoading, refetch } = useQuery<(CourseEnrolment & { courses: Course })[]>({
     queryKey: ['independent-enrolments', user?.id],
@@ -70,6 +77,42 @@ export default function IndependentDashboard() {
   const completedLessons = firstCourseProgress?.completedLessons ?? 0;
   const totalLessons = firstCourseProgress?.totalLessons ?? 0;
 
+  const paymentStorageKey = useCallback(
+    (courseId: string) => `independent:paystack:paid:${user?.id ?? 'guest'}:${courseId}`,
+    [user?.id]
+  );
+
+  const markFakePaymentAsComplete = async () => {
+    if (!paymentCourseId) return;
+    if (!paymentWindowOpened) {
+      Alert.alert('Open checkout first', 'Please open the Paystack checkout window before confirming payment.');
+      return;
+    }
+    await AsyncStorage.setItem(
+      paymentStorageKey(paymentCourseId),
+      JSON.stringify({
+        provider: 'paystack',
+        mode: 'test-fake',
+        publicKey: PAYSTACK_TEST_PUBLIC_KEY,
+        paidAt: new Date().toISOString(),
+      })
+    );
+    const courseId = paymentCourseId;
+    const progressPctToUse = paymentProgressPct;
+    setPaymentCourseId(null);
+    setPaymentWindowOpened(false);
+    await openIndependentCourse(courseId, progressPctToUse);
+  };
+
+  const openPaystackWindow = () => {
+    setPaymentWindowOpened(true);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(PAYSTACK_TEST_CHECKOUT_URL, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    void Linking.openURL(PAYSTACK_TEST_CHECKOUT_URL);
+  };
+
   const statItems = useMemo(
     () => [
       {
@@ -112,6 +155,28 @@ export default function IndependentDashboard() {
   );
 
   const openIndependentCourse = async (courseId: string, averagePctComplete: number) => {
+    if (!user?.id) return;
+
+    const hasPaid = await AsyncStorage.getItem(paymentStorageKey(courseId));
+    if (!hasPaid) {
+      Alert.alert(
+        'Payment required',
+        'Independent learners must complete Paystack payment before starting this course.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Pay with Paystack',
+            onPress: () => {
+              setPaymentProgressPct(averagePctComplete);
+              setPaymentCourseId(courseId);
+              setPaymentWindowOpened(false);
+            },
+          },
+        ]
+      );
+      return;
+    }
+
     if (averagePctComplete >= 100 && user?.id) {
       const badgeSeenKey = `badge-first-opened:independent:${user.id}:${courseId}`;
       const hasSeenBadge = await AsyncStorage.getItem(badgeSeenKey);
@@ -233,6 +298,72 @@ export default function IndependentDashboard() {
             })()
           )}
         />
+        <Modal
+          visible={Boolean(paymentCourseId)}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => {
+            setPaymentCourseId(null);
+            setPaymentWindowOpened(false);
+            Alert.alert('Payment required', 'Close without paying does not unlock the course.');
+          }}
+        >
+          <SafeAreaView className="flex-1 bg-white">
+            <View className="px-5 py-4 border-b border-earth-300 flex-row items-center justify-between">
+              <View className="flex-1 pr-3">
+                <Text className="text-earth-900 text-base font-semibold">Paystack test checkout</Text>
+                <Text className="text-earth-600 text-xs mt-1">
+                  Complete test payment before starting this course.
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setPaymentCourseId(null);
+                  setPaymentWindowOpened(false);
+                  Alert.alert('Payment required', 'Close without paying does not unlock the course.');
+                }}
+                className="px-3 py-2 rounded-lg bg-earth-200"
+                activeOpacity={0.85}
+              >
+                <Text className="text-earth-800 text-xs font-medium">Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            {Platform.OS === 'web' ? (
+              <View className="flex-1 px-5 py-4 bg-earth-100">
+                <View className="rounded-xl overflow-hidden border border-earth-300 bg-white flex-1 min-h-[320px]">
+                  <iframe
+                    src={PAYSTACK_TEST_CHECKOUT_URL}
+                    title="Paystack checkout"
+                    style={{ border: 'none', width: '100%', height: '100%' }}
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={openPaystackWindow}
+                  className="mt-3 rounded-xl bg-earth-800 py-3 items-center justify-center"
+                  activeOpacity={0.9}
+                >
+                  <Text className="text-white font-medium">Open Paystack in secure window</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <WebView source={{ uri: PAYSTACK_TEST_CHECKOUT_URL }} className="flex-1" onLoadStart={() => setPaymentWindowOpened(true)} />
+            )}
+
+            <View className="px-5 py-4 border-t border-earth-300 bg-white">
+              <TouchableOpacity
+                onPress={() => {
+                  void markFakePaymentAsComplete();
+                }}
+                className={`w-full rounded-xl py-3.5 items-center justify-center ${paymentWindowOpened ? 'bg-cyan-600' : 'bg-cyan-300'}`}
+                activeOpacity={0.9}
+                disabled={!paymentWindowOpened}
+              >
+                <Text className="text-white font-semibold">I completed the test payment</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     </LinearGradient>
   );
