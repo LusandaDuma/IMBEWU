@@ -3,8 +3,16 @@
  */
 
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { downloadBadgeTemplate, shareBadgeTemplate } from '@/services/badgeTemplateService';
 import {
+  downloadBadgeTemplate,
+  downloadBadgeTemplates,
+  downloadCertificateTemplate,
+  downloadCertificateTemplates,
+  shareBadgeTemplate,
+  shareCertificateTemplate,
+} from '@/services/badgeTemplateService';
+import {
+  getCompletedCourseCertificates,
   getIndependentAchievementsData,
   syncAndGetEarnedCourseBadges,
 } from '@/services/supabase';
@@ -12,15 +20,20 @@ import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import { useRef, useState, type RefObject } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { Button, CompletionBadgeTemplate } from '@/components/shared';
+import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
 
 export default function ProgressScreen() {
   const { user, profile } = useAuthStore();
-  const badgeRef = useRef<View>(null);
+  const badgeRefs = useRef<Record<string, View | null>>({});
+  const certificateRefs = useRef<Record<string, View | null>>({});
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [isSharingCertificate, setIsSharingCertificate] = useState(false);
+  const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
+  const [isDownloadingAllCertificates, setIsDownloadingAllCertificates] = useState(false);
 
   const { data, refetch } = useQuery({
     queryKey: ['independent-achievements', user?.id],
@@ -28,13 +41,19 @@ export default function ProgressScreen() {
     enabled: !!user,
   });
   const { data: earnedBadges = [], refetch: refetchEarnedBadges } = useQuery({
-    queryKey: ['earned-course-badges', user?.id],
+    queryKey: ['earned-course-badges', user?.id, 'independent'],
     queryFn: () => (user ? syncAndGetEarnedCourseBadges(user.id, 'independent') : Promise.resolve([])),
+    enabled: !!user,
+  });
+  const { data: certificates = [], refetch: refetchCertificates } = useQuery({
+    queryKey: ['completed-course-certificates', user?.id, 'independent'],
+    queryFn: () => (user ? getCompletedCourseCertificates(user.id, 'independent') : Promise.resolve([])),
     enabled: !!user,
   });
 
   useRefetchOnFocus(refetch, !!user);
   useRefetchOnFocus(refetchEarnedBadges, !!user);
+  useRefetchOnFocus(refetchCertificates, !!user);
 
   const stats = [
     { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
@@ -46,14 +65,19 @@ export default function ProgressScreen() {
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const achievements = data?.achievements ?? [];
   const effectiveBadges = earnedBadges;
-  const latestEarnedBadge = effectiveBadges[0];
   const hasCourseCompletionBadge = effectiveBadges.length > 0;
+  const hasCertificates = certificates.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
 
   const onShareBadge = async () => {
     try {
       setIsSharing(true);
-      await shareBadgeTemplate(badgeRef, learnerName);
+      const firstBadge = effectiveBadges[0];
+      const firstBadgeRef = firstBadge ? badgeRefs.current[firstBadge.id] : null;
+      if (!firstBadge || !firstBadgeRef) {
+        throw new Error('Badges are still loading. Please try again in a moment.');
+      }
+      await shareBadgeTemplate({ current: firstBadgeRef }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share badge right now.');
     } finally {
@@ -64,12 +88,103 @@ export default function ProgressScreen() {
   const onDownloadBadge = async () => {
     try {
       setIsDownloading(true);
-      const uri = await downloadBadgeTemplate(badgeRef, learnerName);
+      const firstBadge = effectiveBadges[0];
+      const firstBadgeRef = firstBadge ? badgeRefs.current[firstBadge.id] : null;
+      if (!firstBadge || !firstBadgeRef) {
+        throw new Error('Badges are still loading. Please try again in a moment.');
+      }
+      const uri = await downloadBadgeTemplate({ current: firstBadgeRef }, learnerName, firstBadge.course_title);
       Alert.alert('Badge saved', `Saved to:\n${uri}`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save badge right now.');
     } finally {
       setIsDownloading(false);
+    }
+  };
+
+  const onDownloadAllBadges = async () => {
+    try {
+      setIsDownloadingAll(true);
+      const badgeDownloads = effectiveBadges
+        .map((badge) => {
+          const ref = badgeRefs.current[badge.id];
+          return ref ? { ref: { current: ref }, courseTitle: badge.course_title } : null;
+        })
+        .filter((item): item is { ref: RefObject<View | null>; courseTitle?: string } => item !== null);
+
+      if (badgeDownloads.length === 0) {
+        throw new Error('Badges are still loading. Please try again in a moment.');
+      }
+
+      await downloadBadgeTemplates(badgeDownloads, learnerName);
+      Alert.alert('Badges saved', `Downloaded ${badgeDownloads.length} badge${badgeDownloads.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all badges right now.');
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
+
+  const onShareCertificate = async () => {
+    try {
+      setIsSharingCertificate(true);
+      const firstCertificate = certificates[0];
+      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
+      if (!firstCertificate || !firstCertificateRef) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+      await shareCertificateTemplate({ current: firstCertificateRef }, learnerName);
+    } catch (error) {
+      Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share certificate right now.');
+    } finally {
+      setIsSharingCertificate(false);
+    }
+  };
+
+  const onDownloadCertificate = async () => {
+    try {
+      setIsDownloadingCertificate(true);
+      const firstCertificate = certificates[0];
+      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
+      if (!firstCertificate || !firstCertificateRef) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+      const uri = await downloadCertificateTemplate(
+        { current: firstCertificateRef },
+        learnerName,
+        firstCertificate.course_title
+      );
+      Alert.alert('Certificate saved', `Saved to:\n${uri}`);
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save certificate right now.');
+    } finally {
+      setIsDownloadingCertificate(false);
+    }
+  };
+
+  const onDownloadAllCertificates = async () => {
+    try {
+      setIsDownloadingAllCertificates(true);
+      const certificateDownloads = certificates
+        .map((certificate) => {
+          const ref = certificateRefs.current[certificate.course_id];
+          return ref ? { ref: { current: ref }, courseTitle: certificate.course_title } : null;
+        })
+        .filter((item): item is { ref: RefObject<View | null>; courseTitle?: string } => item !== null);
+
+      if (certificateDownloads.length === 0) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+
+      await downloadCertificateTemplates(certificateDownloads, learnerName);
+      Alert.alert(
+        'Certificates saved',
+        `Downloaded ${certificateDownloads.length} certificate${certificateDownloads.length === 1 ? '' : 's'}.`
+      );
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all certificates right now.');
+    } finally {
+      setIsDownloadingAllCertificates(false);
     }
   };
 
@@ -147,7 +262,7 @@ export default function ProgressScreen() {
 
         {hasCourseCompletionBadge ? (
           <View className="mt-6 mb-10">
-            <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Template</Text>
+            <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Templates</Text>
             <View className="mb-3">
               {effectiveBadges.map((badge) => (
                 <View key={badge.id} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
@@ -156,26 +271,101 @@ export default function ProgressScreen() {
                 </View>
               ))}
             </View>
-            <View ref={badgeRef} collapsable={false}>
-              <CompletionBadgeTemplate
-                learnerName={learnerName}
-                courseTitle={latestEarnedBadge?.course_title}
-                awardedAt={latestEarnedBadge?.awarded_at ?? new Date().toISOString()}
-              />
-            </View>
+            {effectiveBadges.map((badge) => (
+              <View
+                key={`visible-${badge.id}`}
+                ref={(node) => {
+                  badgeRefs.current[badge.id] = node;
+                }}
+                collapsable={false}
+                className="mb-3"
+              >
+                <CompletionBadgeTemplate
+                  learnerName={learnerName}
+                  courseTitle={badge.course_title}
+                  awardedAt={badge.awarded_at ?? new Date().toISOString()}
+                />
+              </View>
+            ))}
             <View className="mt-3 gap-2">
               <Button
                 label={isSharing ? 'Sharing…' : 'Share badge'}
                 onPress={onShareBadge}
                 isLoading={isSharing}
-                disabled={isSharing || isDownloading}
+                disabled={isSharing || isDownloading || isDownloadingAll}
                 fullWidth
               />
               <Button
                 label={isDownloading ? 'Saving…' : 'Download badge'}
                 onPress={onDownloadBadge}
                 isLoading={isDownloading}
-                disabled={isDownloading || isSharing}
+                disabled={isDownloading || isSharing || isDownloadingAll}
+                variant="secondary"
+                fullWidth
+              />
+              <Button
+                label={isDownloadingAll ? 'Saving all…' : 'Download all badges'}
+                onPress={onDownloadAllBadges}
+                isLoading={isDownloadingAll}
+                disabled={isDownloadingAll || isSharing || isDownloading}
+                variant="secondary"
+                fullWidth
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {hasCertificates ? (
+          <View className="mt-2 mb-10">
+            <Text className="text-lg font-bold text-earth-800 mb-3">Course Certificates</Text>
+            <View className="mb-3">
+              {certificates.map((certificate) => (
+                <View
+                  key={`certificate-row-${certificate.course_id}`}
+                  className="flex-row items-center justify-between border-b border-earth-400/30 py-2"
+                >
+                  <Text className="text-earth-800 font-medium">Certificate</Text>
+                  <Text className="text-earth-500 text-xs">{certificate.course_title}</Text>
+                </View>
+              ))}
+            </View>
+            {certificates.map((certificate) => (
+              <View
+                key={`certificate-visible-${certificate.course_id}`}
+                ref={(node) => {
+                  certificateRefs.current[certificate.course_id] = node;
+                }}
+                collapsable={false}
+                className="mb-3"
+              >
+                <CompletionCertificateTemplate
+                  learnerName={learnerName}
+                  courseTitle={certificate.course_title}
+                  awardedAt={certificate.completed_at}
+                />
+              </View>
+            ))}
+            <View className="mt-3 gap-2">
+              <Button
+                label={isSharingCertificate ? 'Sharing…' : 'Share certificate'}
+                onPress={onShareCertificate}
+                isLoading={isSharingCertificate}
+                disabled={isSharingCertificate || isDownloadingCertificate || isDownloadingAllCertificates}
+                fullWidth
+              />
+              <Button
+                label={isDownloadingCertificate ? 'Saving…' : 'Download certificate'}
+                onPress={onDownloadCertificate}
+                isLoading={isDownloadingCertificate}
+                disabled={isDownloadingCertificate || isSharingCertificate || isDownloadingAllCertificates}
+                variant="secondary"
+                fullWidth
+              />
+              <Button
+                label={isDownloadingAllCertificates ? 'Saving all…' : 'Download all certificates'}
+                onPress={onDownloadAllCertificates}
+                isLoading={isDownloadingAllCertificates}
+                disabled={isDownloadingAllCertificates || isSharingCertificate || isDownloadingCertificate}
                 variant="secondary"
                 fullWidth
               />

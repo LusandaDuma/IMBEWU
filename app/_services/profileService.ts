@@ -76,3 +76,39 @@ export async function createProfile(input: {
     };
   }
 }
+
+/**
+ * Update an existing profile row for the currently logged-in user.
+ * @param input - Profile update payload.
+ * @returns Updated profile row.
+ */
+export async function updateProfile(input: {
+  id: string;
+  firstName: string;
+  lastName: string;
+  language?: string;
+}): Promise<ServiceResult<Profile>> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        first_name: input.firstName,
+        last_name: input.lastName,
+        language: input.language ?? 'en',
+      })
+      .eq('id', input.id)
+      .select('id, first_name, last_name, role, language, is_active, last_login, updated_at')
+      .single();
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    return { data: data as Profile, error: null };
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error.message : 'Failed to update profile.',
+    };
+  }
+}

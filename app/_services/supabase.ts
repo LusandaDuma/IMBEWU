@@ -389,6 +389,12 @@ export type EarnedCourseBadge = {
   criteria: string | null;
 };
 
+export type CompletedCourseCertificate = {
+  course_id: string;
+  course_title: string;
+  completed_at: string;
+};
+
 export async function checkAndAwardCourseBadges(userId: string, courseId: string): Promise<number> {
   const { data, error } = await supabase.rpc('check_and_award_badges', {
     p_user_id: userId,
@@ -426,6 +432,98 @@ export async function getEarnedCourseBadges(userId: string): Promise<EarnedCours
     course_title: row.badges.courses?.title ?? 'Course',
     criteria: row.badges.criteria ?? null,
   }));
+}
+
+export async function getCompletedCourseCertificates(
+  userId: string,
+  enrolmentType?: 'independent' | 'class_based'
+): Promise<CompletedCourseCertificate[]> {
+  const enrolmentQuery = supabase
+    .from('course_enrolments')
+    .select('course_id, courses(title)')
+    .eq('user_id', userId);
+
+  if (enrolmentType) {
+    enrolmentQuery.eq('enrolment_type', enrolmentType);
+  }
+
+  const { data: enrolments, error: enrolmentsError } = await enrolmentQuery;
+  if (enrolmentsError) {
+    console.error('Error fetching enrolments for certificates:', enrolmentsError);
+    return [];
+  }
+
+  const rows = enrolments || [];
+  const courseIds = [...new Set(rows.map((row: any) => row.course_id))];
+  if (!courseIds.length) {
+    return [];
+  }
+
+  const { data: lessons, error: lessonsError } = await supabase
+    .from('lessons')
+    .select('id, course_id')
+    .in('course_id', courseIds);
+  if (lessonsError) {
+    console.error('Error fetching lessons for certificates:', lessonsError);
+    return [];
+  }
+
+  const lessonRows = lessons || [];
+  const lessonIds = lessonRows.map((lesson) => lesson.id);
+  if (!lessonIds.length) {
+    return [];
+  }
+
+  const { data: progressRows, error: progressError } = await supabase
+    .from('lesson_progress')
+    .select('lesson_id, is_completed, completed_at')
+    .eq('user_id', userId)
+    .in('lesson_id', lessonIds);
+  if (progressError) {
+    console.error('Error fetching progress for certificates:', progressError);
+    return [];
+  }
+
+  const lessonToCourse = new Map(lessonRows.map((lesson) => [lesson.id, lesson.course_id]));
+  const totalsByCourse = new Map<string, number>();
+  const completedByCourse = new Map<string, number>();
+  const latestCompletedAtByCourse = new Map<string, string>();
+
+  for (const lesson of lessonRows) {
+    totalsByCourse.set(lesson.course_id, (totalsByCourse.get(lesson.course_id) || 0) + 1);
+  }
+
+  for (const row of progressRows || []) {
+    if (!row.is_completed) continue;
+    const courseId = lessonToCourse.get(row.lesson_id);
+    if (!courseId) continue;
+    completedByCourse.set(courseId, (completedByCourse.get(courseId) || 0) + 1);
+    if (row.completed_at) {
+      const current = latestCompletedAtByCourse.get(courseId);
+      if (!current || new Date(row.completed_at).getTime() > new Date(current).getTime()) {
+        latestCompletedAtByCourse.set(courseId, row.completed_at);
+      }
+    }
+  }
+
+  const courseTitleById = new Map(
+    rows.map((row: any) => [row.course_id, row.courses?.title || 'Course'])
+  );
+
+  const completedCourses = courseIds
+    .filter((courseId) => {
+      const total = totalsByCourse.get(courseId) || 0;
+      const completed = completedByCourse.get(courseId) || 0;
+      return total > 0 && completed === total;
+    })
+    .map((courseId) => ({
+      course_id: courseId,
+      course_title: courseTitleById.get(courseId) || 'Course',
+      completed_at: latestCompletedAtByCourse.get(courseId) || new Date().toISOString(),
+    }))
+    .sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
+
+  return completedCourses;
 }
 
 // Quiz services
@@ -1324,7 +1422,7 @@ function getDayStreak(dateKeys: string[]): number {
 function getDefaultAchievements(): IndependentAchievementItem[] {
   return [
     { id: 'first-steps', name: 'First Steps', description: 'Complete your first lesson', unlocked: false },
-    { id: 'dedicated-learner', name: 'Dedicated Learner', description: 'Learn for 7 days straight', unlocked: false },
+    { id: 'dedicated-learner', name: 'Dedicated Learner', description: 'Complete all modules in a course', unlocked: false },
     { id: 'course-master', name: 'Course Master', description: 'Complete your first course', unlocked: false },
   ];
 }
@@ -1487,8 +1585,8 @@ async function getLearnerAchievementsData(
       {
         id: 'dedicated-learner',
         name: 'Dedicated Learner',
-        description: 'Learn for 7 days straight',
-        unlocked: dayStreak >= 7,
+        description: 'Complete all modules in a course',
+        unlocked: courseMasterUnlocked,
       },
       {
         id: 'course-master',

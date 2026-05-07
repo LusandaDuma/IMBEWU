@@ -1,6 +1,7 @@
 export { AlertBanner, type AlertBannerProps, type AlertBannerVariant } from './AlertBanner';
 export { CourseCard, type CourseCardProps, type CourseCardVariant } from './CourseCard';
 export { CompletionBadgeTemplate, type CompletionBadgeTemplateProps } from './CompletionBadgeTemplate';
+export { CompletionCertificateTemplate, type CompletionCertificateTemplateProps } from './CompletionCertificateTemplate';
 export { DashboardStatsGrid, type DashboardStatItem, type DashboardStatsGridProps } from './DashboardStatsGrid';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
 export { FormField, type FormFieldProps } from './FormField';

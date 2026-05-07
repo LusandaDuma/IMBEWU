@@ -27,6 +27,13 @@ function createBadgeFileName(learnerName: string, courseTitle?: string): string 
   return `imbewu-course-badge-${safeName}${courseSegment}-${getFileStamp()}.png`;
 }
 
+function createCertificateFileName(learnerName: string, courseTitle?: string): string {
+  const safeName = learnerName.trim().replace(/\s+/g, '-').toLowerCase() || 'learner';
+  const safeCourse = courseTitle?.trim().replace(/\s+/g, '-').toLowerCase();
+  const courseSegment = safeCourse ? `-${safeCourse}` : '';
+  return `imbewu-course-certificate-${safeName}${courseSegment}-${getFileStamp()}.png`;
+}
+
 export async function downloadBadgeTemplate(
   ref: React.RefObject<View | null>,
   learnerName: string,
@@ -77,6 +84,61 @@ export async function shareBadgeTemplate(ref: React.RefObject<View | null>, lear
 
   await Share.share({
     message: 'I completed my Imbewu course badge.',
+    url: tempUri,
+  });
+}
+
+export async function downloadCertificateTemplate(
+  ref: React.RefObject<View | null>,
+  learnerName: string,
+  courseTitle?: string
+): Promise<string> {
+  const tempUri = await captureBadge(ref);
+  const fileName = createCertificateFileName(learnerName, courseTitle);
+
+  if (Platform.OS === 'web') {
+    const link = document.createElement('a');
+    link.href = tempUri;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return fileName;
+  }
+
+  const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+  if (!baseDir) {
+    return tempUri;
+  }
+  const exportDir = `${baseDir}certificates`;
+  await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
+  const targetUri = `${exportDir}/${fileName}`;
+  await FileSystem.copyAsync({ from: tempUri, to: targetUri });
+  return targetUri;
+}
+
+export async function downloadCertificateTemplates(
+  certificates: Array<{ ref: React.RefObject<View | null>; courseTitle?: string }>,
+  learnerName: string
+): Promise<string[]> {
+  return Promise.all(
+    certificates.map((certificate) => downloadCertificateTemplate(certificate.ref, learnerName, certificate.courseTitle))
+  );
+}
+
+export async function shareCertificateTemplate(ref: React.RefObject<View | null>, learnerName: string): Promise<void> {
+  const tempUri = await captureBadge(ref);
+  if (Platform.OS !== 'web' && (await Sharing.isAvailableAsync())) {
+    await Sharing.shareAsync(tempUri, {
+      mimeType: 'image/png',
+      dialogTitle: `Share ${learnerName}'s Imbewu certificate`,
+      UTI: 'public.png',
+    });
+    return;
+  }
+
+  await Share.share({
+    message: 'I completed my Imbewu course certificate.',
     url: tempUri,
   });
 }

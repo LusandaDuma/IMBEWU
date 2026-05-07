@@ -2,17 +2,22 @@
  * @fileoverview Independent learner profile screen
  */
 
-import { surfaceMenuShell } from '@/constants/theme';
 import { signOut } from '@/services/authService';
+import { updateProfile } from '@/services/profileService';
 import { useAuthStore } from '@/store/auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronRight, LogOut, Mail, Settings, User } from 'lucide-react-native';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { LogOut } from 'lucide-react-native';
+import { useState } from 'react';
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function IndependentProfileScreen() {
-  const { profile, logout } = useAuthStore();
+  const { profile, logout, setProfile } = useAuthStore();
   const router = useRouter();
+  const [firstName, setFirstName] = useState(profile?.first_name ?? '');
+  const [lastName, setLastName] = useState(profile?.last_name ?? '');
+  const [language, setLanguage] = useState(profile?.language ?? 'en');
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -35,16 +40,33 @@ export default function IndependentProfileScreen() {
     );
   };
 
-  const menuItems = [
-    { icon: User, label: 'Edit Profile', onPress: () => {} },
-    { icon: Settings, label: 'Preferences', onPress: () => {} },
-    { icon: Mail, label: 'Notifications', onPress: () => {} },
-  ];
+  const handleSave = async () => {
+    if (!profile?.id) return;
+    if (!firstName.trim() || !lastName.trim()) {
+      Alert.alert('Missing information', 'First name and last name are required.');
+      return;
+    }
+    setIsSaving(true);
+    const result = await updateProfile({
+      id: profile.id,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      language: language.trim() || 'en',
+    });
+    setIsSaving(false);
+    if (result.error || !result.data) {
+      Alert.alert('Update failed', result.error ?? 'Unable to update your profile.');
+      return;
+    }
+    setProfile(result.data);
+    Alert.alert('Saved', 'Your information was updated.');
+  };
 
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-earth-900">Profile</Text>
+        <Text className="text-2xl font-bold text-earth-900">Settings</Text>
+        <Text className="text-earth-600 mt-1">Update your information</Text>
       </View>
 
       <ScrollView className="flex-1">
@@ -61,23 +83,39 @@ export default function IndependentProfileScreen() {
         </View>
 
         <View className="px-5">
-          <View className={surfaceMenuShell}>
-            {menuItems.map((item, index) => {
-              const Icon = item.icon;
-              return (
-                <TouchableOpacity
-                  key={item.label}
-                  onPress={item.onPress}
-                  className={`flex-row items-center px-4 py-4 ${
-                    index < menuItems.length - 1 ? 'border-b border-earth-100' : ''
-                  }`}
-                >
-                  <Icon size={20} color="#0891b2" />
-                  <Text className="flex-1 ml-3 text-earth-800">{item.label}</Text>
-                  <ChevronRight size={20} color="#a8a29e" />
-                </TouchableOpacity>
-              );
-            })}
+          <View className="rounded-2xl bg-white border border-earth-300/50 p-4">
+            <Text className="text-earth-700 text-xs mb-2">First name</Text>
+            <TextInput
+              value={firstName}
+              onChangeText={setFirstName}
+              className="bg-earth-50 border border-earth-200 rounded-xl px-3 py-3 text-earth-900 mb-3"
+              placeholder="First name"
+              placeholderTextColor="#a8a29e"
+            />
+            <Text className="text-earth-700 text-xs mb-2">Last name</Text>
+            <TextInput
+              value={lastName}
+              onChangeText={setLastName}
+              className="bg-earth-50 border border-earth-200 rounded-xl px-3 py-3 text-earth-900 mb-3"
+              placeholder="Last name"
+              placeholderTextColor="#a8a29e"
+            />
+            <Text className="text-earth-700 text-xs mb-2">Language</Text>
+            <TextInput
+              value={language}
+              onChangeText={setLanguage}
+              className="bg-earth-50 border border-earth-200 rounded-xl px-3 py-3 text-earth-900"
+              placeholder="en"
+              placeholderTextColor="#a8a29e"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={isSaving}
+              className={`mt-4 rounded-xl px-4 py-3 items-center ${isSaving ? 'bg-primary-400' : 'bg-primary-600'}`}
+            >
+              <Text className="text-white font-semibold">{isSaving ? 'Saving...' : 'Save changes'}</Text>
+            </TouchableOpacity>
           </View>
         </View>
 

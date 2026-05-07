@@ -3,8 +3,16 @@
  */
 
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
-import { downloadBadgeTemplate, downloadBadgeTemplates, shareBadgeTemplate } from '@/services/badgeTemplateService';
 import {
+  downloadBadgeTemplate,
+  downloadBadgeTemplates,
+  downloadCertificateTemplate,
+  downloadCertificateTemplates,
+  shareBadgeTemplate,
+  shareCertificateTemplate,
+} from '@/services/badgeTemplateService';
+import {
+  getCompletedCourseCertificates,
   getStudentAchievementsData,
   syncAndGetEarnedCourseBadges,
 } from '@/services/supabase';
@@ -14,27 +22,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
 import { useRef, useState, type RefObject } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { Button, CompletionBadgeTemplate } from '@/components/shared';
+import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
 
 export default function AchievementsScreen() {
   const { user, profile } = useAuthStore();
   const badgeRefs = useRef<Record<string, View | null>>({});
+  const certificateRefs = useRef<Record<string, View | null>>({});
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [isSharingCertificate, setIsSharingCertificate] = useState(false);
+  const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
+  const [isDownloadingAllCertificates, setIsDownloadingAllCertificates] = useState(false);
   const { data, refetch } = useQuery({
     queryKey: ['student-achievements', user?.id],
     queryFn: () => (user ? getStudentAchievementsData(user.id) : Promise.resolve(null)),
     enabled: !!user,
   });
   const { data: earnedBadges = [], refetch: refetchEarnedBadges } = useQuery({
-    queryKey: ['earned-course-badges', user?.id],
+    queryKey: ['earned-course-badges', user?.id, 'class_based'],
     queryFn: () => (user ? syncAndGetEarnedCourseBadges(user.id, 'class_based') : Promise.resolve([])),
+    enabled: !!user,
+  });
+  const { data: certificates = [], refetch: refetchCertificates } = useQuery({
+    queryKey: ['completed-course-certificates', user?.id, 'class_based'],
+    queryFn: () => (user ? getCompletedCourseCertificates(user.id, 'class_based') : Promise.resolve([])),
     enabled: !!user,
   });
 
   useRefetchOnFocus(refetch, !!user);
   useRefetchOnFocus(refetchEarnedBadges, !!user);
+  useRefetchOnFocus(refetchCertificates, !!user);
 
   const achievements = data?.achievements ?? [];
   const unlockedCount = achievements.filter((achievement) => achievement.unlocked).length;
@@ -48,6 +66,7 @@ export default function AchievementsScreen() {
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const effectiveBadges = earnedBadges;
   const hasCourseCompletionBadge = effectiveBadges.length > 0;
+  const hasCertificates = certificates.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
 
   const onShareBadge = async () => {
@@ -103,6 +122,69 @@ export default function AchievementsScreen() {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all badges right now.');
     } finally {
       setIsDownloadingAll(false);
+    }
+  };
+
+  const onShareCertificate = async () => {
+    try {
+      setIsSharingCertificate(true);
+      const firstCertificate = certificates[0];
+      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
+      if (!firstCertificate || !firstCertificateRef) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+      await shareCertificateTemplate({ current: firstCertificateRef }, learnerName);
+    } catch (error) {
+      Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share certificate right now.');
+    } finally {
+      setIsSharingCertificate(false);
+    }
+  };
+
+  const onDownloadCertificate = async () => {
+    try {
+      setIsDownloadingCertificate(true);
+      const firstCertificate = certificates[0];
+      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
+      if (!firstCertificate || !firstCertificateRef) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+      const uri = await downloadCertificateTemplate(
+        { current: firstCertificateRef },
+        learnerName,
+        firstCertificate.course_title
+      );
+      Alert.alert('Certificate saved', `Saved to:\n${uri}`);
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save certificate right now.');
+    } finally {
+      setIsDownloadingCertificate(false);
+    }
+  };
+
+  const onDownloadAllCertificates = async () => {
+    try {
+      setIsDownloadingAllCertificates(true);
+      const certificateDownloads = certificates
+        .map((certificate) => {
+          const ref = certificateRefs.current[certificate.course_id];
+          return ref ? { ref: { current: ref }, courseTitle: certificate.course_title } : null;
+        })
+        .filter((item): item is { ref: RefObject<View | null>; courseTitle?: string } => item !== null);
+
+      if (certificateDownloads.length === 0) {
+        throw new Error('Certificates are still loading. Please try again in a moment.');
+      }
+
+      await downloadCertificateTemplates(certificateDownloads, learnerName);
+      Alert.alert(
+        'Certificates saved',
+        `Downloaded ${certificateDownloads.length} certificate${certificateDownloads.length === 1 ? '' : 's'}.`
+      );
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all certificates right now.');
+    } finally {
+      setIsDownloadingAllCertificates(false);
     }
   };
 
@@ -245,6 +327,64 @@ export default function AchievementsScreen() {
                 onPress={onDownloadAllBadges}
                 isLoading={isDownloadingAll}
                 disabled={isDownloadingAll || isSharing || isDownloading}
+                variant="secondary"
+                fullWidth
+              />
+            </View>
+          </View>
+        ) : null}
+
+        {hasCertificates ? (
+          <View className="mt-2 mb-10">
+            <Text className="text-lg font-bold text-earth-800 mb-3">Course Certificates</Text>
+            <View className="mb-3">
+              {certificates.map((certificate) => (
+                <View
+                  key={`certificate-row-${certificate.course_id}`}
+                  className="flex-row items-center justify-between border-b border-earth-400/30 py-2"
+                >
+                  <Text className="text-earth-800 font-medium">Certificate</Text>
+                  <Text className="text-earth-500 text-xs">{certificate.course_title}</Text>
+                </View>
+              ))}
+            </View>
+            {certificates.map((certificate) => (
+              <View
+                key={`certificate-visible-${certificate.course_id}`}
+                ref={(node) => {
+                  certificateRefs.current[certificate.course_id] = node;
+                }}
+                collapsable={false}
+                className="mb-3"
+              >
+                <CompletionCertificateTemplate
+                  learnerName={learnerName}
+                  courseTitle={certificate.course_title}
+                  awardedAt={certificate.completed_at}
+                />
+              </View>
+            ))}
+            <View className="mt-3 gap-2">
+              <Button
+                label={isSharingCertificate ? 'Sharing…' : 'Share certificate'}
+                onPress={onShareCertificate}
+                isLoading={isSharingCertificate}
+                disabled={isSharingCertificate || isDownloadingCertificate || isDownloadingAllCertificates}
+                fullWidth
+              />
+              <Button
+                label={isDownloadingCertificate ? 'Saving…' : 'Download certificate'}
+                onPress={onDownloadCertificate}
+                isLoading={isDownloadingCertificate}
+                disabled={isDownloadingCertificate || isSharingCertificate || isDownloadingAllCertificates}
+                variant="secondary"
+                fullWidth
+              />
+              <Button
+                label={isDownloadingAllCertificates ? 'Saving all…' : 'Download all certificates'}
+                onPress={onDownloadAllCertificates}
+                isLoading={isDownloadingAllCertificates}
+                disabled={isDownloadingAllCertificates || isSharingCertificate || isDownloadingCertificate}
                 variant="secondary"
                 fullWidth
               />
