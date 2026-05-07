@@ -2,6 +2,7 @@
  * @fileoverview Independent learner progress screen
  */
 
+import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import {
   downloadBadgeTemplate,
@@ -22,7 +23,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
 import { useRef, useState, type RefObject } from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
 
 export default function ProgressScreen() {
   const { user, profile } = useAuthStore();
@@ -64,19 +64,16 @@ export default function ProgressScreen() {
   const weeklyActivity = data?.weeklyActivity ?? [];
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const achievements = data?.achievements ?? [];
-  const effectiveBadges = earnedBadges;
-  const hasCourseCompletionBadge = effectiveBadges.length > 0;
+  const hasCourseCompletionBadge = earnedBadges.length > 0;
   const hasCertificates = certificates.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
 
   const onShareBadge = async () => {
     try {
       setIsSharing(true);
-      const firstBadge = effectiveBadges[0];
+      const firstBadge = earnedBadges[0];
       const firstBadgeRef = firstBadge ? badgeRefs.current[firstBadge.id] : null;
-      if (!firstBadge || !firstBadgeRef) {
-        throw new Error('Badges are still loading. Please try again in a moment.');
-      }
+      if (!firstBadge || !firstBadgeRef) throw new Error('Badges are still loading. Please try again in a moment.');
       await shareBadgeTemplate({ current: firstBadgeRef }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share badge right now.');
@@ -88,11 +85,9 @@ export default function ProgressScreen() {
   const onDownloadBadge = async () => {
     try {
       setIsDownloading(true);
-      const firstBadge = effectiveBadges[0];
+      const firstBadge = earnedBadges[0];
       const firstBadgeRef = firstBadge ? badgeRefs.current[firstBadge.id] : null;
-      if (!firstBadge || !firstBadgeRef) {
-        throw new Error('Badges are still loading. Please try again in a moment.');
-      }
+      if (!firstBadge || !firstBadgeRef) throw new Error('Badges are still loading. Please try again in a moment.');
       const uri = await downloadBadgeTemplate({ current: firstBadgeRef }, learnerName, firstBadge.course_title);
       Alert.alert('Badge saved', `Saved to:\n${uri}`);
     } catch (error) {
@@ -105,17 +100,13 @@ export default function ProgressScreen() {
   const onDownloadAllBadges = async () => {
     try {
       setIsDownloadingAll(true);
-      const badgeDownloads = effectiveBadges
-        .map((badge) => {
-          const ref = badgeRefs.current[badge.id];
-          return ref ? { ref: { current: ref }, courseTitle: badge.course_title } : null;
-        })
-        .filter((item): item is { ref: RefObject<View | null>; courseTitle?: string } => item !== null);
-
-      if (badgeDownloads.length === 0) {
-        throw new Error('Badges are still loading. Please try again in a moment.');
+      const badgeDownloads: Array<{ ref: RefObject<View | null>; courseTitle?: string }> = [];
+      for (const badge of earnedBadges) {
+        const node = badgeRefs.current[badge.id];
+        if (!node) continue;
+        badgeDownloads.push({ ref: { current: node } as RefObject<View | null>, courseTitle: badge.course_title });
       }
-
+      if (badgeDownloads.length === 0) throw new Error('Badges are still loading. Please try again in a moment.');
       await downloadBadgeTemplates(badgeDownloads, learnerName);
       Alert.alert('Badges saved', `Downloaded ${badgeDownloads.length} badge${badgeDownloads.length === 1 ? '' : 's'}.`);
     } catch (error) {
@@ -130,9 +121,7 @@ export default function ProgressScreen() {
       setIsSharingCertificate(true);
       const firstCertificate = certificates[0];
       const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
-      if (!firstCertificate || !firstCertificateRef) {
-        throw new Error('Certificates are still loading. Please try again in a moment.');
-      }
+      if (!firstCertificate || !firstCertificateRef) throw new Error('Certificates are still loading. Please try again in a moment.');
       await shareCertificateTemplate({ current: firstCertificateRef }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share certificate right now.');
@@ -146,9 +135,7 @@ export default function ProgressScreen() {
       setIsDownloadingCertificate(true);
       const firstCertificate = certificates[0];
       const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
-      if (!firstCertificate || !firstCertificateRef) {
-        throw new Error('Certificates are still loading. Please try again in a moment.');
-      }
+      if (!firstCertificate || !firstCertificateRef) throw new Error('Certificates are still loading. Please try again in a moment.');
       const uri = await downloadCertificateTemplate(
         { current: firstCertificateRef },
         learnerName,
@@ -165,17 +152,18 @@ export default function ProgressScreen() {
   const onDownloadAllCertificates = async () => {
     try {
       setIsDownloadingAllCertificates(true);
-      const certificateDownloads = certificates
-        .map((certificate) => {
-          const ref = certificateRefs.current[certificate.course_id];
-          return ref ? { ref: { current: ref }, courseTitle: certificate.course_title } : null;
-        })
-        .filter((item): item is { ref: RefObject<View | null>; courseTitle?: string } => item !== null);
-
+      const certificateDownloads: Array<{ ref: RefObject<View | null>; courseTitle?: string }> = [];
+      for (const certificate of certificates) {
+        const node = certificateRefs.current[certificate.course_id];
+        if (!node) continue;
+        certificateDownloads.push({
+          ref: { current: node } as RefObject<View | null>,
+          courseTitle: certificate.course_title,
+        });
+      }
       if (certificateDownloads.length === 0) {
         throw new Error('Certificates are still loading. Please try again in a moment.');
       }
-
       await downloadCertificateTemplates(certificateDownloads, learnerName);
       Alert.alert(
         'Certificates saved',
@@ -201,10 +189,7 @@ export default function ProgressScreen() {
             const Icon = stat.icon;
             return (
               <View key={stat.label} className="flex-1 mx-1">
-                <View 
-                  className="w-10 h-10 rounded-xl items-center justify-center mb-3"
-                  style={{ backgroundColor: `${stat.color}20` }}
-                >
+                <View className="w-10 h-10 rounded-xl items-center justify-center mb-3" style={{ backgroundColor: `${stat.color}20` }}>
                   <Icon size={20} color={stat.color} />
                 </View>
                 <Text className="text-2xl font-bold text-earth-800">{stat.value}</Text>
@@ -219,10 +204,7 @@ export default function ProgressScreen() {
           <View className="flex-row items-end justify-between h-24">
             {weeklyActivity.map((item, index) => (
               <View key={`${item.day}-${index}`} className="items-center">
-                <View 
-                  className="w-8 bg-cyan-200 rounded-t-lg"
-                  style={{ height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 8 }}
-                />
+                <View className="w-8 bg-cyan-200 rounded-t-lg" style={{ height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 8 }} />
                 <Text className="text-earth-500 text-xs mt-2">{item.day}</Text>
               </View>
             ))}
@@ -231,19 +213,9 @@ export default function ProgressScreen() {
 
         <Text className="text-lg font-bold text-earth-800 mb-3">Achievements</Text>
         {achievements.map((achievement) => {
-          const Icon =
-            achievement.id === 'dedicated-learner'
-              ? Flame
-              : achievement.id === 'course-master'
-                ? Award
-                : Target;
+          const Icon = achievement.id === 'dedicated-learner' ? Flame : achievement.id === 'course-master' ? Award : Target;
           return (
-            <View
-              key={achievement.id}
-              className={`flex-row items-center py-3 mb-0 border-b border-earth-400/30 ${
-                !achievement.unlocked ? 'opacity-50' : ''
-              }`}
-            >
+            <View key={achievement.id} className={`flex-row items-center py-3 mb-0 border-b border-earth-400/30 ${!achievement.unlocked ? 'opacity-50' : ''}`}>
               <View className="w-12 h-12 rounded-xl bg-cyan-100 items-center justify-center">
                 <Icon size={24} color="#0891b2" />
               </View>
@@ -264,14 +236,14 @@ export default function ProgressScreen() {
           <View className="mt-6 mb-10">
             <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Templates</Text>
             <View className="mb-3">
-              {effectiveBadges.map((badge) => (
+              {earnedBadges.map((badge) => (
                 <View key={badge.id} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
                   <Text className="text-earth-800 font-medium">{badge.badge_name}</Text>
                   <Text className="text-earth-500 text-xs">{badge.course_title}</Text>
                 </View>
               ))}
             </View>
-            {effectiveBadges.map((badge) => (
+            {earnedBadges.map((badge) => (
               <View
                 key={`visible-${badge.id}`}
                 ref={(node) => {
@@ -280,29 +252,12 @@ export default function ProgressScreen() {
                 collapsable={false}
                 className="mb-3"
               >
-                <CompletionBadgeTemplate
-                  learnerName={learnerName}
-                  courseTitle={badge.course_title}
-                  awardedAt={badge.awarded_at ?? new Date().toISOString()}
-                />
+                <CompletionBadgeTemplate learnerName={learnerName} courseTitle={badge.course_title} awardedAt={badge.awarded_at ?? new Date().toISOString()} />
               </View>
             ))}
             <View className="mt-3 gap-2">
-              <Button
-                label={isSharing ? 'Sharing…' : 'Share badge'}
-                onPress={onShareBadge}
-                isLoading={isSharing}
-                disabled={isSharing || isDownloading || isDownloadingAll}
-                fullWidth
-              />
-              <Button
-                label={isDownloading ? 'Saving…' : 'Download badge'}
-                onPress={onDownloadBadge}
-                isLoading={isDownloading}
-                disabled={isDownloading || isSharing || isDownloadingAll}
-                variant="secondary"
-                fullWidth
-              />
+              <Button label={isSharing ? 'Sharing…' : 'Share badge'} onPress={onShareBadge} isLoading={isSharing} disabled={isSharing || isDownloading || isDownloadingAll} fullWidth />
+              <Button label={isDownloading ? 'Saving…' : 'Download badge'} onPress={onDownloadBadge} isLoading={isDownloading} disabled={isDownloading || isSharing || isDownloadingAll} variant="secondary" fullWidth />
               <Button
                 label={isDownloadingAll ? 'Saving all…' : 'Download all badges'}
                 onPress={onDownloadAllBadges}
@@ -320,10 +275,7 @@ export default function ProgressScreen() {
             <Text className="text-lg font-bold text-earth-800 mb-3">Course Certificates</Text>
             <View className="mb-3">
               {certificates.map((certificate) => (
-                <View
-                  key={`certificate-row-${certificate.course_id}`}
-                  className="flex-row items-center justify-between border-b border-earth-400/30 py-2"
-                >
+                <View key={`certificate-row-${certificate.course_id}`} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
                   <Text className="text-earth-800 font-medium">Certificate</Text>
                   <Text className="text-earth-500 text-xs">{certificate.course_title}</Text>
                 </View>
@@ -338,11 +290,7 @@ export default function ProgressScreen() {
                 collapsable={false}
                 className="mb-3"
               >
-                <CompletionCertificateTemplate
-                  learnerName={learnerName}
-                  courseTitle={certificate.course_title}
-                  awardedAt={certificate.completed_at}
-                />
+                <CompletionCertificateTemplate learnerName={learnerName} courseTitle={certificate.course_title} awardedAt={certificate.completed_at} />
               </View>
             ))}
             <View className="mt-3 gap-2">

@@ -25,8 +25,7 @@ export function NolwaziFab() {
 
   return (
     <View
-      style={[styles.fabContainer, { right: RIGHT, bottom }]}
-      pointerEvents="box-none"
+      style={[styles.fabContainer, { right: RIGHT, bottom }, styles.pointerEventsBoxNone]}
     >
       <TouchableOpacity
         onPress={() => router.push('/nolwazi')}
@@ -46,6 +45,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 50,
     elevation: 12,
+  },
+  pointerEventsBoxNone: {
+    pointerEvents: 'box-none',
   },
   fabButton: {
     width: FAB_H,
