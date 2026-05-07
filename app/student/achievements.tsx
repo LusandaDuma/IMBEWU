@@ -34,6 +34,7 @@ export default function AchievementsScreen() {
   const [isSharingCertificate, setIsSharingCertificate] = useState(false);
   const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
   const [isDownloadingAllCertificates, setIsDownloadingAllCertificates] = useState(false);
+  const [downloadingCertificateId, setDownloadingCertificateId] = useState<string | null>(null);
 
   const { data, refetch } = useQuery({
     queryKey: ['student-achievements', user?.id],
@@ -46,8 +47,8 @@ export default function AchievementsScreen() {
     enabled: !!user,
   });
   const { data: certificates = [], refetch: refetchCertificates } = useQuery({
-    queryKey: ['completed-course-certificates', user?.id, 'class_based'],
-    queryFn: () => (user ? getCompletedCourseCertificates(user.id, 'class_based') : Promise.resolve([])),
+    queryKey: ['completed-course-certificates', user?.id, 'all'],
+    queryFn: () => (user ? getCompletedCourseCertificates(user.id) : Promise.resolve([])),
     enabled: !!user,
   });
 
@@ -176,6 +177,22 @@ export default function AchievementsScreen() {
     }
   };
 
+  const onDownloadSingleCertificate = async (courseId: string, courseTitle: string) => {
+    try {
+      setDownloadingCertificateId(courseId);
+      const certificateRef = certificateRefs.current[courseId];
+      if (!certificateRef) {
+        throw new Error('Certificate is still loading. Please try again in a moment.');
+      }
+      const uri = await downloadCertificateTemplate({ current: certificateRef }, learnerName, courseTitle);
+      Alert.alert('Certificate saved', `Saved to:\n${uri}`);
+    } catch (error) {
+      Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save certificate right now.');
+    } finally {
+      setDownloadingCertificateId(null);
+    }
+  };
+
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
       <View className="pt-14 px-5 pb-4">
@@ -298,15 +315,31 @@ export default function AchievementsScreen() {
               ))}
             </View>
             {certificates.map((certificate) => (
-              <View
-                key={`certificate-visible-${certificate.course_id}`}
-                ref={(node) => {
-                  certificateRefs.current[certificate.course_id] = node;
-                }}
-                collapsable={false}
-                className="mb-3"
-              >
-                <CompletionCertificateTemplate learnerName={learnerName} courseTitle={certificate.course_title} awardedAt={certificate.completed_at} />
+              <View key={`certificate-visible-${certificate.course_id}`} className="mb-3">
+                <View
+                  ref={(node) => {
+                    certificateRefs.current[certificate.course_id] = node;
+                  }}
+                  collapsable={false}
+                >
+                  <CompletionCertificateTemplate
+                    learnerName={learnerName}
+                    courseTitle={certificate.course_title}
+                    awardedAt={certificate.completed_at}
+                  />
+                </View>
+                <View className="mt-2">
+                  <Button
+                    label={downloadingCertificateId === certificate.course_id ? 'Saving…' : 'Download this certificate'}
+                    onPress={() => {
+                      void onDownloadSingleCertificate(certificate.course_id, certificate.course_title);
+                    }}
+                    isLoading={downloadingCertificateId === certificate.course_id}
+                    disabled={downloadingCertificateId !== null}
+                    variant="secondary"
+                    fullWidth
+                  />
+                </View>
               </View>
             ))}
             <View className="mt-3 gap-2">
