@@ -1,23 +1,26 @@
 /**
- * @fileoverview Create new user screen for admins.
+ * @fileoverview Create new user — luxury emerald & gold theme
  */
 
-import { fieldPlain } from '@/constants/theme';
 import { createUserAsAdmin } from '@/services/authService';
 import type { UserRole } from '@/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, Save } from 'lucide-react-native';
+import { ChevronLeft, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const roleOptions: { label: string; value: UserRole }[] = [
-  { label: 'Admin', value: 'admin' },
-  { label: 'Coordinator', value: 'coordinator' },
-  { label: 'Student', value: 'student' },
-  { label: 'Independent', value: 'independent' },
+const EMERALD = '#032f20';
+const DARK = '#022418';
+const GOLD = '#C9A84C';
+const CREAM = '#FAF7F2';
+
+const roleOptions: { label: string; value: UserRole; description: string }[] = [
+  { label: 'Student', value: 'student', description: 'Learn through structured courses' },
+  { label: 'Coordinator', value: 'coordinator', description: 'Lead classes and learners' },
+  { label: 'Independent', value: 'independent', description: 'Cultivate at own pace' },
+  { label: 'Admin', value: 'admin', description: 'Full platform access' },
 ];
 
 export default function AdminUsersNewScreen() {
@@ -30,16 +33,10 @@ export default function AdminUsersNewScreen() {
   const [role, setRole] = useState<UserRole>('student');
 
   const resetForm = () => {
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setPassword('');
-    setRole('student');
+    setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setRole('student');
   };
 
-  const goToUsersList = () => {
-    router.replace('/admin/users');
-  };
+  const goToUsersList = () => router.replace('/admin/users');
 
   const createUserMutation = useMutation({
     mutationFn: async () => {
@@ -51,7 +48,7 @@ export default function AdminUsersNewScreen() {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       resetForm();
-      Alert.alert('User created', 'The new user account was added successfully.', [
+      Alert.alert('Registered', 'The new user account was added successfully.', [
         { text: 'Add another', style: 'cancel' },
         { text: 'Back to users list', onPress: goToUsersList },
       ]);
@@ -73,109 +70,200 @@ export default function AdminUsersNewScreen() {
     createUserMutation.mutate();
   };
 
+  const inputStyle = {
+    backgroundColor: CREAM,
+    borderWidth: 1,
+    borderColor: '#E8DFD0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: DARK,
+  };
+
+  const labelStyle = {
+    color: '#8B7355',
+    fontSize: 11,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+    fontWeight: '700' as const,
+    marginBottom: 8,
+  };
+
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
-          <View className="px-5 pb-5 flex-row items-center">
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 }}>
             <TouchableOpacity
               onPress={goToUsersList}
-              className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
-              activeOpacity={0.9}
+              style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: 'white', alignItems: 'center', justifyContent: 'center',
+                borderWidth: 1, borderColor: '#E8DFD0', marginRight: 14,
+              }}
+              activeOpacity={0.85}
             >
-              <ChevronLeft size={20} color="#1c1917" />
+              <ChevronLeft size={20} color={DARK} />
             </TouchableOpacity>
-            <View className="ml-3">
-              <Text className="text-2xl font-bold text-black">Add User</Text>
-              <Text className="text-earth-800">Create a new account for the platform</Text>
+            <View>
+              <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600' }}>
+                Growers & Roles
+              </Text>
+              <Text style={{ color: DARK, fontSize: 24, fontWeight: '300', fontFamily: 'serif' }}>
+                Register New Account
+              </Text>
             </View>
           </View>
 
-          <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-            <View>
-              <Text className="text-earth-700 font-medium mb-2">First name</Text>
-              <TextInput
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="e.g. Naledi"
-                placeholderTextColor="#a8a29e"
-                className={fieldPlain}
-              />
+          {/* Form Card */}
+          <View style={{
+            backgroundColor: 'white', marginHorizontal: 20, borderRadius: 20,
+            padding: 24, borderWidth: 1, borderColor: '#E8DFD0', marginBottom: 16,
+          }}>
+            {/* Card Header */}
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              marginBottom: 24, paddingBottom: 16,
+              borderBottomWidth: 1, borderBottomColor: '#F0EAE0',
+            }}>
+              <UserPlus size={16} color={GOLD} />
+              <Text style={{ color: DARK, fontSize: 16, fontWeight: '600', fontFamily: 'serif' }}>
+                Account Details
+              </Text>
+            </View>
 
-              <Text className="text-earth-700 font-medium mb-2 mt-4">Last name</Text>
-              <TextInput
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="e.g. Molefe"
-                placeholderTextColor="#a8a29e"
-                className={fieldPlain}
-              />
+            {/* First & Last Name row */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>First Name</Text>
+                <TextInput
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="e.g. Lungile"
+                  placeholderTextColor="#C4B89A"
+                  style={inputStyle}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={labelStyle}>Last Name</Text>
+                <TextInput
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="e.g. Cele"
+                  placeholderTextColor="#C4B89A"
+                  style={inputStyle}
+                />
+              </View>
+            </View>
 
-              <Text className="text-earth-700 font-medium mb-2 mt-4">Email</Text>
+            {/* Email */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={labelStyle}>Email Address</Text>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
-                placeholder="name@example.com"
+                placeholder="e.g. lungile@example.com"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                placeholderTextColor="#a8a29e"
-                className={fieldPlain}
+                placeholderTextColor="#C4B89A"
+                style={inputStyle}
               />
+            </View>
 
-              <Text className="text-earth-700 font-medium mb-2 mt-4">Temporary password</Text>
+            {/* Password */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={labelStyle}>Temporary Password</Text>
               <TextInput
                 value={password}
                 onChangeText={setPassword}
                 placeholder="At least 6 characters"
                 secureTextEntry
-                placeholderTextColor="#a8a29e"
-                className={fieldPlain}
+                placeholderTextColor="#C4B89A"
+                style={inputStyle}
               />
+            </View>
 
-              <Text className="text-earth-700 font-medium mb-2 mt-4">Role</Text>
-              <View className="flex-row flex-wrap -mx-1">
+            {/* Role Selection */}
+            <View>
+              <Text style={labelStyle}>Academy Credentials Role</Text>
+              <View style={{ gap: 10 }}>
                 {roleOptions.map((option) => {
                   const active = role === option.value;
                   return (
-                    <View key={option.value} className="px-1 mb-2 w-1/2">
-                      <TouchableOpacity
-                        onPress={() => setRole(option.value)}
-                        className={`rounded-full py-2.5 items-center ${active ? 'bg-primary-600' : 'bg-white/60'}`}
-                        activeOpacity={0.9}
-                      >
-                        <Text className={active ? 'text-white font-semibold' : 'text-earth-700'}>{option.label}</Text>
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      key={option.value}
+                      onPress={() => setRole(option.value)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        padding: 14,
+                        borderRadius: 12,
+                        backgroundColor: active ? EMERALD : CREAM,
+                        borderWidth: 1,
+                        borderColor: active ? EMERALD : '#E8DFD0',
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <View style={{
+                        width: 20, height: 20, borderRadius: 10,
+                        borderWidth: 2,
+                        borderColor: active ? GOLD : '#C4B89A',
+                        alignItems: 'center', justifyContent: 'center',
+                        marginRight: 12,
+                      }}>
+                        {active && (
+                          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: GOLD }} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: active ? GOLD : DARK, fontWeight: '600', fontSize: 14 }}>
+                          {option.label}
+                        </Text>
+                        <Text style={{ color: active ? 'rgba(255,255,255,0.6)' : '#8B7355', fontSize: 12, marginTop: 2 }}>
+                          {option.description}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
             </View>
-          </ScrollView>
+          </View>
 
-          <View className="px-5 py-5">
+          {/* Action Buttons */}
+          <View style={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
             <TouchableOpacity
               onPress={handleCreateUser}
               disabled={createUserMutation.isPending}
-              className={`rounded-xl py-4 items-center ${createUserMutation.isPending ? 'bg-primary-400' : 'bg-primary-600'}`}
-              activeOpacity={0.9}
+              style={{
+                backgroundColor: createUserMutation.isPending ? `${EMERALD}80` : EMERALD,
+                borderRadius: 14, paddingVertical: 16, alignItems: 'center',
+                borderWidth: 1, borderColor: `${GOLD}40`,
+              }}
+              activeOpacity={0.85}
             >
-              <View className="flex-row items-center">
-                <Save size={18} color="white" />
-                <Text className="text-white font-semibold text-base ml-2">
-                  {createUserMutation.isPending ? 'Creating user...' : 'Create User'}
-                </Text>
-              </View>
+              <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15, letterSpacing: 0.5 }}>
+                {createUserMutation.isPending ? 'Registering...' : 'Confirm Registration'}
+              </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               onPress={goToUsersList}
-              className="mt-3 rounded-xl py-3.5 items-center border border-earth-400/50"
-              activeOpacity={0.9}
+              style={{
+                borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+                borderWidth: 1, borderColor: '#E8DFD0', backgroundColor: 'white',
+              }}
+              activeOpacity={0.85}
             >
-              <Text className="text-black font-medium">Back to users list</Text>
+              <Text style={{ color: '#8B7355', fontWeight: '600', fontSize: 14 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

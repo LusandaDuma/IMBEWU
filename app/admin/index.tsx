@@ -1,311 +1,286 @@
 /**
- * @fileoverview Admin LMS control room — platform pulse and shortcuts.
+ * @fileoverview Admin LMS control room — luxury emerald & gold theme.
+ * Keeps all existing data fetching, replaces UI with premium design.
  */
 
-import { DashboardStatsGrid, ScreenHeader } from '@/components/shared';
+import { DashboardStatsGrid } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getAdminAdvancedStats, getAdminDashboardAnalytics } from '@/services/adminService';
 import { useQuery } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   Activity,
   Award,
-  BookOpen,
   BookMarked,
+  BookOpen,
   Building2,
   FileEdit,
   GraduationCap,
   Plus,
+  Settings,
+  Sparkles,
   Sprout,
   TrendingUp,
   UserCog,
-  Users,
+  Users
 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const EMERALD = '#032f20';
+const GOLD = '#C9A84C';
+const CREAM = '#FAF7F2';
+const DARK = '#022418';
 
 function formatRelativeTime(isoDate: string): string {
   const timestamp = new Date(isoDate).getTime();
   if (Number.isNaN(timestamp)) return 'Just now';
-
   const diffMs = timestamp - Date.now();
   const absMs = Math.abs(diffMs);
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
-
-  if (typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl) {
-    try {
-      const formatter = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-      if (absMs < hour) {
-        return formatter.format(Math.round(diffMs / minute), 'minute');
-      }
-      if (absMs < day) {
-        return formatter.format(Math.round(diffMs / hour), 'hour');
-      }
-      return formatter.format(Math.round(diffMs / day), 'day');
-    } catch {
-      /* engine stub — fall through */
-    }
-  }
-
   if (absMs < minute) return 'just now';
-  if (absMs < hour) {
-    const n = Math.round(absMs / minute);
-    return n === 1 ? '1 min ago' : `${n} min ago`;
-  }
-  if (absMs < day) {
-    const n = Math.round(absMs / hour);
-    return n === 1 ? '1 hour ago' : `${n} hours ago`;
-  }
+  if (absMs < hour) { const n = Math.round(absMs / minute); return n === 1 ? '1 min ago' : `${n} min ago`; }
+  if (absMs < day) { const n = Math.round(absMs / hour); return n === 1 ? '1 hour ago' : `${n} hours ago`; }
   const n = Math.round(absMs / day);
   return n === 1 ? '1 day ago' : `${n} days ago`;
 }
 
 export default function AdminDashboard() {
   const router = useRouter();
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin-dashboard-analytics'],
     queryFn: getAdminDashboardAnalytics,
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
   });
 
-  const {
-    data: advanced,
-    isLoading: advancedLoading,
-    isError: advancedError,
-    refetch: refetchAdvanced,
-  } = useQuery({
+  const { data: advanced, isLoading: advancedLoading, isError: advancedError, refetch: refetchAdvanced } = useQuery({
     queryKey: ['admin-advanced-stats'],
     queryFn: getAdminAdvancedStats,
   });
 
-  useRefetchOnFocus(
-    () => {
-      void refetch();
-      void refetchAdvanced();
-    },
-    true
-  );
-
-  const stats = [
-    {
-      label: 'Total users',
-      value: `${data?.stats.totalUsers ?? 0}`,
-      change: 'Live',
-      icon: Users,
-      iconColor: '#a78bfa',
-    },
-    {
-      label: 'Courses',
-      value: `${data?.stats.totalCourses ?? 0}`,
-      change: 'Live',
-      icon: BookOpen,
-      iconColor: '#4ade80',
-    },
-    {
-      label: 'Active users',
-      value: `${data?.stats.activeLearners ?? 0}`,
-      change: 'Live',
-      icon: Users,
-      iconColor: '#22d3ee',
-    },
-    {
-      label: 'Completion rate',
-      value: `${data?.stats.completionRate ?? 0}%`,
-      change: 'Live',
-      icon: TrendingUp,
-      iconColor: '#fbbf24',
-    },
-  ];
+  useRefetchOnFocus(() => { void refetch(); void refetchAdvanced(); }, true);
 
   const recentActions = data?.recentActions ?? [];
 
   const roleStatItems = useMemo(() => {
     const r = advanced?.usersByRole;
     return [
-      { label: 'Admins', value: `${r?.admin ?? 0}`, change: 'Role', icon: UserCog, iconColor: '#7c3aed' },
-      { label: 'Coordinators', value: `${r?.coordinator ?? 0}`, change: 'Role', icon: BookMarked, iconColor: '#16a34a' },
-      { label: 'Students', value: `${r?.student ?? 0}`, change: 'Role', icon: GraduationCap, iconColor: '#0ea5e9' },
-      { label: 'Independent', value: `${r?.independent ?? 0}`, change: 'Role', icon: Sprout, iconColor: '#ea580c' },
+      { label: 'Admins', value: `${r?.admin ?? 0}`, change: 'Role', icon: UserCog, iconColor: GOLD },
+      { label: 'Coordinators', value: `${r?.coordinator ?? 0}`, change: 'Role', icon: BookMarked, iconColor: GOLD },
+      { label: 'Students', value: `${r?.student ?? 0}`, change: 'Role', icon: GraduationCap, iconColor: GOLD },
+      { label: 'Independent', value: `${r?.independent ?? 0}`, change: 'Role', icon: Sprout, iconColor: GOLD },
     ];
   }, [advanced?.usersByRole]);
 
-  const contentStatItems = useMemo(
-    () => [
-      {
-        label: 'Published courses',
-        value: `${advanced?.publishedCourses ?? 0}`,
-        change: 'Live',
-        icon: BookOpen,
-        iconColor: '#22c55e',
-      },
-      {
-        label: 'Draft courses',
-        value: `${advanced?.draftCourses ?? 0}`,
-        change: 'Unlisted',
-        icon: FileEdit,
-        iconColor: '#ca8a04',
-      },
-      {
-        label: 'Total enrolments',
-        value: `${advanced?.totalEnrolments ?? 0}`,
-        change: 'All time',
-        icon: Users,
-        iconColor: '#0891b2',
-      },
-      {
-        label: 'Classes',
-        value: `${advanced?.totalClasses ?? 0}`,
-        change: 'Cohorts',
-        icon: Building2,
-        iconColor: '#8b5cf6',
-      },
-    ],
-    [advanced]
-  );
+  const contentStatItems = useMemo(() => [
+    { label: 'Published courses', value: `${advanced?.publishedCourses ?? 0}`, change: 'Live', icon: BookOpen, iconColor: GOLD },
+    { label: 'Draft courses', value: `${advanced?.draftCourses ?? 0}`, change: 'Unlisted', icon: FileEdit, iconColor: GOLD },
+    { label: 'Total enrolments', value: `${advanced?.totalEnrolments ?? 0}`, change: 'All time', icon: Users, iconColor: GOLD },
+    { label: 'Classes', value: `${advanced?.totalClasses ?? 0}`, change: 'Cohorts', icon: Building2, iconColor: GOLD },
+  ], [advanced]);
 
-  const signalStatItems = useMemo(
-    () => [
-      {
-        label: 'New enrolments (7d)',
-        value: `${advanced?.newEnrolments7d ?? 0}`,
-        change: 'Week',
-        icon: TrendingUp,
-        iconColor: '#10b981',
-      },
-      {
-        label: 'Badges issued',
-        value: `${advanced?.badgesAwarded ?? 0}`,
-        change: 'All time',
-        icon: Award,
-        iconColor: '#d97706',
-      },
-      {
-        label: 'Logins (7d)',
-        value: `${advanced?.activeLogins7d ?? 0}`,
-        change: 'Active',
-        icon: Activity,
-        iconColor: '#6366f1',
-      },
-    ],
-    [advanced]
-  );
+  const signalStatItems = useMemo(() => [
+    { label: 'New enrolments (7d)', value: `${advanced?.newEnrolments7d ?? 0}`, change: 'Week', icon: TrendingUp, iconColor: GOLD },
+    { label: 'Badges issued', value: `${advanced?.badgesAwarded ?? 0}`, change: 'All time', icon: Award, iconColor: GOLD },
+    { label: 'Logins (7d)', value: `${advanced?.activeLogins7d ?? 0}`, change: 'Active', icon: Activity, iconColor: GOLD },
+  ], [advanced]);
+
+  const quickActions = [
+    { label: 'Add Course', icon: Plus, onPress: () => router.push('/admin/courses/new') },
+    { label: 'Manage Users', icon: Users, onPress: () => router.push('/admin/users') },
+    { label: 'Course Library', icon: BookOpen, onPress: () => router.push('/admin/courses') },
+    { label: 'Settings', icon: Settings, onPress: () => router.push('/admin/settings') },
+  ];
 
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="px-5 flex-row items-start justify-between">
-          <View className="flex-1 pr-3">
-            <ScreenHeader
-              title="Administration"
-              subtitle="Courses, users, and platform health."
-              variant="light"
-            />
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push('/admin/courses/new')}
-            className="mt-2 w-12 h-12 rounded-full bg-primary-600/95 items-center justify-center"
-            style={{ elevation: 4 }}
-          >
-            <Plus size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
 
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-          <View className="flex-row flex-wrap -mx-2 mt-2">
-            {stats.map((stat) => {
-              const Icon = stat.icon;
-              return (
-                <View key={stat.label} className="w-1/2 px-2 mb-4">
-                  <View className="pt-1 pb-4 border-b border-earth-400/30">
-                    <View className="flex-row items-start justify-between">
-                      <View className="w-10 h-10 items-center justify-center">
-                        <Icon size={20} color={stat.iconColor} />
-                      </View>
-                      <Text className="text-primary-800 text-xs font-bold">{isLoading ? 'Loading...' : stat.change}</Text>
-                    </View>
-                    <Text className="text-2xl font-light text-black mt-3 tracking-tight">{stat.value}</Text>
-                    <Text className="text-earth-700 text-xs font-light mt-1 tracking-wide">{stat.label}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
-          <View className="mb-2">
-            <Text className="text-black font-light text-base mb-1 tracking-tight">Platform detail</Text>
-            <Text className="text-earth-600 text-xs font-light mb-3">
-              Deeper metrics — user mix, content inventory, and recent momentum.
+        {/* HERO BANNER */}
+        <View style={{
+          backgroundColor: EMERALD,
+          margin: 16,
+          borderRadius: 20,
+          padding: 24,
+          borderWidth: 1,
+          borderColor: `${GOLD}50`,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <Sparkles size={12} color={GOLD} />
+            <Text style={{ color: GOLD, fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600' }}>
+              System Active
             </Text>
-            {advancedError ? (
-              <Text className="text-red-800 text-sm font-light mb-3">
-                Could not load advanced stats. Try again later.
-              </Text>
-            ) : (
-              <>
-                <DashboardStatsGrid
-                  title="Users by role"
-                  items={roleStatItems}
-                  isLoading={advancedLoading}
-                />
-                <DashboardStatsGrid
-                  title="Content & enrolments"
-                  items={contentStatItems}
-                  isLoading={advancedLoading}
-                />
-                <DashboardStatsGrid
-                  title="Signals (7 days)"
-                  items={signalStatItems}
-                  isLoading={advancedLoading}
-                />
-              </>
-            )}
           </View>
-
-          <View className="mb-6 pb-4 border-b border-earth-400/40">
-            <Text className="text-black font-light text-base mb-5 tracking-tight">Quick actions</Text>
-            <View className="flex-row flex-wrap -mx-2">
-              {[
-                { label: 'Add course', onPress: () => router.push('/admin/courses/new') },
-                { label: 'Manage users', onPress: () => router.push('/admin/users') },
-                { label: 'Course library', onPress: () => router.push('/admin/courses') },
-                { label: 'Settings', onPress: () => router.push('/admin/settings') },
-              ].map((action) => (
-                <View key={action.label} className="w-1/2 px-2 mb-3">
-                  <TouchableOpacity
-                    onPress={action.onPress}
-                    className="py-3 px-2 border-b border-earth-400/40 items-center"
-                    activeOpacity={0.9}
-                  >
-                    <Text className="text-black text-sm font-light text-center tracking-wide">{action.label}</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View className="mb-3 flex-row items-center justify-between">
-            <Text className="text-black font-light text-base tracking-tight">Recent activity</Text>
-            <TouchableOpacity onPress={() => router.push('/admin/activity')} activeOpacity={0.9}>
-              <Text className="text-primary-800 text-sm font-medium">View all</Text>
+          <Text style={{ color: 'white', fontSize: 22, fontWeight: '300', fontFamily: 'serif', marginBottom: 8 }}>
+            Courses, users, and platform health.
+          </Text>
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
+            Monitor course completion, manage coordinators, and query our indigenous knowledge database using the Copilot helper.
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              onPress={() => router.push('/admin/courses/new')}
+              style={{
+                backgroundColor: GOLD,
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 10,
+              }}
+            >
+              <Text style={{ color: DARK, fontSize: 12, fontWeight: '700' }}>Design Course</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push('/admin/users-new')}
+              style={{
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.3)',
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 10,
+              }}
+            >
+              <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>Add Learner</Text>
             </TouchableOpacity>
           </View>
-          <View className="mb-10 pb-1 border-b border-earth-400/40">
+        </View>
+
+        {/* STATS GRID */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+            {[
+              { label: 'Total Users', value: data?.stats.totalUsers ?? 0, icon: Users },
+              { label: 'Courses', value: data?.stats.totalCourses ?? 0, icon: BookOpen },
+              { label: 'Active Users', value: data?.stats.activeLearners ?? 0, icon: Activity },
+              { label: 'Completion', value: `${data?.stats.completionRate ?? 0}%`, icon: TrendingUp },
+            ].map((stat) => (
+              <View key={stat.label} style={{
+                width: '47%',
+                backgroundColor: 'white',
+                borderRadius: 16,
+                padding: 20,
+                borderWidth: 1,
+                borderColor: '#E8DFD0',
+              }}>
+                <stat.icon size={18} color={GOLD} />
+                <Text style={{
+                  color: DARK,
+                  fontSize: 28,
+                  fontWeight: '700',
+                  fontFamily: 'serif',
+                  marginTop: 12,
+                }}>
+                  {isLoading ? '—' : stat.value}
+                </Text>
+                <Text style={{
+                  color: '#8B7355',
+                  fontSize: 10,
+                  textTransform: 'uppercase',
+                  letterSpacing: 1.5,
+                  marginTop: 4,
+                }}>
+                  {stat.label}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
+                  <Text style={{ color: '#22c55e', fontSize: 10, fontWeight: '600' }}>Live</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* QUICK ACTIONS */}
+        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+          <Text style={{ color: DARK, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Quick Actions
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 13, marginBottom: 12 }}>
+            Navigate to key platform areas.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.label}
+                onPress={action.onPress}
+                style={{
+                  width: '47%',
+                  backgroundColor: EMERALD,
+                  borderRadius: 14,
+                  padding: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 10,
+                  borderWidth: 1,
+                  borderColor: `${GOLD}40`,
+                }}
+                activeOpacity={0.85}
+              >
+                <action.icon size={16} color={GOLD} />
+                <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* PLATFORM DETAIL */}
+        <View style={{ paddingHorizontal: 16, marginTop: 24 }}>
+          <Text style={{ color: DARK, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Platform Detail
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 13, marginBottom: 16 }}>
+            Deeper metrics — user mix, content inventory, and recent momentum.
+          </Text>
+
+          {advancedError ? (
+            <Text style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>
+              Could not load advanced stats. Try again later.
+            </Text>
+          ) : (
+            <>
+              <DashboardStatsGrid title="Users by role" items={roleStatItems} isLoading={advancedLoading} />
+              <DashboardStatsGrid title="Content & enrolments" items={contentStatItems} isLoading={advancedLoading} />
+              <DashboardStatsGrid title="Signals (7 days)" items={signalStatItems} isLoading={advancedLoading} />
+            </>
+          )}
+        </View>
+
+        {/* RECENT ACTIVITY */}
+        <View style={{ paddingHorizontal: 16, marginTop: 16, marginBottom: 32 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ color: DARK, fontSize: 16, fontWeight: '300', fontFamily: 'serif' }}>
+              Recent Activity
+            </Text>
+            <TouchableOpacity onPress={() => router.push('/admin/activity')}>
+              <Text style={{ color: GOLD, fontSize: 13, fontWeight: '600' }}>View all</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{
+            backgroundColor: 'white',
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: '#E8DFD0',
+            overflow: 'hidden',
+          }}>
             {isError ? (
-              <View className="px-4 py-3.5">
-                <Text className="text-red-800 text-sm leading-5 font-light">
-                  Unable to load analytics right now. Pull to refresh or try again in a moment.
+              <View style={{ padding: 20 }}>
+                <Text style={{ color: '#ef4444', fontSize: 13 }}>
+                  Unable to load analytics right now.
                 </Text>
               </View>
             ) : recentActions.length === 0 ? (
-              <View className="px-4 py-3.5">
-                <Text className="text-earth-700 text-sm leading-5 font-light">
+              <View style={{ padding: 20 }}>
+                <Text style={{ color: '#8B7355', fontSize: 13 }}>
                   {isLoading ? 'Loading recent activity...' : 'No recent activity yet.'}
                 </Text>
               </View>
@@ -313,18 +288,60 @@ export default function AdminDashboard() {
               recentActions.map((action, ri) => (
                 <View
                   key={action.id}
-                  className={`px-4 py-3.5 ${ri < recentActions.length - 1 ? 'border-b border-earth-400/35' : ''}`}
+                  style={{
+                    padding: 16,
+                    borderBottomWidth: ri < recentActions.length - 1 ? 1 : 0,
+                    borderBottomColor: '#E8DFD0',
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    gap: 12,
+                  }}
                 >
-                  <Text className="text-black text-sm leading-5 font-light">{action.text}</Text>
-                  <Text className="text-earth-600 text-xs mt-2 font-light tracking-wide">
-                    {formatRelativeTime(action.timestamp)}
-                  </Text>
+                  <View style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: GOLD,
+                    marginTop: 5,
+                  }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: DARK, fontSize: 13, lineHeight: 20 }}>{action.text}</Text>
+                    <Text style={{ color: '#8B7355', fontSize: 11, marginTop: 4 }}>
+                      {formatRelativeTime(action.timestamp)}
+                    </Text>
+                  </View>
                 </View>
               ))
             )}
           </View>
-        </ScrollView>
-      </SafeAreaView>
-    </LinearGradient>
+        </View>
+
+      </ScrollView>
+
+      {/* FAB - Add Course */}
+      <TouchableOpacity
+        onPress={() => router.push('/admin/courses/new')}
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 20,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: EMERALD,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderWidth: 2,
+          borderColor: GOLD,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+        }}
+      >
+        <Plus size={24} color={GOLD} />
+      </TouchableOpacity>
+    </SafeAreaView>
   );
 }

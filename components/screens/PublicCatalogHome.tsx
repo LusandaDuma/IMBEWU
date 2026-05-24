@@ -4,21 +4,19 @@
  */
 
 import { Button, SearchBar } from '@/components/shared';
-import { COURSE_LOGO_THUMB } from '@/constants/courseBranding';
 import { useCourses } from '@/hooks/useCourse';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useRouter } from 'expo-router';
-import { MessageCircle, Search, Sprout } from 'lucide-react-native';
+import { GraduationCap, Leaf, MessageCircle, Search, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import {
     Alert,
     FlatList,
-    Image,
     RefreshControl,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -83,7 +81,7 @@ export function PublicCatalogHome() {
         </View>
 
         <FlatList
-          data={filtered}
+          data={[]}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} tintColor={PRIMARY_COLOR} />}
@@ -109,63 +107,64 @@ export function PublicCatalogHome() {
                 </View>
               </View>
 
-              {featuredCourses.length ? (
-                <View style={{ paddingHorizontal: 10, marginTop: 18 }}>
-                  <Text style={styles.sectionLabel}>Featured</Text>
-                  {featuredCourses.slice(0, 1).map((course) => (
-                    <TouchableOpacity
-                      key={course.id}
-                      activeOpacity={0.92}
-                      onPress={() => router.push({ pathname: '/course/[id]', params: { id: course.id } })}
-                      style={styles.featuredCard}
-                    >
-                      <View style={styles.featuredTopRow}>
-                        <Text style={styles.featuredLabel}>FEATURED COURSE</Text>
-                        <Sprout size={18} color={ACCENT_COLOR} strokeWidth={1.4} />
-                      </View>
-                      <Text style={styles.featuredTitle} numberOfLines={2}>
-                        {course.title}
-                      </Text>
-                      <Text style={styles.featuredDetails}>12 lessons · Field certification · Coordinator-led</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : null}
+              {/* Trust / Statistics section: Proudly South African */}
+              <View className="mt-6 bg-[#FAF7F2] px-6 py-8 rounded-lg items-center">
+                <Text className="text-[#C9A84C] text-xs uppercase font-semibold">PROUDLY SOUTH AFRICAN</Text>
+                <Text className="text-[#1B4332] text-2xl font-extrabold text-center mt-3">Agriculture education, available to every grower —</Text>
+                <Text className="text-[#1B4332] text-2xl font-extrabold text-center">from Limpopo to the Cape.</Text>
 
-              <Text style={styles.allLabel}>All published courses</Text>
-            </View>
-          }
-          ListEmptyComponent={
-            <View className="py-16 items-center px-6">
-              <Sprout size={40} color="#64748b" strokeWidth={1.2} />
-              <Text className="text-earth-700 text-center mt-4 font-light">{isLoading ? 'Loading catalogue…' : 'No courses match your search.'}</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View style={styles.listCard}>
-              <View style={{ flexDirection: 'row' }}>
-                <View style={styles.thumb}>
-                  <Image source={COURSE_LOGO_THUMB} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+                <Text className="text-[#6B7280] text-center mt-4 px-4">
+                  Imbewu is available in all 9 provinces, offered in multiple South African languages including Zulu, Xhosa, Sotho, and Afrikaans. Whether you are a small-scale farmer in the Eastern Cape or a commercial grower in the Western Cape, Imbewu meets you where you are.
+                </Text>
+
+                <View className="flex-row justify-between mt-6 w-full px-4">
+                  <View className="flex-1 items-center">
+                    <Text className="text-[#C9A84C] text-3xl font-extrabold">9</Text>
+                    <Text className="text-[#1B4332] text-sm mt-1">Provinces covered</Text>
+                  </View>
+                  <View className="flex-1 items-center">
+                    <Text className="text-[#C9A84C] text-3xl font-extrabold">6+</Text>
+                    <Text className="text-[#1B4332] text-sm mt-1">Languages supported</Text>
+                  </View>
+                  <View className="flex-1 items-center">
+                    <Text className="text-[#C9A84C] text-3xl font-extrabold">50+</Text>
+                    <Text className="text-[#1B4332] text-sm mt-1">Courses available</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1, marginLeft: 12 }}>
-                  <Text style={styles.courseTitle} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  {item.description ? <Text style={styles.courseDesc} numberOfLines={2}>{item.description}</Text> : null}
-                  <View style={{ marginTop: 10 }}>
-                    <Button
-                      label="View Course"
-                      variant="primary"
-                      size="md"
-                      fullWidth
-                      style={{ backgroundColor: PRIMARY_COLOR }}
-                      onPress={() => router.push({ pathname: '/course/[id]', params: { id: item.id } })}
-                    />
+
+                <View className="h-[1px] bg-[#C9A84C] w-full my-6" />
+
+                <Text className="text-[#1B4332] italic text-center px-4">"The seed of knowledge, planted in every corner of South Africa."</Text>
+              </View>
+
+              {/* For Every Role section - dark emerald background, three role cards */}
+              <View className="mt-6 px-4 py-6 rounded-xl bg-[#1B4332]">
+                <Text className="text-[#C9A84C] text-xs uppercase font-semibold">FOR EVERY ROLE</Text>
+                <Text className="text-white text-2xl font-extrabold mt-2">One platform.</Text>
+                <Text className="text-[#C9A84C] text-2xl italic font-extrabold">Many hands in the soil.</Text>
+
+                <View className="flex-row mt-5">
+                  <View className="flex-1 bg-[#2d5a3d] rounded-lg p-4 mr-2 items-start">
+                    <GraduationCap size={24} color="#C9A84C" strokeWidth={1.6} />
+                    <Text className="text-white text-lg font-bold mt-3">Students</Text>
+                    <Text className="text-white/70 text-sm mt-2">Follow a personal pathway from foundational soil science to advanced agronomy.</Text>
+                  </View>
+
+                  <View className="flex-1 bg-[#2d5a3d] rounded-lg p-4 mx-1 items-start">
+                    <Users size={24} color="#C9A84C" strokeWidth={1.6} />
+                    <Text className="text-white text-lg font-bold mt-3">Coordinators</Text>
+                    <Text className="text-white/70 text-sm mt-2">Manage classes, issue certificates, and track learner progress in real time.</Text>
+                  </View>
+
+                  <View className="flex-1 bg-[#2d5a3d] rounded-lg p-4 ml-2 items-start">
+                    <Leaf size={24} color="#C9A84C" strokeWidth={1.6} />
+                    <Text className="text-white text-lg font-bold mt-3">Independent growers</Text>
+                    <Text className="text-white/70 text-sm mt-2">Self-paced libraries, the Nolwazi AI copilot, and FieldWise diagnostics.</Text>
                   </View>
                 </View>
               </View>
             </View>
-          )}
+          }
         />
       </SafeAreaView>
     </LinearGradient>

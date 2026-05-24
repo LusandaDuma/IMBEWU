@@ -1,18 +1,25 @@
 /**
- * @fileoverview Create new course screen
+ * @fileoverview Create new course — luxury emerald & gold theme
  */
 
-import { fieldPlain } from '@/constants/theme';
 import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
 import { createCourse } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, List, Save } from 'lucide-react-native';
+import { ChevronLeft, Sparkles } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const EMERALD = '#032f20';
+const DARK = '#022418';
+const GOLD = '#C9A84C';
+const CREAM = '#FAF7F2';
+
+const INSTRUCTORS = ['Dr. N. Mabaso', 'Elder Joseph K.', 'Marta Alvarez', 'Prof. S. Dlamini'];
+const CATEGORIES = ['Soil Science', 'Water Systems', 'Agroforestry', 'Indigenous Harvesting', 'Soil Health', 'Regenerative Farming'];
+const LESSON_COUNTS = ['6', '8', '10', '12', '15', '20'];
 
 export default function CreateCourseScreen() {
   const router = useRouter();
@@ -20,6 +27,9 @@ export default function CreateCourseScreen() {
   const queryClient = useQueryClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [instructor, setInstructor] = useState(INSTRUCTORS[0]);
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [lessonCount, setLessonCount] = useState('10');
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -38,95 +48,270 @@ export default function CreateCourseScreen() {
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
       invalidateAllCourseCatalogQueries(queryClient);
-      Alert.alert('Success', 'Course created successfully!');
+      Alert.alert('Published', 'Course has been added to the catalog!');
       router.back();
     },
     onError: (error) => {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create course. Please try again.');
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create course.');
     },
   });
 
   const handleSave = () => {
     if (!title.trim() || !description.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      Alert.alert('Missing Fields', 'Please fill in the course title and description.');
       return;
     }
     createMutation.mutate();
   };
 
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="px-5 pb-5 flex-row items-center">
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 20,
+          paddingTop: 8,
+          paddingBottom: 20,
+        }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
-            activeOpacity={0.9}
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: 'white',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: 1,
+              borderColor: '#E8DFD0',
+              marginRight: 14,
+            }}
+            activeOpacity={0.85}
           >
-            <ChevronLeft size={20} color="#1c1917" />
+            <ChevronLeft size={20} color={DARK} />
           </TouchableOpacity>
-          <View className="ml-3">
-            <Text className="text-2xl font-bold text-black">Create Course</Text>
-            <Text className="text-earth-800">Add a new course to the platform</Text>
+          <View>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600' }}>
+              Curriculum
+            </Text>
+            <Text style={{ color: DARK, fontSize: 24, fontWeight: '300', fontFamily: 'serif' }}>
+              Design New Course
+            </Text>
           </View>
         </View>
 
-        <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-          <View>
-            <Text className="text-earth-700 font-medium mb-2">Course Title</Text>
-          <TextInput
-            className={fieldPlain}
-            placeholder="Enter course title"
-            value={title}
-            onChangeText={setTitle}
-            placeholderTextColor="#a8a29e"
-          />
-
-            <Text className="text-earth-700 font-medium mb-2 mt-5">Description</Text>
-          <TextInput
-            className={fieldPlain}
-            placeholder="Enter course description"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-            style={{ minHeight: 100 }}
-            placeholderTextColor="#a8a29e"
-          />
-
-            <Text className="text-earth-500 text-sm mt-5">
-              After creating the course, you can add lessons and quizzes from the course detail page.
+        {/* Form Card */}
+        <View style={{
+          backgroundColor: 'white',
+          marginHorizontal: 20,
+          borderRadius: 20,
+          padding: 24,
+          borderWidth: 1,
+          borderColor: '#E8DFD0',
+          marginBottom: 16,
+        }}>
+          {/* Header accent */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            marginBottom: 24,
+            paddingBottom: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: '#F0EAE0',
+          }}>
+            <Sparkles size={16} color={GOLD} />
+            <Text style={{ color: DARK, fontSize: 16, fontWeight: '600', fontFamily: 'serif' }}>
+              Course Details
             </Text>
           </View>
-        </ScrollView>
 
-        <View className="px-5 py-5">
+          {/* Course Title */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 }}>
+              Course Title
+            </Text>
+            <TextInput
+              value={title}
+              onChangeText={setTitle}
+              placeholder="e.g., Companion Planting Dynamics & Yield Optimizers"
+              placeholderTextColor="#C4B89A"
+              style={{
+                backgroundColor: CREAM,
+                borderWidth: 1,
+                borderColor: '#E8DFD0',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                fontSize: 14,
+                color: DARK,
+              }}
+            />
+          </View>
+
+          {/* Description */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 }}>
+              Description
+            </Text>
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe what learners will discover and cultivate..."
+              placeholderTextColor="#C4B89A"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              style={{
+                backgroundColor: CREAM,
+                borderWidth: 1,
+                borderColor: '#E8DFD0',
+                borderRadius: 12,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                fontSize: 14,
+                color: DARK,
+                minHeight: 100,
+              }}
+            />
+          </View>
+
+          {/* Instructor */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 }}>
+              Academy Instructor
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -4 }}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 4 }}>
+                {INSTRUCTORS.map((i) => (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => setInstructor(i)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: instructor === i ? EMERALD : CREAM,
+                      borderWidth: 1,
+                      borderColor: instructor === i ? EMERALD : '#E8DFD0',
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ color: instructor === i ? GOLD : '#8B7355', fontSize: 12, fontWeight: '600' }}>
+                      {i}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+
+          {/* Category */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 }}>
+              Agro-Subject Category
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {CATEGORIES.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setCategory(c)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: category === c ? EMERALD : CREAM,
+                    borderWidth: 1,
+                    borderColor: category === c ? EMERALD : '#E8DFD0',
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ color: category === c ? GOLD : '#8B7355', fontSize: 12, fontWeight: '600' }}>
+                    {c}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Lesson Count */}
+          <View style={{ marginBottom: 8 }}>
+            <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 8 }}>
+              Lessons Count
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {LESSON_COUNTS.map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  onPress={() => setLessonCount(n)}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: lessonCount === n ? EMERALD : CREAM,
+                    borderWidth: 1,
+                    borderColor: lessonCount === n ? EMERALD : '#E8DFD0',
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ color: lessonCount === n ? GOLD : '#8B7355', fontSize: 13, fontWeight: '700' }}>
+                    {n}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Info note */}
+        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+          <Text style={{ color: '#8B7355', fontSize: 12, lineHeight: 18 }}>
+            After publishing, you can add lessons and quizzes from the course detail page.
+          </Text>
+        </View>
+
+        {/* Action Buttons */}
+        <View style={{ paddingHorizontal: 20, paddingBottom: 40, gap: 12 }}>
           <TouchableOpacity
             onPress={handleSave}
             disabled={createMutation.isPending}
-            className={`rounded-xl py-4 items-center ${createMutation.isPending ? 'bg-primary-400' : 'bg-primary-600'}`}
-            activeOpacity={0.9}
+            style={{
+              backgroundColor: createMutation.isPending ? `${EMERALD}80` : EMERALD,
+              borderRadius: 14,
+              paddingVertical: 16,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: `${GOLD}40`,
+            }}
+            activeOpacity={0.85}
           >
-            <View className="flex-row items-center">
-              <Save size={20} color="white" />
-              <Text className="text-white font-semibold text-lg ml-2">
-                {createMutation.isPending ? 'Creating...' : 'Create Course'}
-              </Text>
-            </View>
+            <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15, letterSpacing: 0.5 }}>
+              {createMutation.isPending ? 'Publishing...' : 'Publish to Catalog'}
+            </Text>
           </TouchableOpacity>
+
           <TouchableOpacity
-            onPress={() => router.push('/admin/courses')}
-            className="rounded-xl py-4 items-center border border-earth-400/50 mt-3"
-            activeOpacity={0.9}
+            onPress={() => router.back()}
+            style={{
+              borderRadius: 14,
+              paddingVertical: 14,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#E8DFD0',
+              backgroundColor: 'white',
+            }}
+            activeOpacity={0.85}
           >
-            <View className="flex-row items-center">
-              <List size={20} color="#44403c" />
-              <Text className="text-black font-semibold text-base ml-2">Manage Courses (CRUD)</Text>
-            </View>
+            <Text style={{ color: '#8B7355', fontWeight: '600', fontSize: 14 }}>Cancel</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    </LinearGradient>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
