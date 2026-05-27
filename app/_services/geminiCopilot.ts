@@ -1,18 +1,18 @@
 /**
- * @fileoverview Gemini + Copilot: function calling and orchestration loop.
+ * @fileoverview OpenAI + Copilot: function calling and orchestration loop.
  * The model may only use declared tools; server tools hit the Edge mediation API; client tools stay in-app.
  */
 
 import { invokeCopilotTool } from '@/services/copilotApi';
 import { CLIENT_ONLY_COPILOT_TOOLS, runCopilotNavigateTo, runCopilotSignOut } from '@/services/copilotClientTools';
-import { getGeminiApiKey } from '@/services/gemini';
+import { getOpenAiApiKey } from '@/services/openai';
 import type { Router } from 'expo-router';
 
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'] as const;
+const DEFAULT_MODEL = 'gpt-4.1-mini';
+const FALLBACK_MODELS = ['gpt-4.1-mini'] as const;
 const MAX_TOOL_ROUNDS = 8;
 
-function normalizeGeminiError(message: string): string {
+function normalizeModelError(message: string): string {
   const lower = message.toLowerCase();
   const isQuota =
     lower.includes('quota exceeded') ||
@@ -23,10 +23,10 @@ function normalizeGeminiError(message: string): string {
   }
   const retryMatch = message.match(/retry in\s+([\d.]+)s/i);
   const waitText = retryMatch ? ` Please retry in about ${Math.ceil(Number(retryMatch[1]))}s.` : '';
-  return `Nolwazi is temporarily busy due to Gemini API quota limits.${waitText}`;
+  return `Nolwazi is temporarily busy due to API quota limits.${waitText}`;
 }
 
-/** Gemini 1.5/2 REST content (includes tool parts). */
+/** Copilot content (tool-call compatible transcript). */
 export type CopilotContentPart = {
   text?: string;
   functionCall?: { name: string; args?: Record<string, unknown> };
@@ -105,130 +105,187 @@ function asRecord(v: unknown): Record<string, unknown> {
   return {};
 }
 
-async function callGenerateContent(
-  key: string,
-  model: string,
-  body: object,
-): Promise<
-  { ok: true; json: Record<string, unknown> } | { ok: false; status: number; error: string }
-> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
+type OpenAiTool = {
+  type: 'function';
+  function: { name: string; description?: string; parameters: Record<string, unknown> };
+};
 
-  const res = await fetch(url, {
+type OpenAiChatMessage =
+  | { role: 'system' | 'user' | 'assistant'; content: string }
+  | { role: 'assistant'; content: string | null; tool_calls: Array<{ id: string; type: 'function'; function: { name: string; arguments: string } }> }
+  | { role: 'tool'; tool_call_id: string; content: string };
+
+async function callOpenAiChat(params: {
+  apiKey: string;
+  model: string;
+  messages: OpenAiChatMessage[];
+  tools: OpenAiTool[];
+}): Promise<
+  | { ok: true; kind: 'text'; text: string; toolCall?: never; toolCallId?: never }
+  | { ok: true; kind: 'tool'; toolCall: { name: string; args: Record<string, unknown> }; toolCallId: string; text?: never }
+  | { ok: false; status: number; error: string }
+> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: {
+      Authorization: `Bearer ${params.apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: params.model,
+      messages: params.messages,
+      tools: params.tools,
+      tool_choice: 'auto',
+      temperature: 0.55,
+      max_tokens: 768,
+    }),
   });
 
-  const json = (await res.json()) as Record<string, unknown>;
+  const json = (await res.json()) as any;
   if (!res.ok) {
-    const err = (json.error as { message?: string } | undefined)?.message ?? `Request failed (${res.status})`;
-    return { ok: false, status: res.status, error: err };
-  }
-  return { ok: true, json };
-}
-
-function parseModelGenerateResult(
-  json: Record<string, unknown>,
-): { text?: string; functionCall?: { name: string; args: Record<string, unknown> } } {
-  const candidates = json.candidates as
-    | { content?: { parts?: unknown[]; role?: string } }[]
-    | undefined;
-  const parts = candidates?.[0]?.content?.parts as CopilotContentPart[] | undefined;
-  if (!parts?.length) {
-    return {};
+    return {
+      ok: false,
+      status: res.status,
+      error: json?.error?.message ?? `Request failed (${res.status})`,
+    };
   }
 
-  for (const p of parts) {
-    if (p?.functionCall?.name) {
-      const name = p.functionCall.name;
-      const args = asRecord(p.functionCall.args ?? {});
-      return { functionCall: { name, args } };
+  const message = json?.choices?.[0]?.message;
+  const contentText = typeof message?.content === 'string' ? message.content.trim() : '';
+  const toolCalls = Array.isArray(message?.tool_calls) ? message.tool_calls : [];
+
+  if (toolCalls.length > 0) {
+    const first = toolCalls[0];
+    const name = String(first?.function?.name ?? '').trim();
+    const argsRaw = String(first?.function?.arguments ?? '').trim();
+    let args: Record<string, unknown> = {};
+    try {
+      args = argsRaw ? (JSON.parse(argsRaw) as Record<string, unknown>) : {};
+    } catch {
+      args = {};
     }
+    return { ok: true, kind: 'tool', toolCall: { name, args: asRecord(args) }, toolCallId: String(first?.id ?? 'toolcall') };
   }
 
-  const text = parts
-    .map((p) => p?.text ?? '')
-    .join('')
-    .trim();
-  return { text: text || undefined };
+  if (contentText) {
+    return { ok: true, kind: 'text', text: contentText };
+  }
+
+  return { ok: false, status: 500, error: 'Empty model output.' };
 }
 
 /**
- * One Gemini round with function-calling config.
+ * One OpenAI round with function-calling config.
  */
 async function oneGenerateRound(
   systemInstruction: string,
   contents: CopilotContent[],
   model: string = DEFAULT_MODEL,
 ): Promise<GenerateResult> {
-  const key = getGeminiApiKey();
+  const key = getOpenAiApiKey();
   if (!key?.trim()) {
-    return { kind: 'error', error: 'Missing EXPO_PUBLIC_GEMINI_API_KEY' };
+    return { kind: 'error', error: 'Missing EXPO_PUBLIC_OPENAI_API_KEY' };
   }
 
-  const body = {
-    systemInstruction: { parts: [{ text: systemInstruction }] },
-    contents,
-    tools: [
-      {
-        functionDeclarations: COPILOT_FUNCTION_DECLARATIONS,
-      },
-    ],
-    toolConfig: {
-      functionCallingConfig: {
-        mode: 'AUTO',
-      },
+  // Convert Copilot transcript to OpenAI messages INCLUDING tool call + tool responses.
+  // This prevents the model from repeatedly requesting the same tool due to missing tool outputs.
+  const messages: OpenAiChatMessage[] = [{ role: 'system', content: systemInstruction }];
+  let lastToolCallId: string | null = null;
+  let toolCallCounter = 0;
+  let lastToolCallMsgIndex: number | null = null;
+
+  for (const c of contents) {
+    const role = c.role === 'user' ? 'user' : 'assistant';
+
+    for (const p of c.parts ?? []) {
+      // Tool responses in the stored transcript are represented as `functionResponse` parts.
+      // In the legacy Gemini format, these are stored as a "user" role message, so we must
+      // convert them to OpenAI `tool` messages regardless of `c.role`.
+      if (p.functionResponse?.name) {
+        const toolId = lastToolCallId ?? `call_${toolCallCounter++}`;
+        messages.push({
+          role: 'tool',
+          tool_call_id: toolId,
+          content: JSON.stringify(p.functionResponse.response ?? {}),
+        });
+        lastToolCallId = null;
+        lastToolCallMsgIndex = null;
+        continue;
+      }
+
+      // Normal text
+      if (p.text && p.text.trim()) {
+        messages.push({ role, content: p.text.trim() });
+      }
+
+      // Tool call request (assistant side)
+      if (p.functionCall?.name) {
+        const id = `call_${toolCallCounter++}`;
+        lastToolCallId = id;
+        lastToolCallMsgIndex = messages.length;
+        messages.push({
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            {
+              id,
+              type: 'function',
+              function: {
+                name: p.functionCall.name,
+                arguments: JSON.stringify(asRecord(p.functionCall.args ?? {})),
+              },
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  // OpenAI requires every assistant `tool_calls` in the request history to be followed
+  // by tool messages for each `tool_call_id`. If we have a dangling tool call in the
+  // persisted transcript (e.g. app crashed mid-round), drop it from the history.
+  if (lastToolCallId && lastToolCallMsgIndex != null) {
+    messages.splice(lastToolCallMsgIndex, 1);
+  }
+
+  const tools: OpenAiTool[] = COPILOT_FUNCTION_DECLARATIONS.map((d) => ({
+    type: 'function',
+    function: {
+      name: d.name,
+      description: d.description,
+      parameters: d.parameters as Record<string, unknown>,
     },
-    generationConfig: {
-      temperature: 0.55,
-      maxOutputTokens: 768,
-    },
-  };
+  }));
 
   const modelsToTry = [model, ...FALLBACK_MODELS.filter((m) => m !== model)];
 
   let lastErr = 'Unknown';
   for (const m of modelsToTry) {
-    const r = await callGenerateContent(key, m, body);
+    const r = await callOpenAiChat({ apiKey: key, model: m, messages, tools });
     if (!r.ok) {
-      lastErr = normalizeGeminiError(r.error);
+      lastErr = normalizeModelError(r.error);
       if (r.status === 429 || r.status === 503 || r.status === 404) {
         if (r.status === 429 && lastErr.includes('quota limits')) {
           return { kind: 'error', error: lastErr };
         }
         continue;
       }
-      return { kind: 'error', error: normalizeGeminiError(r.error) };
+      return { kind: 'error', error: normalizeModelError(r.error) };
     }
 
-    const content = (r.json.candidates as { content: CopilotContent }[] | undefined)?.[0]?.content;
-    if (!content?.parts?.length) {
-      return { kind: 'error', error: 'No model content returned.' };
-    }
-
-    const modelContent: CopilotContent = { role: 'model', parts: content.parts as CopilotContentPart[] };
-    const parsed = parseModelGenerateResult(r.json);
-
-    if (parsed.functionCall) {
-      if (!COPILOT_FUNCTION_DECLARATIONS.some((d) => d.name === parsed.functionCall!.name)) {
+    if (r.kind === 'tool') {
+      if (!COPILOT_FUNCTION_DECLARATIONS.some((d) => d.name === r.toolCall.name)) {
         return { kind: 'error', error: 'Model requested an unknown tool (blocked).' };
       }
-      return {
-        kind: 'function',
-        functionCall: parsed.functionCall,
-        modelContent,
-      };
+      const modelContent: CopilotContent = { role: 'model', parts: [{ functionCall: { name: r.toolCall.name, args: r.toolCall.args } }] };
+      return { kind: 'function', functionCall: r.toolCall, modelContent };
     }
 
-    if (parsed.text) {
-      return { kind: 'text', text: parsed.text, modelContent };
-    }
-
-    return { kind: 'error', error: 'Empty model output.' };
+    const modelContent: CopilotContent = { role: 'model', parts: [{ text: r.text }] };
+    return { kind: 'text', text: r.text, modelContent };
   }
 
-  return { kind: 'error', error: normalizeGeminiError(lastErr) };
+  return { kind: 'error', error: normalizeModelError(lastErr) };
 }
 
 export type ToolLogEntry = { name: string; ok: boolean; summary: string };

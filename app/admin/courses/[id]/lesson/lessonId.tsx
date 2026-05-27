@@ -305,7 +305,7 @@ export default function AdminEditLessonScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-earth-900 font-medium">Generate lesson</Text>
-                <Text className="text-earth-400 text-xs font-light">Powered by Gemini AI</Text>
+                <Text className="text-earth-400 text-xs font-light">Powered by OpenAI</Text>
               </View>
             </View>
 

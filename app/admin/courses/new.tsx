@@ -5,8 +5,11 @@
  */
 
 import { invalidateAllCourseCatalogQueries } from '@/lib/queryInvalidation';
-import { generateCourseWithAI } from '@/services/lessonGenerationService';
-import { createCourse, supabase } from '@/services/supabase';
+import {
+  createEmptyCourseForManualEditing,
+  persistCourseWithLessonsAndQuizzes,
+} from '@/services/courseCreationService';
+import { generateCourseWithAI, suggestTrendingCourseTopics } from '@/services/lessonGenerationService';
 import { useAuthStore } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -164,6 +167,10 @@ export default function CreateCourseScreen() {
 
   const [cropCategory, setCropCategory] = useState(CROP_CATEGORIES[0]);
   const [focusTheme, setFocusTheme]     = useState('');
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [isManualSaving, setIsManualSaving] = useState(false);
+  const [isSuggestingTopic, setIsSuggestingTopic] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
 
   const [saveStep, setSaveStep]         = useState<SaveStep>('idle');
@@ -203,10 +210,45 @@ export default function CreateCourseScreen() {
     return 'pending';
   };
 
+  const onCreateManualCourse = async () => {
+    if (!user) {
+      Alert.alert('Not authenticated', 'Please sign in again.');
+      return;
+    }
+    const title = manualTitle.trim();
+    if (!title) {
+      Alert.alert('Title required', 'Please enter a course title.');
+      return;
+    }
+
+    setIsManualSaving(true);
+    try {
+      const saved = await createEmptyCourseForManualEditing({
+        createdBy: user.id,
+        title,
+        description: manualDescription.trim(),
+      });
+      if (!saved.ok) {
+        Alert.alert('Could not create course', saved.error);
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      invalidateAllCourseCatalogQueries(queryClient);
+      router.replace(`/admin/courses/${saved.courseId}`);
+    } catch (e) {
+      Alert.alert('Could not create course', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setIsManualSaving(false);
+    }
+  };
+
   const onGenerate = async () => {
     if (!user) { Alert.alert('Not authenticated', 'Please sign in again.'); return; }
 
     const topic = [cropCategory, focusTheme.trim()].filter(Boolean).join(' — ');
+    const seed = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
     setSaveStep('generating');
     setLessonTitles([]);
@@ -216,9 +258,10 @@ export default function CreateCourseScreen() {
     startPulse();
 
     try {
-      // ── Step 1: Generate with Gemini ──
+      // ── Step 1: Generate with AI ──
       const result = await generateCourseWithAI({
         topic,
+        seed,
         onProgress: (msg) => setProgressMsg(msg),
       });
 
@@ -232,72 +275,88 @@ export default function CreateCourseScreen() {
       animateTo(45);
       setLessonTitles(result.course.lessons.map((l) => l.title));
 
-      // ── Step 2: Save course ──
+      // ── Step 2: Save using the same path as manual admin creation ──
       setSaveStep('saving');
-      setProgressMsg('Creating course record…');
       animateTo(55);
 
-      const created = await createCourse({
+      const saved = await persistCourseWithLessonsAndQuizzes({
+        createdBy: user.id,
         title: result.course.title,
         description: result.course.description,
         offline_url: null,
-        created_by: user.id,
         is_published: false,
+        lessons: result.course.lessons.map((lesson) => ({
+          title: lesson.title,
+          description: lesson.summary || null,
+          content: lesson.content || null,
+          video_url: lesson.video_url ?? null,
+          duration_mins: lesson.duration_mins,
+          quiz: lesson.quiz
+            ? {
+                title: lesson.quiz.title,
+                passScore: lesson.quiz.pass_score,
+                questions: lesson.quiz.questions.map((q) => ({
+                  text: q.text,
+                  options: q.options.map((o) => ({
+                    text: o.text,
+                    isCorrect: o.is_correct,
+                  })),
+                })),
+              }
+            : undefined,
+        })),
+        onProgress: (msg) => setProgressMsg(msg),
       });
 
-      if (!created) {
+      if (!saved.ok) {
         stopPulse();
         setSaveStep('error');
-        setProgressMsg('Could not save course. Check your Supabase permissions.');
+        setProgressMsg(saved.error);
         return;
       }
 
-      // ── Step 3: Batch-insert all lessons in ONE call ──
-      setProgressMsg('Saving all lessons…');
-      animateTo(75);
-
-      const lessonRows = result.course.lessons.map((lesson, i) => ({
-        course_id:    created.id,
-        order_index:  i,
-        title:        lesson.title,
-        description:  lesson.summary  || null,
-        content:      lesson.content  || null,
-        video_url:    lesson.video_url ?? null,
-        duration_mins: lesson.duration_mins,
-      }));
-
-      const { error: lessonsError } = await supabase
-        .from('lessons')
-        .insert(lessonRows);
-
-      if (lessonsError) {
-        stopPulse();
-        setSaveStep('error');
-        setProgressMsg(`Lessons error: ${lessonsError.message}`);
-        return;
-      }
-
-      // ── Done ──
       animateTo(100);
       stopPulse();
       setSaveStep('done');
-      setProgressMsg('');
+      setProgressMsg(
+        saved.quizCount > 0
+          ? `Saved ${saved.lessonCount} lessons and ${saved.quizCount} quizzes.`
+          : `Saved ${saved.lessonCount} lessons.`
+      );
 
       queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-course-lessons', created.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin-course-lessons', saved.courseId] });
       invalidateAllCourseCatalogQueries(queryClient);
 
       setTimeout(() => {
         setModalVisible(false);
         setSaveStep('idle');
-        router.replace(`/admin/courses/${created.id}`);
+        router.replace(`/admin/courses/${saved.courseId}`);
       }, 1600);
 
     } catch (e) {
       stopPulse();
       setSaveStep('error');
       setProgressMsg(e instanceof Error ? e.message : 'Unexpected error. Please try again.');
+    }
+  };
+
+  const onSuggestTopic = async () => {
+    setIsSuggestingTopic(true);
+    try {
+      const seed = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      const result = await suggestTrendingCourseTopics({ category: cropCategory, count: 6, seed });
+      if (!result.ok) {
+        Alert.alert('Could not suggest topics', result.error);
+        return;
+      }
+      const pick = result.topics[Math.floor(Math.random() * result.topics.length)] ?? '';
+      if (pick) setFocusTheme(pick);
+    } catch (e) {
+      Alert.alert('Could not suggest topics', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setIsSuggestingTopic(false);
     }
   };
 
@@ -369,6 +428,26 @@ export default function CreateCourseScreen() {
                   style={{ color: '#fff', fontSize: 15, fontWeight: '300', paddingVertical: 10 }}
                 />
               </View>
+              <TouchableOpacity
+                onPress={() => void onSuggestTopic()}
+                disabled={isSuggestingTopic}
+                activeOpacity={0.85}
+                style={{
+                  alignSelf: 'flex-start',
+                  marginTop: -18,
+                  marginBottom: 26,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.16)',
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                }}
+              >
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '300' }}>
+                  {isSuggestingTopic ? 'Suggesting…' : 'Suggest trending focus'}
+                </Text>
+              </TouchableOpacity>
 
               {/* Generate CTA */}
               <TouchableOpacity
@@ -389,6 +468,65 @@ export default function CreateCourseScreen() {
           <Text style={{ color: '#78716c', fontSize: 12, fontWeight: '300', lineHeight: 18, textAlign: 'center', marginTop: 16 }}>
             AI generates a full course with 8 detailed lessons.{'\n'}Typically takes 20–40 seconds. You can edit everything after.
           </Text>
+
+          {/* ── Manual creation (same save path, empty shell) ── */}
+          <View style={{ marginTop: 28, backgroundColor: '#fff', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
+            <Text style={{ color: '#78716c', fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 12 }}>
+              MANUAL CREATION
+            </Text>
+            <Text style={{ color: '#44403c', fontSize: 14, fontWeight: '300', lineHeight: 20, marginBottom: 16 }}>
+              Create an empty course, then add lessons and quizzes one by one in the course editor — the same records AI generation saves to.
+            </Text>
+            <Text style={{ color: '#78716c', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8 }}>TITLE</Text>
+            <TextInput
+              value={manualTitle}
+              onChangeText={setManualTitle}
+              placeholder="Course title"
+              placeholderTextColor="#a8a29e"
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: '#d6d3d1',
+                paddingVertical: 10,
+                fontSize: 15,
+                color: '#1c1917',
+                marginBottom: 16,
+              }}
+            />
+            <Text style={{ color: '#78716c', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8 }}>DESCRIPTION</Text>
+            <TextInput
+              value={manualDescription}
+              onChangeText={setManualDescription}
+              placeholder="Short description (optional)"
+              placeholderTextColor="#a8a29e"
+              multiline
+              style={{
+                borderBottomWidth: 1,
+                borderBottomColor: '#d6d3d1',
+                paddingVertical: 10,
+                fontSize: 15,
+                color: '#1c1917',
+                minHeight: 72,
+                marginBottom: 18,
+              }}
+            />
+            <TouchableOpacity
+              onPress={() => void onCreateManualCourse()}
+              disabled={isManualSaving}
+              activeOpacity={0.87}
+              style={{
+                borderRadius: 14,
+                paddingVertical: 14,
+                alignItems: 'center',
+                backgroundColor: isManualSaving ? '#d6d3d1' : '#166534',
+              }}
+            >
+              {isManualSaving ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Create course manually</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
 
@@ -428,7 +566,7 @@ export default function CreateCourseScreen() {
                   {saveStep === 'done' ? 'Course created!' : 'Generating course'}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: '300' }}>
-                  {saveStep === 'done' ? 'Opening course now…' : 'Powered by Gemini AI'}
+                  {saveStep === 'done' ? 'Opening course now…' : 'Powered by OpenAI'}
                 </Text>
               </View>
             </View>
@@ -460,7 +598,7 @@ export default function CreateCourseScreen() {
                 <StepRow label="Generating course content with Gemini…" status={saveStep === 'generating' ? 'active' : saveStep === 'error' ? 'error' : 'done'} />
                 <StepRow label="Saving course to database…"
                   status={saveStep === 'saving' ? 'active' : saveStep === 'done' ? 'done' : saveStep === 'error' ? 'error' : 'pending'} />
-                <StepRow label="Saving all 8 lessons at once…"
+                <StepRow label="Saving lessons and quizzes (manual flow)…"
                   status={saveStep === 'saving' ? 'active' : saveStep === 'done' ? 'done' : saveStep === 'error' ? 'error' : 'pending'} />
               </View>
             )}
