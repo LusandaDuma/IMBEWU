@@ -3,16 +3,16 @@
  */
 
 import { LessonRow, NolwaziActionsModal, ScreenHeader } from '@/components/shared';
-import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { APP_BACKGROUND_COLOR, surfaceContentPanel } from '@/constants/theme';
+import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import { getCourseById, getLessonProgressByLessonIds, getLessonsByCourse } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import type { Lesson } from '@/types';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { BookOpen, MessageCircle } from 'lucide-react-native';
+import { BookOpen, Camera, MessageCircle } from 'lucide-react-native';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -46,6 +46,8 @@ export default function IndependentCourseScreen() {
         : Promise.resolve(new Map()),
     enabled: !!user && lessonIds.length > 0,
   });
+
+  const allLessonsComplete = lessons.length > 0 && lessons.every((lesson) => isLessonComplete(progressByLesson.get(lesson.id)));
 
   useRefetchOnFocus(
     () => {
@@ -152,6 +154,23 @@ export default function IndependentCourseScreen() {
             />
           );
         })}
+
+        {allLessonsComplete && course?.title ? (
+          <View className="px-5 mt-6">
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: '/crop-analysis',
+                  params: { courseTitle: course.title },
+                })
+              }
+              className="flex-row items-center justify-center rounded-2xl bg-[#1B4332] px-5 py-4"
+            >
+              <Camera size={20} color="#C9A84C" />
+              <Text className="ml-3 text-base font-semibold text-[#C9A84C]">📸 Analyse My Crop with Nolwazi</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </ScrollView>
 
       <NolwaziActionsModal

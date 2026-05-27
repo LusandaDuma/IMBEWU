@@ -3,9 +3,9 @@
  * The model may only use declared tools; server tools hit the Edge mediation API; client tools stay in-app.
  */
 
-import { getGeminiApiKey } from '@/services/gemini';
 import { invokeCopilotTool } from '@/services/copilotApi';
 import { CLIENT_ONLY_COPILOT_TOOLS, runCopilotNavigateTo, runCopilotSignOut } from '@/services/copilotClientTools';
+import { getGeminiApiKey } from '@/services/gemini';
 import type { Router } from 'expo-router';
 
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
@@ -382,3 +382,4 @@ export async function runCopilotTurn(params: RunCopilotParams): Promise<{
  * Re-export declarations for unit tests or UI hints.
  */
 export { COPILOT_FUNCTION_DECLARATIONS };
+

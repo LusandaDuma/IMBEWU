@@ -7,7 +7,7 @@ import '../global.css';
 
 import { SupabaseRealtimeSync } from '@/components/SupabaseRealtimeSync';
 import { NolwaziFab } from '@/components/shared';
-import { BRAND_ICON, BRAND_NAME } from '@/constants/brandAssets';
+import { BRAND_ICON } from '@/constants/brandAssets';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
 import { getSession } from '@/services/authService';
 import { getProfile } from '@/services/profileService';
@@ -15,11 +15,10 @@ import supabase from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Image, Platform, Text, View } from 'react-native';
+import { Animated, Image, Platform, Text, View } from 'react-native';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -122,42 +121,127 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   if (!isReady) {
     return (
-      <LinearGradient
-        colors={[APP_BACKGROUND_COLOR, APP_BACKGROUND_COLOR]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        className="flex-1"
-      >
-        <View className="flex-1 items-center justify-center">
-          <Animated.View
-            style={[
-              {
-                transform: [{ scale: scaleAnim }],
-                opacity: opacityAnim,
-              },
-            ]}
-            className="items-center"
-          >
-            <Image source={BRAND_ICON} style={{ width: 74, height: 74, marginBottom: 12 }} resizeMode="contain" />
-            <Image source={BRAND_NAME} style={{ width: 192, height: 48, marginBottom: 8 }} resizeMode="contain" />
-            <Text className="text-black text-center text-base mb-12 max-w-xs">
-              Initializing your learning platform
-            </Text>
-
-            <ActivityIndicator size="large" color="#22c55e" />
-
-            <View className="flex-row mt-8 gap-2">
-              <View className="w-2 h-2 rounded-full bg-primary-500" style={{ opacity: 0.5 }} />
-              <View className="w-2 h-2 rounded-full bg-primary-500" style={{ opacity: 0.5 }} />
-              <View className="w-2 h-2 rounded-full bg-primary-500" style={{ opacity: 0.5 }} />
-            </View>
-          </Animated.View>
-
-          <Text className="absolute bottom-12 text-earth-800 text-xs text-center max-w-xs px-6">
-            Setting up your personalized learning experience
+      <View style={{ flex: 1, backgroundColor: '#032f20' }}>
+        <StatusBar style="light" />
+        
+        {/* Top bar */}
+        <View style={{
+          position: 'absolute', top: 52, left: 0, right: 0,
+          flexDirection: 'row', justifyContent: 'space-between',
+          alignItems: 'center', paddingHorizontal: 24,
+        }}>
+          <Text style={{
+            color: 'rgba(201,168,76,0.9)', fontSize: 11,
+            letterSpacing: 3, fontWeight: '700',
+          }}>
+            IMBEWU PREMIUM
           </Text>
+          <View style={{
+            borderWidth: 1, borderColor: 'rgba(201,168,76,0.4)',
+            borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+          }}>
+            <Text style={{ color: '#C9A84C', fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>
+              V1.0 LIVE
+            </Text>
+          </View>
         </View>
-      </LinearGradient>
+
+        {/* Center content */}
+        <Animated.View style={{
+          flex: 1, alignItems: 'center', justifyContent: 'center',
+          transform: [{ scale: scaleAnim }],
+          opacity: opacityAnim,
+        }}>
+          {/* Concentric circles */}
+          <View style={{
+            width: 160, height: 160, borderRadius: 80,
+            borderWidth: 1, borderColor: 'rgba(201,168,76,0.2)',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <View style={{
+              width: 120, height: 120, borderRadius: 60,
+              borderWidth: 1, borderColor: 'rgba(201,168,76,0.35)',
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <View style={{
+                width: 80, height: 80, borderRadius: 40,
+                backgroundColor: 'rgba(201,168,76,0.1)',
+                borderWidth: 2, borderColor: '#C9A84C',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Image
+                  source={BRAND_ICON}
+                  style={{ width: 40, height: 40 }}
+                  resizeMode="contain"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Brand name */}
+          <Text style={{
+            color: 'white', fontSize: 36, letterSpacing: 12,
+            fontWeight: '300', marginTop: 32, marginBottom: 8,
+            fontFamily: 'serif',
+          }}>
+            IMBEWU
+          </Text>
+
+          {/* Animated loading text */}
+          <Text style={{
+            color: 'rgba(201,168,76,0.8)', fontSize: 13,
+            fontStyle: 'italic', fontFamily: 'serif',
+            marginBottom: 40, letterSpacing: 1,
+          }}>
+            Establishing secure botanical connection...
+          </Text>
+
+          {/* Progress bar */}
+          <View style={{ width: 240, marginBottom: 12 }}>
+            <View style={{
+              flexDirection: 'row', justifyContent: 'space-between',
+              marginBottom: 8,
+            }}>
+              <Text style={{
+                color: 'rgba(255,255,255,0.4)', fontSize: 9,
+                letterSpacing: 2, textTransform: 'uppercase',
+              }}>
+                INITIALIZATION PROGRESS
+              </Text>
+              <Text style={{ color: '#C9A84C', fontSize: 9, fontWeight: '700' }}>
+                LOADING
+              </Text>
+            </View>
+            <View style={{
+              height: 2, backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: 1, overflow: 'hidden',
+            }}>
+              <Animated.View style={{
+                height: '100%', backgroundColor: '#C9A84C',
+                borderRadius: 1, width: '75%',
+              }} />
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Bottom text */}
+        <View style={{ position: 'absolute', bottom: 48, left: 0, right: 0, alignItems: 'center' }}>
+          <Text style={{
+            color: 'rgba(255,255,255,0.4)', fontSize: 9,
+            letterSpacing: 3, textTransform: 'uppercase', marginBottom: 12,
+          }}>
+            SETTING UP YOUR PERSONALIZED LEARNING EXPERIENCE
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={{
+                width: 6, height: 6, borderRadius: 3,
+                backgroundColor: i === 1 ? '#C9A84C' : 'rgba(201,168,76,0.3)',
+              }} />
+            ))}
+          </View>
+        </View>
+      </View>
     );
   }
 
