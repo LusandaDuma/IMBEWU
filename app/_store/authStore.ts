@@ -99,8 +99,10 @@ export const useAuthStore = create<AuthState>()(
         profile: state.profile,
         role: state.role,
         session: state.session,
-        isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => () => {
+        useAuthStore.setState({ isLoading: true, isAuthenticated: false });
+      },
     }
   )
 );

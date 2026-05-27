@@ -120,11 +120,13 @@ export default function RegisterScreen() {
     }
 
     setIsSubmitting(false);
-// Always redirect to OTP verification
-router.push({
-  pathname: '/auth/verify-otp',
-  params: { email: values.email },
-});
+if (values.role === USER_ROLES.COORDINATOR) {
+  router.replace('/coordinator');
+} else if (values.role === USER_ROLES.STUDENT) {
+  router.replace('/student');
+} else {
+  router.replace('/independent');
+}
   };
 
   const inputStyle = {

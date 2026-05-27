@@ -87,7 +87,7 @@ export async function signUp(
     return {
       data: {
         session: data.session,
-        requiresEmailConfirmation: Boolean(data.user && !data.session),
+        requiresEmailConfirmation: false, // email confirmation disabled
       },
       error: null,
     };

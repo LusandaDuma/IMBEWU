@@ -1,6 +1,5 @@
 /**
  * @fileoverview Admin LMS control room — luxury emerald & gold theme.
- * Keeps all existing data fetching, replaces UI with premium design.
  */
 
 import { DashboardStatsGrid } from '@/components/shared';
@@ -22,15 +21,11 @@ import {
   Sprout,
   TrendingUp,
   UserCog,
-  Users
+  UserPlus,
+  Users,
 } from 'lucide-react-native';
 import { useMemo } from 'react';
-import {
-  ScrollView,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const EMERALD = '#032f20';
@@ -127,29 +122,44 @@ export default function AdminDashboard() {
           <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 20, marginBottom: 20 }}>
             Monitor course completion, manage coordinators, and query our indigenous knowledge database using the Copilot helper.
           </Text>
+
+          {/* ── CTA row: Add Course + Add Learner ── */}
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity
               onPress={() => router.push('/admin/courses/new')}
               style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
                 backgroundColor: GOLD,
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 10,
+                paddingVertical: 12,
+                borderRadius: 12,
               }}
+              activeOpacity={0.85}
             >
-              <Text style={{ color: DARK, fontSize: 12, fontWeight: '700' }}>Design Course</Text>
+              <Plus size={15} color={DARK} strokeWidth={2.5} />
+              <Text style={{ color: DARK, fontSize: 13, fontWeight: '700' }}>Add Course</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               onPress={() => router.push('/admin/users-new')}
               style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
                 borderWidth: 1,
-                borderColor: 'rgba(255,255,255,0.3)',
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 10,
+                borderColor: 'rgba(255,255,255,0.35)',
+                paddingVertical: 12,
+                borderRadius: 12,
               }}
+              activeOpacity={0.85}
             >
-              <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>Add Learner</Text>
+              <UserPlus size={15} color="white" strokeWidth={2} />
+              <Text style={{ color: 'white', fontSize: 13, fontWeight: '600' }}>Add Learner</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -240,7 +250,6 @@ export default function AdminDashboard() {
           <Text style={{ color: '#8B7355', fontSize: 13, marginBottom: 16 }}>
             Deeper metrics — user mix, content inventory, and recent momentum.
           </Text>
-
           {advancedError ? (
             <Text style={{ color: '#ef4444', fontSize: 13, marginBottom: 12 }}>
               Could not load advanced stats. Try again later.
@@ -264,7 +273,6 @@ export default function AdminDashboard() {
               <Text style={{ color: GOLD, fontSize: 13, fontWeight: '600' }}>View all</Text>
             </TouchableOpacity>
           </View>
-
           <View style={{
             backgroundColor: 'white',
             borderRadius: 16,
@@ -274,9 +282,7 @@ export default function AdminDashboard() {
           }}>
             {isError ? (
               <View style={{ padding: 20 }}>
-                <Text style={{ color: '#ef4444', fontSize: 13 }}>
-                  Unable to load analytics right now.
-                </Text>
+                <Text style={{ color: '#ef4444', fontSize: 13 }}>Unable to load analytics right now.</Text>
               </View>
             ) : recentActions.length === 0 ? (
               <View style={{ padding: 20 }}>
@@ -297,13 +303,7 @@ export default function AdminDashboard() {
                     gap: 12,
                   }}
                 >
-                  <View style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: GOLD,
-                    marginTop: 5,
-                  }} />
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: GOLD, marginTop: 5 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: DARK, fontSize: 13, lineHeight: 20 }}>{action.text}</Text>
                     <Text style={{ color: '#8B7355', fontSize: 11, marginTop: 4 }}>
@@ -318,7 +318,7 @@ export default function AdminDashboard() {
 
       </ScrollView>
 
-      {/* FAB - Add Course */}
+      {/* FAB */}
       <TouchableOpacity
         onPress={() => router.push('/admin/courses/new')}
         style={{

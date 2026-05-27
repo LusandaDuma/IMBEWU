@@ -1,15 +1,14 @@
 /**
- * @fileoverview Nolwazi — AgroLearn / Imbewu LMS AI copilot (Gemini + tools + mediation API).
+ * @fileoverview Nolwazi — Imbewu Copilot UI
+ * Design: dark-green header, white chat body, gold accents, pill badge.
  */
 
-import { Input } from '@/components/shared';
 import { NOLWAZI_SYSTEM_INSTRUCTION } from '@/constants/nolwaziKnowledge';
 import { runCopilotTurn, type CopilotContent, type ToolLogEntry } from '@/services/geminiCopilot';
 import { useAuthStore } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, SendHorizontal, Sparkles, Wrench } from 'lucide-react-native';
+import { Leaf, SendHorizontal, Sparkles, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,10 +16,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// ── Constants ────────────────────────────────────────────────────────────────
+const EMERALD   = '#032f20';
+const EMERALD_2 = '#0a3d28';
+const GOLD      = '#C9A84C';
+const WHITE     = '#ffffff';
+const CREAM     = '#F7F5F0';
 
 type Msg = {
   id: string;
@@ -35,15 +42,71 @@ COPILOT (REGISTERED TOOLS ONLY)
 - Use only the provided function tools for account data, catalogue, progress, self-enrolment, or safe navigation. Do not claim you performed an action without a tool result.
 - If the user is not signed in, say so and use navigateTo("/auth/login") or answer generally without inventing their data.`;
 
-function getGreeting(name?: string | null): string {
-  if (name?.trim()) {
-    return `I'm Nolwazi 🌱
-Welcome back, ${name}. What would you like to grow today?`;
-  }
-
-  return `I'm Nolwazi 🌱
-What would you like to grow today?`;
+function getWelcomeText(name?: string | null): string {
+  const greeting = name?.trim() ? `Abalimi (${name}), peace be with you.` : 'Abalimi (Grower), peace be with you.';
+  return `${greeting} I am your specialized Imbewu Study Copilot. Struggling with a term like 'Mycorrhizae' or need swale calculations? Let me assist you.`;
 }
+
+// ── Bubble components ────────────────────────────────────────────────────────
+
+function AssistantBubble({ msg }: { msg: Msg }) {
+  return (
+    <View style={{ marginBottom: 16, maxWidth: '90%', alignSelf: 'flex-start' }}>
+      {/* Label */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+        <Leaf size={11} color={GOLD} strokeWidth={2} />
+        <Text style={{ color: GOLD, fontSize: 9, fontWeight: '700', letterSpacing: 1.5 }}>
+          AGRO-BOTANICAL ASSISTANT
+        </Text>
+      </View>
+      {/* Card */}
+      <View style={{
+        backgroundColor: WHITE,
+        borderRadius: 14,
+        borderTopLeftRadius: 2,
+        padding: 14,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 6,
+        elevation: 2,
+      }}>
+        <Text style={{ color: '#1a1a1a', fontSize: 14, lineHeight: 22, fontWeight: '300' }}>
+          {msg.text}
+        </Text>
+        {msg.toolLog && msg.toolLog.length > 0 && (
+          <View style={{ marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#f0ece6' }}>
+            {msg.toolLog.map((t, i) => (
+              <Text key={i} style={{ fontSize: 11, color: '#7a7060', fontWeight: '300', lineHeight: 16 }}>
+                {t.ok ? '✓' : '—'} {t.summary}
+              </Text>
+            ))}
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+function UserBubble({ msg }: { msg: Msg }) {
+  return (
+    <View style={{ marginBottom: 16, maxWidth: '80%', alignSelf: 'flex-end' }}>
+      <View style={{
+        backgroundColor: EMERALD,
+        borderRadius: 14,
+        borderBottomRightRadius: 2,
+        padding: 12,
+        paddingHorizontal: 16,
+      }}>
+        <Text style={{ color: WHITE, fontSize: 14, lineHeight: 21, fontWeight: '300' }}>
+          {msg.text}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Main screen ──────────────────────────────────────────────────────────────
 
 export default function NolwaziScreen() {
   const router = useRouter();
@@ -51,8 +114,8 @@ export default function NolwaziScreen() {
   const queryClient = useQueryClient();
   const { profile, role, isAuthenticated, session } = useAuthStore();
   const userFirstName = profile?.first_name ?? null;
-  const userLastName = profile?.last_name ?? null;
-  const displayName = [userFirstName, userLastName].filter(Boolean).join(' ').trim() || userFirstName;
+  const userLastName  = profile?.last_name  ?? null;
+  const displayName   = [userFirstName, userLastName].filter(Boolean).join(' ').trim() || userFirstName;
   const insets = useSafeAreaInsets();
 
   const apiContentsRef = useRef<CopilotContent[]>([]);
@@ -67,22 +130,20 @@ export default function NolwaziScreen() {
       `- displayName: ${displayName ?? 'unknown'}`,
       '- If the user asks who they are, use this context. Greet with first name when natural.',
     ].join('\n');
-
     return `${NOLWAZI_SYSTEM_INSTRUCTION}${COPILOT_ADDENDUM}\n\n${userContext}`;
   }, [displayName, isAuthenticated, role, userFirstName, userLastName]);
 
   const listRef = useRef<FlatList<Msg>>(null);
-  const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      text: getGreeting(displayName),
-    },
-  ]);
+  const [input, setInput]   = useState('');
   const [sending, setSending] = useState(false);
   const sendingRef = useRef(false);
   const consumedPrefillRef = useRef(false);
+
+  const [messages, setMessages] = useState<Msg[]>([{
+    id: 'welcome',
+    role: 'assistant',
+    text: getWelcomeText(displayName),
+  }]);
 
   const getAccessToken = useCallback(
     () => session?.access_token ?? useAuthStore.getState().session?.access_token ?? null,
@@ -93,7 +154,6 @@ export default function NolwaziScreen() {
     const trimmed = input.trim();
     if (!trimmed || sendingRef.current) return;
     sendingRef.current = true;
-
     setInput('');
     setSending(true);
 
@@ -111,7 +171,6 @@ export default function NolwaziScreen() {
         router,
       });
 
-      // Always sync API thread (including failed turns where finalContents = prior only)
       apiContentsRef.current = finalContents;
 
       if (toolLog.some((t) => t.name === 'enrolIfEligible' && t.ok)) {
@@ -121,26 +180,19 @@ export default function NolwaziScreen() {
         void queryClient.invalidateQueries({ queryKey: ['course'] });
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `a-${Date.now()}`,
-          role: 'assistant',
-          text: assistantText,
-          toolLog: toolLog.length > 0 ? toolLog : undefined,
-        },
-      ]);
+      setMessages((prev) => [...prev, {
+        id: `a-${Date.now()}`,
+        role: 'assistant',
+        text: assistantText,
+        toolLog: toolLog.length > 0 ? toolLog : undefined,
+      }]);
     } catch (e) {
       apiContentsRef.current = priorContents;
-      const message = e instanceof Error ? e.message : 'Unexpected error';
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `e-${Date.now()}`,
-          role: 'assistant',
-          text: `Something went wrong: ${message}`,
-        },
-      ]);
+      setMessages((prev) => [...prev, {
+        id: `e-${Date.now()}`,
+        role: 'assistant',
+        text: `Something went wrong: ${e instanceof Error ? e.message : 'Unexpected error'}`,
+      }]);
     } finally {
       sendingRef.current = false;
       setSending(false);
@@ -155,104 +207,130 @@ export default function NolwaziScreen() {
   }, [params.q]);
 
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-        >
-          <View className="px-5 pt-2 pb-3 flex-row items-center gap-3">
+    <SafeAreaView style={{ flex: 1, backgroundColor: EMERALD }} edges={['top']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        {/* ── Header ── */}
+        <View style={{
+          backgroundColor: EMERALD,
+          paddingHorizontal: 20,
+          paddingTop: 10,
+          paddingBottom: 20,
+        }}>
+          {/* Top row: title + close */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{
+                width: 34, height: 34, borderRadius: 17,
+                backgroundColor: 'rgba(201,168,76,0.15)',
+                borderWidth: 1, borderColor: 'rgba(201,168,76,0.4)',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Sparkles size={16} color={GOLD} strokeWidth={1.5} />
+              </View>
+              <View>
+                <Text style={{ color: WHITE, fontSize: 17, fontWeight: '600', letterSpacing: 0.2 }}>
+                  Imbewu Copilot
+                </Text>
+                <Text style={{ color: GOLD, fontSize: 9, fontWeight: '700', letterSpacing: 2 }}>
+                  AGRO-ECOSYSTEM ASSISTANT
+                </Text>
+              </View>
+            </View>
+
             <TouchableOpacity
               onPress={() => router.back()}
-              className="w-10 h-10 rounded-full bg-earth-300 items-center justify-center active:bg-earth-400"
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
+              style={{
+                width: 32, height: 32, borderRadius: 16,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+              activeOpacity={0.8}
             >
-              <ArrowLeft size={20} color="#1c1917" />
+              <X size={16} color="rgba(255,255,255,0.8)" strokeWidth={2} />
             </TouchableOpacity>
-            <View className="flex-1">
-              <View className="flex-row items-center gap-2">
-                <Sparkles size={18} color="#15803d" />
-                <Text className="text-xl font-light text-black tracking-tight">Nolwazi</Text>
-              </View>
-              <Text className="text-earth-700 text-xs mt-0.5 font-light">
-                AgroLearn copilot — tools & your data (when signed in)
-              </Text>
-            </View>
           </View>
+        </View>
 
+        {/* ── Chat area ── */}
+        <View style={{ flex: 1, backgroundColor: CREAM }}>
           <FlatList
             ref={listRef}
             data={messages}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, flexGrow: 1 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-            renderItem={({ item }) => (
-              <View
-                className={`max-w-[92%] mb-4 ${
-                  item.role === 'user' ? 'self-end border-b-2 border-primary-600/70 pb-2' : 'self-start border-b border-earth-400/40 pb-2'
-                }`}
-              >
-                <Text
-                  className={`text-sm leading-5 font-light ${
-                    item.role === 'user' ? 'text-earth-900 text-right' : 'text-earth-900'
-                  }`}
-                >
-                  {item.text}
-                </Text>
-                {item.toolLog && item.toolLog.length > 0 ? (
-                  <View className="mt-2.5 pl-0 pr-0 rounded-2xl bg-white/50 px-3 py-2">
-                    <View className="flex-row items-center gap-1.5 mb-1">
-                      <Wrench size={12} color="#57534e" />
-                      <Text className="text-[11px] text-earth-600 font-medium tracking-wide">Actions</Text>
-                    </View>
-                    {item.toolLog.map((t, ti) => (
-                      <Text
-                        key={`${item.id}-tl-${ti}`}
-                        className="text-[11px] text-earth-700 font-light leading-4 mb-0.5"
-                      >
-                        {t.ok ? '✓' : '—'} {t.summary}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            )}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) =>
+              item.role === 'assistant'
+                ? <AssistantBubble msg={item} />
+                : <UserBubble msg={item} />
+            }
           />
 
-          <View className="px-5 pt-2 gap-2" style={{ paddingBottom: Math.max(insets.bottom, 12) + 16 }}>
-            {sending ? (
-              <View className="flex-row items-center gap-2 px-1">
-                <ActivityIndicator color="#16a34a" />
-                <Text className="text-earth-700 text-xs font-light">Nolwazi is working…</Text>
-              </View>
-            ) : null}
-            <View className="flex-row items-end gap-2">
-              <View className="flex-1 border-b border-earth-400/50 py-1">
-                <Input
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Ask Nolwazi…"
-                  placeholderTextColor="#78716c"
-                  multiline
-                  className="text-earth-900 min-h-[44px] max-h-28 py-2"
-                  editable={!sending}
-                />
-              </View>
-              <TouchableOpacity
-                onPress={send}
-                disabled={sending || !input.trim()}
-                className="h-12 w-12 rounded-full bg-primary-600 items-center justify-center active:opacity-90 disabled:opacity-40"
-                accessibilityRole="button"
-                accessibilityLabel="Send message"
-              >
-                <SendHorizontal size={22} color="#ffffff" strokeWidth={2} />
-              </TouchableOpacity>
+          {/* Typing indicator */}
+          {sending && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingBottom: 8 }}>
+              <ActivityIndicator size="small" color={GOLD} />
+              <Text style={{ color: '#9a8f7f', fontSize: 12, fontStyle: 'italic' }}>
+                Nolwazi is thinking…
+              </Text>
             </View>
+          )}
+        </View>
+
+        {/* ── Input bar ── */}
+        <View style={{
+          backgroundColor: WHITE,
+          borderTopWidth: 1,
+          borderTopColor: '#ede9e0',
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          paddingHorizontal: 16,
+          paddingTop: 12,
+          paddingBottom: Math.max(insets.bottom, 12) + 4,
+          gap: 10,
+        }}>
+          <View style={{
+            flex: 1,
+            backgroundColor: CREAM,
+            borderRadius: 24,
+            borderWidth: 1,
+            borderColor: '#ddd8ce',
+            paddingHorizontal: 16,
+            paddingVertical: 10,
+            minHeight: 44,
+            justifyContent: 'center',
+          }}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask about mycorrhizae, swale designs, or compost..."
+              placeholderTextColor="#b0a898"
+              multiline
+              style={{ color: '#1a1a1a', fontSize: 14, lineHeight: 20, fontWeight: '300', maxHeight: 100 }}
+              editable={!sending}
+              onSubmitEditing={send}
+            />
           </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-    </LinearGradient>
+
+          <TouchableOpacity
+            onPress={send}
+            disabled={sending || !input.trim()}
+            style={{
+              width: 44, height: 44, borderRadius: 22,
+              backgroundColor: input.trim() && !sending ? EMERALD_2 : '#c8c0b4',
+              alignItems: 'center', justifyContent: 'center',
+            }}
+            activeOpacity={0.85}
+          >
+            <SendHorizontal size={19} color={WHITE} strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
