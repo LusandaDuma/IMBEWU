@@ -1,45 +1,60 @@
 import { Button } from '@/components/shared';
 import { fieldPlain } from '@/constants/theme';
 import {
+  addCourseToClass,
   addStudentToClass,
   getClassById,
   getClassMembers,
-  getCourseById,
+  getCourses,
+  getCoursesByClass,
   getLessonsByCourse,
+  removeCourseFromClass,
   removeStudentFromClass,
   searchStudentsByName,
   type StudentSearchResult,
   updateClass,
 } from '@/services/supabase';
-import type { ClassMember, Lesson } from '@/types';
+import type { ClassMember, Course, Lesson } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, Copy, Users } from 'lucide-react-native';
+import { BookOpen, ChevronLeft, ChevronRight, Copy, Plus, Trash2, Users } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const EMERALD = '#032f20';
+const GOLD    = '#C9A84C';
 
 export default function CoordinatorClassScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id } = useLocalSearchParams<{ id: string }>();
   const classId = useMemo(() => (typeof id === 'string' ? id : ''), [id]);
+
   const [className, setClassName] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [studentSearchText, setStudentSearchText] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<StudentSearchResult | null>(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
 
+  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: classData, isLoading: classLoading } = useQuery({
     queryKey: ['class', classId],
     queryFn: () => getClassById(classId),
     enabled: !!classId,
   });
 
-  const { data: courseData } = useQuery({
-    queryKey: ['class-course', classData?.course_id],
-    queryFn: () => getCourseById(classData!.course_id),
-    enabled: !!classData?.course_id,
+  const { data: linkedCourses = [] } = useQuery<Course[]>({
+    queryKey: ['class-courses', classId],
+    queryFn: () => getCoursesByClass(classId),
+    enabled: !!classId,
+  });
+
+  const { data: allCourses = [] } = useQuery<Course[]>({
+    queryKey: ['available-courses'],
+    queryFn: getCourses,
+    enabled: showCourseModal,
   });
 
   const { data: classMembers = [] } = useQuery<ClassMember[]>({
@@ -48,10 +63,16 @@ export default function CoordinatorClassScreen() {
     enabled: !!classId,
   });
 
-  const { data: lessons = [] } = useQuery<Lesson[]>({
-    queryKey: ['class-lessons', classData?.course_id],
-    queryFn: () => getLessonsByCourse(classData!.course_id),
-    enabled: !!classData?.course_id,
+  // Lessons for ALL linked courses combined
+  const { data: allLessons = [] } = useQuery<Lesson[]>({
+    queryKey: ['class-lessons-multi', linkedCourses.map((c) => c.id).join(',')],
+    queryFn: async () => {
+      const results = await Promise.all(
+        linkedCourses.map((c) => getLessonsByCourse(c.id))
+      );
+      return results.flat();
+    },
+    enabled: linkedCourses.length > 0,
   });
 
   const { data: studentSearchResults = [], isFetching: searchingStudents } = useQuery<StudentSearchResult[]>({
@@ -62,30 +83,23 @@ export default function CoordinatorClassScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (!classId) {
-        return;
-      }
+      if (!classId) return;
       void queryClient.invalidateQueries({ queryKey: ['class', classId] });
       void queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
-      void queryClient.invalidateQueries({ queryKey: ['class-lessons'] });
-      void queryClient.invalidateQueries({ queryKey: ['class-course'] });
+      void queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
+      void queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
     }, [classId, queryClient])
   );
 
   useEffect(() => {
-    if (!classData) {
-      return;
-    }
+    if (!classData) return;
     setClassName(classData.name);
     setIsActive(classData.is_active);
   }, [classData?.id, classData?.name, classData?.is_active]);
 
+  // ── Mutations ─────────────────────────────────────────────────────────────
   const updateClassMutation = useMutation({
-    mutationFn: async () =>
-      updateClass(classId, {
-        name: className.trim(),
-        is_active: isActive,
-      }),
+    mutationFn: async () => updateClass(classId, { name: className.trim(), is_active: isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['class', classId] });
       queryClient.invalidateQueries({ queryKey: ['coordinator-classes'] });
@@ -94,14 +108,34 @@ export default function CoordinatorClassScreen() {
     onError: () => Alert.alert('Could not save', 'Please try again.'),
   });
 
+  const addCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => addCourseToClass(classId, courseId),
+    onSuccess: (result, courseId) => {
+      if (result === 'already-linked') {
+        Alert.alert('Already linked', 'This course is already linked to this class.');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
+      queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
+      setShowCourseModal(false);
+    },
+    onError: () => Alert.alert('Could not add course', 'Please try again.'),
+  });
+
+  const removeCourseMutation = useMutation({
+    mutationFn: async (courseId: string) => removeCourseFromClass(classId, courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
+      queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
+    },
+    onError: () => Alert.alert('Could not remove course', 'Please try again.'),
+  });
+
   const addStudentMutation = useMutation({
     mutationFn: async () => addStudentToClass(classId, selectedStudent!.id),
     onSuccess: (result) => {
       if (result === 'already-enrolled') {
-        Alert.alert(
-          'Already enrolled',
-          'This student is already enrolled in this course and cannot be added to another class for it.'
-        );
+        Alert.alert('Already enrolled', 'This student is already enrolled in this course and cannot be added to another class for it.');
         return;
       }
       if (result === 'already-in-class') {
@@ -119,6 +153,7 @@ export default function CoordinatorClassScreen() {
     },
     onError: () => Alert.alert('Could not add student', 'Please try again.'),
   });
+
   const removeStudentMutation = useMutation({
     mutationFn: async (studentId: string) => removeStudentFromClass(classId, studentId),
     onSuccess: (result) => {
@@ -136,6 +171,42 @@ export default function CoordinatorClassScreen() {
     onError: () => Alert.alert('Could not remove student', 'Please try again.'),
   });
 
+  // ── Handlers ──────────────────────────────────────────────────────────────
+  const onSaveClass = () => {
+    if (!className.trim()) {
+      Alert.alert('Class name required', 'Please provide a class name.');
+      return;
+    }
+    updateClassMutation.mutate();
+  };
+
+  const onAddStudent = () => {
+    if (!selectedStudent) {
+      Alert.alert('Select a student', 'Search by name or surname and select a student.');
+      return;
+    }
+    addStudentMutation.mutate();
+  };
+
+  const onRemoveStudent = (member: ClassMember) => {
+    if (member.role !== 'student') return;
+    const studentName = member.profile
+      ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
+      : 'this student';
+    Alert.alert('Remove student', `Remove ${studentName} from this class?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeStudentMutation.mutate(member.user_id) },
+    ]);
+  };
+
+  const onRemoveCourse = (course: Course) => {
+    Alert.alert('Remove course', `Remove "${course.title}" from this class?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeCourseMutation.mutate(course.id) },
+    ]);
+  };
+
+  // ── Loading / empty states ────────────────────────────────────────────────
   if (classLoading) {
     return (
       <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
@@ -160,44 +231,17 @@ export default function CoordinatorClassScreen() {
   const coordinatorCount = classMembers.filter((m) => m.role === 'coordinator').length;
   const studentCount = classMembers.filter((m) => m.role === 'student').length;
 
-  const onSaveClass = () => {
-    if (!className.trim()) {
-      Alert.alert('Class name required', 'Please provide a class name.');
-      return;
-    }
-    updateClassMutation.mutate();
-  };
+  // Courses not yet linked (for the picker modal)
+  const unlinkedCourses = allCourses.filter(
+    (c) => !linkedCourses.some((lc) => lc.id === c.id)
+  );
 
-  const onAddStudent = () => {
-    if (!selectedStudent) {
-      Alert.alert('Select a student', 'Search by name or surname and select a student.');
-      return;
-    }
-    addStudentMutation.mutate();
-  };
-
-  const onRemoveStudent = (member: ClassMember) => {
-    if (member.role !== 'student') return;
-    const studentName = member.profile
-      ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
-      : 'this student';
-    Alert.alert(
-      'Remove student',
-      `Remove ${studentName} from this class?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: () => removeStudentMutation.mutate(member.user_id),
-        },
-      ]
-    );
-  };
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
       <SafeAreaView className="flex-1" edges={['top']}>
+
+        {/* Header */}
         <View className="px-5 py-4 flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -219,6 +263,8 @@ export default function CoordinatorClassScreen() {
         </View>
 
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
+
+          {/* ── Class details ── */}
           <View className="mb-4 pb-4 border-b border-earth-400/40">
             <Text className="text-earth-900 font-semibold mb-3">Class details</Text>
             <TextInput
@@ -240,6 +286,84 @@ export default function CoordinatorClassScreen() {
             />
           </View>
 
+          {/* ── Courses ── */}
+          <View className="mb-4 pb-4 border-b border-earth-400/40">
+            <View className="flex-row items-center justify-between mb-3">
+              <View className="flex-row items-center">
+                <BookOpen size={18} color={EMERALD} />
+                <Text className="text-earth-900 font-semibold ml-2">Courses</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowCourseModal(true)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 4,
+                  backgroundColor: EMERALD, borderRadius: 99,
+                  paddingHorizontal: 12, paddingVertical: 6,
+                }}
+              >
+                <Plus size={13} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Add course</Text>
+              </TouchableOpacity>
+            </View>
+
+            {linkedCourses.length === 0 ? (
+              <Text className="text-earth-500 text-sm">No courses linked yet. Tap "Add course" to link one.</Text>
+            ) : (
+              linkedCourses.map((course, ci) => (
+                <View
+                  key={course.id}
+                  style={{
+                    backgroundColor: '#fff', borderRadius: 12,
+                    padding: 12, marginBottom: 8,
+                    borderWidth: 1, borderColor: '#E8DFD0',
+                    flexDirection: 'row', alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: EMERALD, fontWeight: '500', fontSize: 14 }} numberOfLines={1}>
+                      {course.title}
+                    </Text>
+                    {course.description ? (
+                      <Text style={{ color: '#8B7355', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                        {course.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/coordinator/course/${course.id}`)}
+                      style={{
+                        width: 30, height: 30, borderRadius: 15,
+                        backgroundColor: `${GOLD}15`, alignItems: 'center', justifyContent: 'center',
+                        borderWidth: 1, borderColor: `${GOLD}30`,
+                      }}
+                    >
+                      <ChevronRight size={14} color={GOLD} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => onRemoveCourse(course)}
+                      style={{
+                        width: 30, height: 30, borderRadius: 15,
+                        backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center',
+                        borderWidth: 1, borderColor: '#fca5a5',
+                      }}
+                    >
+                      <Trash2 size={13} color="#dc2626" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
+
+            {/* Lessons summary */}
+            {allLessons.length > 0 && (
+              <Text className="text-earth-500 text-xs mt-2">
+                {allLessons.length} lesson{allLessons.length !== 1 ? 's' : ''} across all linked courses
+              </Text>
+            )}
+          </View>
+
+          {/* ── Students and roster ── */}
           <View className="mb-4 pb-4 border-b border-earth-400/40">
             <View className="flex-row items-center mb-2">
               <Users size={18} color="#166534" />
@@ -316,9 +440,7 @@ export default function CoordinatorClassScreen() {
                     </View>
                     {member.role === 'student' ? (
                       <Button
-                        label={
-                          removeStudentMutation.isPending ? 'Removing...' : 'Remove'
-                        }
+                        label={removeStudentMutation.isPending ? 'Removing...' : 'Remove'}
                         variant="danger"
                         size="sm"
                         onPress={() => onRemoveStudent(member)}
@@ -331,37 +453,98 @@ export default function CoordinatorClassScreen() {
             </View>
           </View>
 
-          <View className="pt-1">
-            <View className="flex-row items-center mb-2">
-              <BookOpen size={18} color="#166534" />
-              <Text className="text-earth-900 font-semibold ml-2">Class content</Text>
-            </View>
-            <Text className="text-earth-600 text-sm mb-1">
-              Course: {courseData?.title || classData.course_id}
-            </Text>
-            <Text className="text-earth-500 text-xs mb-3">{lessons.length} lessons linked to this class</Text>
-            <Button
-              label="Edit course details"
-              variant="outline"
-              onPress={() => router.push(`/coordinator/course/${classData.course_id}`)}
-              fullWidth
-            />
-            <View className="h-3" />
-            {lessons.map((lesson, li) => (
-              <View
-                key={lesson.id}
-                className={`py-2 ${li < lessons.length - 1 ? 'border-b border-earth-100/80' : ''}`}
-              >
-                <Text className="text-earth-900">{lesson.order_index}. {lesson.title}</Text>
-                <Text className="text-earth-500 text-xs">{lesson.duration_mins || 0} mins</Text>
+          {/* ── Lessons across all courses ── */}
+          {allLessons.length > 0 && (
+            <View className="pt-1">
+              <View className="flex-row items-center mb-3">
+                <BookOpen size={18} color="#166534" />
+                <Text className="text-earth-900 font-semibold ml-2">All lessons</Text>
               </View>
-            ))}
-            {lessons.length === 0 ? (
-              <Text className="text-earth-500 text-sm">No class content yet for this course.</Text>
-            ) : null}
-          </View>
+              {linkedCourses.map((course) => {
+                const courseLessons = allLessons.filter((l) => l.course_id === course.id);
+                if (courseLessons.length === 0) return null;
+                return (
+                  <View key={course.id} className="mb-4">
+                    <Text style={{ color: EMERALD, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+                      {course.title}
+                    </Text>
+                    {courseLessons.map((lesson, li) => (
+                      <View
+                        key={lesson.id}
+                        className={`py-2 ${li < courseLessons.length - 1 ? 'border-b border-earth-100/80' : ''}`}
+                      >
+                        <Text className="text-earth-900">{lesson.order_index}. {lesson.title}</Text>
+                        <Text className="text-earth-500 text-xs">{lesson.duration_mins || 0} mins</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
         </ScrollView>
       </SafeAreaView>
+
+      {/* ── Course picker modal ── */}
+      <Modal
+        visible={showCourseModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCourseModal(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            paddingHorizontal: 20, paddingVertical: 16,
+            borderBottomWidth: 1, borderBottomColor: '#E8DFD0',
+          }}>
+            <Text style={{ color: EMERALD, fontSize: 18, fontWeight: '600' }}>Add a course</Text>
+            <TouchableOpacity onPress={() => setShowCourseModal(false)}>
+              <Text style={{ color: '#8B7355', fontSize: 15 }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 20 }}>
+            {unlinkedCourses.length === 0 ? (
+              <Text style={{ color: '#8B7355', textAlign: 'center', marginTop: 32 }}>
+                All available courses are already linked to this class.
+              </Text>
+            ) : (
+              unlinkedCourses.map((course) => (
+                <TouchableOpacity
+                  key={course.id}
+                  onPress={() => addCourseMutation.mutate(course.id)}
+                  disabled={addCourseMutation.isPending}
+                  style={{
+                    backgroundColor: '#fff', borderRadius: 14,
+                    padding: 16, marginBottom: 10,
+                    borderWidth: 1, borderColor: '#E8DFD0',
+                    flexDirection: 'row', alignItems: 'center',
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: EMERALD, fontWeight: '500', fontSize: 15 }}>{course.title}</Text>
+                    {course.description ? (
+                      <Text style={{ color: '#8B7355', fontSize: 12, marginTop: 3 }} numberOfLines={2}>
+                        {course.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16,
+                    backgroundColor: `${EMERALD}10`, alignItems: 'center', justifyContent: 'center',
+                    marginLeft: 12, borderWidth: 1, borderColor: `${EMERALD}20`,
+                  }}>
+                    <Plus size={16} color={EMERALD} />
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
     </LinearGradient>
   );
 }

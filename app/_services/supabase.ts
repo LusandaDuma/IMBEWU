@@ -149,6 +149,39 @@ export async function getCourseById(courseId: string): Promise<Course | null> {
   return found;
 }
 
+// Get all courses linked to a class
+export async function getCoursesByClass(classId: string): Promise<Course[]> {
+  const { data, error } = await supabase
+    .from('class_courses')
+    .select('course_id, courses(id, title, description, is_published)')
+    .eq('class_id', classId);
+  if (error) throw error;
+  return (data ?? []).map((row: any) => row.courses) as Course[];
+}
+
+// Add a course to a class
+export async function addCourseToClass(classId: string, courseId: string) {
+  const { error } = await supabase
+    .from('class_courses')
+    .insert({ class_id: classId, course_id: courseId });
+  if (error) {
+    if (error.code === '23505') return 'already-linked'; // unique violation
+    throw error;
+  }
+  return 'linked';
+}
+
+// Remove a course from a class
+export async function removeCourseFromClass(classId: string, courseId: string) {
+  const { error } = await supabase
+    .from('class_courses')
+    .delete()
+    .eq('class_id', classId)
+    .eq('course_id', courseId);
+  if (error) throw error;
+  return 'removed';
+}
+
 type CreateCoursePayload = {
   created_by: string;
   title: string;
