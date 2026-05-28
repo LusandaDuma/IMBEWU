@@ -1,5 +1,11 @@
 /**
  * @fileoverview Persisted authentication state with role/profile helpers.
+ *
+ * KEY RULE: `isLoading` and `isAuthenticated` are NEVER persisted.
+ * They always start as `isLoading: true, isAuthenticated: false` on every
+ * app launch/refresh. The AuthProvider in _layout.tsx calls setAuth() or
+ * clearAuth() after verifying the Supabase session, which sets isLoading:false.
+ * This prevents the "refresh → dashboard" bug on web.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,8 +39,8 @@ export const useAuthStore = create<AuthState>()(
       profile: null,
       role: null,
       session: null,
-      isLoading: true,
-      isAuthenticated: false,
+      isLoading: true,       // always true until AuthProvider verifies session
+      isAuthenticated: false, // always false until AuthProvider confirms
 
       setUser: (user) =>
         set((state) => ({
@@ -76,6 +82,7 @@ export const useAuthStore = create<AuthState>()(
         }),
 
       setLoading: (loading) => set({ isLoading: loading }),
+
       logout: () =>
         set({
           user: null,
@@ -85,6 +92,7 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
           isLoading: false,
         }),
+
       hasRole: (roles) => {
         const role = get().role;
         if (!role) return false;
@@ -94,12 +102,16 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-store',
       storage: createJSONStorage(() => AsyncStorage),
+      // Only persist raw data — never isLoading or isAuthenticated.
+      // On every cold start these reset to isLoading:true, isAuthenticated:false.
       partialize: (state) => ({
         user: state.user,
         profile: state.profile,
         role: state.role,
         session: state.session,
       }),
+      // After AsyncStorage rehydrates, force isLoading=true, isAuthenticated=false
+      // so index.tsx always shows the splash until AuthProvider finishes.
       onRehydrateStorage: () => () => {
         useAuthStore.setState({ isLoading: true, isAuthenticated: false });
       },

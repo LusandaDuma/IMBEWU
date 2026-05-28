@@ -149,39 +149,6 @@ export async function getCourseById(courseId: string): Promise<Course | null> {
   return found;
 }
 
-// Get all courses linked to a class
-export async function getCoursesByClass(classId: string): Promise<Course[]> {
-  const { data, error } = await supabase
-    .from('class_courses')
-    .select('course_id, courses(id, title, description, is_published)')
-    .eq('class_id', classId);
-  if (error) throw error;
-  return (data ?? []).map((row: any) => row.courses) as Course[];
-}
-
-// Add a course to a class
-export async function addCourseToClass(classId: string, courseId: string) {
-  const { error } = await supabase
-    .from('class_courses')
-    .insert({ class_id: classId, course_id: courseId });
-  if (error) {
-    if (error.code === '23505') return 'already-linked'; // unique violation
-    throw error;
-  }
-  return 'linked';
-}
-
-// Remove a course from a class
-export async function removeCourseFromClass(classId: string, courseId: string) {
-  const { error } = await supabase
-    .from('class_courses')
-    .delete()
-    .eq('class_id', classId)
-    .eq('course_id', courseId);
-  if (error) throw error;
-  return 'removed';
-}
-
 type CreateCoursePayload = {
   created_by: string;
   title: string;
@@ -1129,7 +1096,7 @@ export async function getClassByJoinCode(joinCode: string): Promise<Class | null
 
 type CreateClassPayload = {
   created_by: string;
-  course_id: string;
+  course_ids: string[];   // multiple courses per class
   name: string;
   join_code?: string;
 };
@@ -1154,10 +1121,14 @@ function generateClientJoinCode(length = 6): string {
 export async function createClass(classData: CreateClassPayload): Promise<Class | null> {
   const requestedJoinCode = classData.join_code?.trim() || generateClientJoinCode();
 
+  // Use first course_id for the legacy RPC (keeps backward compat with join flow)
+  const primaryCourseId = classData.course_ids[0];
+  if (!primaryCourseId) return null;
+
   const createWithCode = (joinCode: string) =>
     supabase.rpc('create_class_atomic', {
       p_coordinator_id: classData.created_by,
-      p_course_id: classData.course_id,
+      p_course_id: primaryCourseId,
       p_name: classData.name,
       p_join_code: joinCode,
     });
@@ -1173,7 +1144,56 @@ export async function createClass(classData: CreateClassPayload): Promise<Class 
     console.error('Error creating class:', error);
     return null;
   }
-  return data as Class;
+
+  const createdClass = data as Class;
+
+  // Insert all selected courses into class_courses junction table
+  if (classData.course_ids.length > 0) {
+    const rows = classData.course_ids.map((courseId) => ({
+      class_id: createdClass.id,
+      course_id: courseId,
+    }));
+    const { error: junctionError } = await supabase
+      .from('class_courses')
+      .upsert(rows, { onConflict: 'class_id,course_id' });
+    if (junctionError) {
+      console.error('Error linking courses to class:', junctionError);
+    }
+  }
+
+  return createdClass;
+}
+
+export async function getCoursesForClass(classId: string): Promise<Course[]> {
+  const { data, error } = await supabase
+    .from('class_courses')
+    .select('course_id, courses(*)')
+    .eq('class_id', classId);
+
+  if (error) {
+    console.error('Error fetching class courses:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => row.courses).filter(Boolean) as Course[];
+}
+
+export async function addCourseToClass(classId: string, courseId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('class_courses')
+    .upsert({ class_id: classId, course_id: courseId }, { onConflict: 'class_id,course_id' });
+  if (error) { console.error('Error adding course to class:', error); return false; }
+  return true;
+}
+
+export async function removeCourseFromClass(classId: string, courseId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('class_courses')
+    .delete()
+    .eq('class_id', classId)
+    .eq('course_id', courseId);
+  if (error) { console.error('Error removing course from class:', error); return false; }
+  return true;
 }
 
 export async function getClassById(classId: string): Promise<Class | null> {

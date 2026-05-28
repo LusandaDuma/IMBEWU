@@ -98,13 +98,13 @@ export default function Index() {
         Animated.timing(iconPulse, {
           toValue: 1.08,
           duration: 1800,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(iconPulse, {
           toValue: 1,
           duration: 1800,
-          easing: Easing.inOut(Easing.sine),
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
@@ -130,11 +130,14 @@ export default function Index() {
   }, [isLoading]);
 
   // ── Route guard ──────────────────────────────────────────────────────────
-  if (!isLoading && isAuthenticated && profile) {
+  // Always wait for isLoading to be false — this is only set by AuthProvider
+  // after it has verified the Supabase session. This prevents the
+  // "refresh → dashboard" bug caused by Zustand rehydrating stale state.
+  if (isLoading) {
+    // fall through to splash screen below
+  } else if (isAuthenticated && profile) {
     return <Redirect href={getHomeHrefForRole(profile.role)} />;
-  }
-
-  if (!isLoading && !isAuthenticated) {
+  } else {
     return <PublicCatalogHome />;
   }
 

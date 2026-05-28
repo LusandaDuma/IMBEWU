@@ -9,7 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Camera, ChevronLeft, Image as ImageIcon, Leaf, RefreshCw, Sparkles, Upload } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-  ActivityIndicator, Alert, Image, ScrollView,
+  ActivityIndicator, Alert, Image, Platform, ScrollView,
   StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -50,6 +50,30 @@ export default function CropAnalysisScreen() {
   };
 
   const takePicture = async () => {
+    // Web browsers don't support launchCameraAsync — fall back to file picker
+    if (Platform.OS === 'web') {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment'; // hints mobile browsers to open camera
+      input.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file) return;
+        const uri = URL.createObjectURL(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          setImageUri(uri);
+          setImageBase64(base64);
+          setAnalysis(null);
+          setError(null);
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
+      return;
+    }
+
     const hasPermission = await requestPermissions();
     if (!hasPermission) return;
 
@@ -99,18 +123,21 @@ export default function CropAnalysisScreen() {
     
 Analyze this crop photo carefully and provide a detailed assessment. ${courseTitle ? `This crop is from the course: "${courseTitle}".` : ''}
 
-Respond ONLY with valid JSON in this exact format:
+Respond ONLY with valid JSON — no markdown, no backticks, no explanation. Use this exact format:
 {
-  "overallHealth": "excellent" | "good" | "fair" | "poor",
-  "healthScore": <number 0-100>,
-  "isSellable": <true|false>,
+  "overallHealth": "excellent",
+  "healthScore": 85,
+  "isSellable": true,
   "summary": "2-3 sentence overall assessment of the crop",
-  "issues": ["issue 1", "issue 2", "issue 3"],
-  "recommendations": ["recommendation 1", "recommendation 2", "recommendation 3"],
-  "harvestReadiness": "Ready to harvest" | "Not yet ready" | "Overdue for harvest" | "Cannot determine"
+  "issues": ["issue 1", "issue 2"],
+  "recommendations": ["recommendation 1", "recommendation 2"],
+  "harvestReadiness": "Ready to harvest"
 }
 
-Be specific and practical. If the crop looks healthy with no issues, return an empty issues array.
+Valid values for overallHealth: "excellent", "good", "fair", "poor"
+Valid values for harvestReadiness: "Ready to harvest", "Not yet ready", "Overdue for harvest", "Cannot determine"
+
+Be specific and practical. If the crop looks healthy with no issues, return an empty issues array [].
 Focus on: color, leaf condition, signs of disease/pests, growth stage, and market readiness.`;
 
     try {
@@ -131,19 +158,47 @@ Focus on: color, leaf condition, signs of disease/pests, growth stage, and marke
                 },
               ],
             }],
-            generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 1024,
+              responseMimeType: 'application/json',
+            },
           }),
         }
       );
 
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('[CropAnalysis] Gemini API error:', response.status, errData);
+        throw new Error(`API error ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log('[CropAnalysis] Gemini raw response:', JSON.stringify(data));
+
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-      const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      if (!rawText) {
+        throw new Error('Empty response from Gemini');
+      }
+
+      // Strip markdown fences if present
+      const cleaned = rawText
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
 
       const parsed: CropAnalysis = JSON.parse(cleaned);
+
+      // Validate required fields
+      if (!parsed.overallHealth || typeof parsed.healthScore !== 'number') {
+        throw new Error('Invalid response structure');
+      }
+
       setAnalysis(parsed);
     } catch (err) {
-      setError('Could not analyze the image. Please try again with a clearer photo.');
+      console.error('[CropAnalysis] Analysis error:', err);
+      setError('Could not analyze the image. Please try again with a clearer photo of your crop.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -278,7 +333,7 @@ Focus on: color, leaf condition, signs of disease/pests, growth stage, and marke
               {/* Progress Bar */}
               <View style={s.progressBg}>
                 <View style={[s.progressFill, {
-                  width: `${analysis.healthScore}%`,
+                  width: `${analysis.healthScore}%` as any,
                   backgroundColor: getHealthColor(analysis.overallHealth),
                 }]} />
               </View>

@@ -35,12 +35,12 @@ const isWide = width >= 768;
 
 type RegisterRole = RegisterFormData['role'];
 
-const ROLE_OPTIONS: Array<{
+const ROLE_OPTIONS: {
   value: RegisterRole;
   label: string;
   description: string;
   icon: typeof Briefcase;
-}> = [
+}[] = [
   {
     value: USER_ROLES.INDEPENDENT,
     label: 'Self-learner',

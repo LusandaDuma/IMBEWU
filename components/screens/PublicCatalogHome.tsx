@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Guest home — redesigned luxury-themed public catalog home.
  * Keeps existing data fetching and navigation behaviour.
@@ -10,13 +11,13 @@ import { Link, useRouter } from 'expo-router';
 import { GraduationCap, Leaf, MessageCircle, Search, Users } from 'lucide-react-native';
 import { useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -80,9 +81,10 @@ export function PublicCatalogHome() {
           <SearchBar value={q} onChangeText={setQ} placeholder="Search courses…" icon={Search} variant="light" />
         </View>
 
-        <FlatList
+        <FlatList<(typeof filtered)[0]>
           data={[]}
           keyExtractor={(item) => item.id}
+          renderItem={null}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
           refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => refetch()} tintColor={PRIMARY_COLOR} />}
           ListHeaderComponent={
@@ -134,7 +136,8 @@ export function PublicCatalogHome() {
 
                 <View className="h-[1px] bg-[#C9A84C] w-full my-6" />
 
-                <Text className="text-[#1B4332] italic text-center px-4">"The seed of knowledge, planted in every corner of South Africa."</Text>
+                <Text className="text-[#1B4332] italic text-center px-4">&ldquo;The seed of knowledge, planted in every corner of South Africa.&rdquo;</Text>
+
               </View>
 
               {/* For Every Role section - dark emerald background, three role cards */}

@@ -1,60 +1,55 @@
-import { Button } from '@/components/shared';
-import { fieldPlain } from '@/constants/theme';
+/**
+ * @fileoverview Coordinator — Class Detail
+ * - Luxury emerald & gold UI
+ * - Add student button removed (students join via join code)
+ * - Remove student kept (coordinator privilege)
+ * - Edit course removed (read-only)
+ */
+
 import {
-  addCourseToClass,
-  addStudentToClass,
-  getClassById,
-  getClassMembers,
-  getCourses,
-  getCoursesByClass,
-  getLessonsByCourse,
-  removeCourseFromClass,
-  removeStudentFromClass,
-  searchStudentsByName,
-  type StudentSearchResult,
-  updateClass,
+  getClassById, getClassMembers, getCourseById,
+  getCoursesForClass, getLessonsByCourse,
+  removeCourseFromClass, removeStudentFromClass,
+  updateClass, type ClassMember,
 } from '@/services/supabase';
-import type { ClassMember, Course, Lesson } from '@/types';
+import type { Course, Lesson } from '@/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { BookOpen, ChevronLeft, ChevronRight, Copy, Plus, Trash2, Users } from 'lucide-react-native';
+import {
+  BookOpen, ChevronLeft, ChevronRight,
+  Clock, Copy, Layers, Sparkles, UserMinus, Users,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, Alert, ScrollView,
+  Switch, Text, TextInput, TouchableOpacity, View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const EMERALD = '#032f20';
 const GOLD    = '#C9A84C';
+const CREAM   = '#FAF7F2';
+const RED     = '#dc2626';
 
 export default function CoordinatorClassScreen() {
-  const router = useRouter();
+  const router      = useRouter();
   const queryClient = useQueryClient();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const classId = useMemo(() => (typeof id === 'string' ? id : ''), [id]);
+  const { id }      = useLocalSearchParams<{ id: string }>();
+  const classId     = useMemo(() => (typeof id === 'string' ? id : ''), [id]);
 
   const [className, setClassName] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [studentSearchText, setStudentSearchText] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<StudentSearchResult | null>(null);
-  const [showCourseModal, setShowCourseModal] = useState(false);
+  const [isActive, setIsActive]   = useState(true);
 
-  // ── Queries ──────────────────────────────────────────────────────────────
   const { data: classData, isLoading: classLoading } = useQuery({
     queryKey: ['class', classId],
     queryFn: () => getClassById(classId),
     enabled: !!classId,
   });
 
-  const { data: linkedCourses = [] } = useQuery<Course[]>({
-    queryKey: ['class-courses', classId],
-    queryFn: () => getCoursesByClass(classId),
-    enabled: !!classId,
-  });
-
-  const { data: allCourses = [] } = useQuery<Course[]>({
-    queryKey: ['available-courses'],
-    queryFn: getCourses,
-    enabled: showCourseModal,
+  const { data: courseData } = useQuery({
+    queryKey: ['class-course', classData?.course_id],
+    queryFn: () => getCourseById(classData!.course_id),
+    enabled: !!classData?.course_id,
   });
 
   const { data: classMembers = [] } = useQuery<ClassMember[]>({
@@ -63,33 +58,26 @@ export default function CoordinatorClassScreen() {
     enabled: !!classId,
   });
 
-  // Lessons for ALL linked courses combined
-  const { data: allLessons = [] } = useQuery<Lesson[]>({
-    queryKey: ['class-lessons-multi', linkedCourses.map((c) => c.id).join(',')],
-    queryFn: async () => {
-      const results = await Promise.all(
-        linkedCourses.map((c) => getLessonsByCourse(c.id))
-      );
-      return results.flat();
-    },
-    enabled: linkedCourses.length > 0,
+  const { data: linkedCourses = [], refetch: refetchCourses } = useQuery<Course[]>({
+    queryKey: ['class-courses', classId],
+    queryFn: () => getCoursesForClass(classId),
+    enabled: !!classId,
   });
 
-  const { data: studentSearchResults = [], isFetching: searchingStudents } = useQuery<StudentSearchResult[]>({
-    queryKey: ['student-search', studentSearchText],
-    queryFn: () => searchStudentsByName(studentSearchText),
-    enabled: studentSearchText.trim().length >= 2,
+  const { data: lessons = [] } = useQuery<Lesson[]>({
+    queryKey: ['class-lessons', classData?.course_id],
+    queryFn: () => getLessonsByCourse(classData!.course_id),
+    enabled: !!classData?.course_id,
   });
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!classId) return;
-      void queryClient.invalidateQueries({ queryKey: ['class', classId] });
-      void queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
-      void queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
-      void queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
-    }, [classId, queryClient])
-  );
+  useFocusEffect(useCallback(() => {
+    if (!classId) return;
+    void queryClient.invalidateQueries({ queryKey: ['class', classId] });
+    void queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
+    void queryClient.invalidateQueries({ queryKey: ['class-lessons'] });
+    void queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
+    void queryClient.invalidateQueries({ queryKey: ['class-course'] });
+  }, [classId, queryClient]));
 
   useEffect(() => {
     if (!classData) return;
@@ -97,454 +85,327 @@ export default function CoordinatorClassScreen() {
     setIsActive(classData.is_active);
   }, [classData?.id, classData?.name, classData?.is_active]);
 
-  // ── Mutations ─────────────────────────────────────────────────────────────
   const updateClassMutation = useMutation({
-    mutationFn: async () => updateClass(classId, { name: className.trim(), is_active: isActive }),
+    mutationFn: () => updateClass(classId, { name: className.trim(), is_active: isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['class', classId] });
       queryClient.invalidateQueries({ queryKey: ['coordinator-classes'] });
-      Alert.alert('Saved', 'Class details updated.');
+      Alert.alert('Saved ✓', 'Class details updated.');
     },
     onError: () => Alert.alert('Could not save', 'Please try again.'),
   });
 
-  const addCourseMutation = useMutation({
-    mutationFn: async (courseId: string) => addCourseToClass(classId, courseId),
-    onSuccess: (result, courseId) => {
-      if (result === 'already-linked') {
-        Alert.alert('Already linked', 'This course is already linked to this class.');
-        return;
-      }
-      queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
-      queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
-      setShowCourseModal(false);
-    },
-    onError: () => Alert.alert('Could not add course', 'Please try again.'),
-  });
-
-  const removeCourseMutation = useMutation({
-    mutationFn: async (courseId: string) => removeCourseFromClass(classId, courseId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
-      queryClient.invalidateQueries({ queryKey: ['class-lessons-multi'] });
-    },
-    onError: () => Alert.alert('Could not remove course', 'Please try again.'),
-  });
-
-  const addStudentMutation = useMutation({
-    mutationFn: async () => addStudentToClass(classId, selectedStudent!.id),
-    onSuccess: (result) => {
-      if (result === 'already-enrolled') {
-        Alert.alert('Already enrolled', 'This student is already enrolled in this course and cannot be added to another class for it.');
-        return;
-      }
-      if (result === 'already-in-class') {
-        Alert.alert('Already in class', 'This student is already in this class.');
-        return;
-      }
-      if (result !== 'joined') {
-        Alert.alert('Could not add student', 'Please try again.');
-        return;
-      }
-      setStudentSearchText('');
-      setSelectedStudent(null);
-      queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
-      Alert.alert('Student added', 'Student added to class and enrolled in the course.');
-    },
-    onError: () => Alert.alert('Could not add student', 'Please try again.'),
-  });
-
   const removeStudentMutation = useMutation({
-    mutationFn: async (studentId: string) => removeStudentFromClass(classId, studentId),
+    mutationFn: (studentId: string) => removeStudentFromClass(classId, studentId),
     onSuccess: (result) => {
-      if (result === 'not-in-class') {
-        Alert.alert('Student not in class', 'This student is no longer part of this class.');
-        return;
-      }
-      if (result !== 'removed') {
-        Alert.alert('Could not remove student', 'Please try again.');
-        return;
-      }
+      if (result === 'not-in-class') { Alert.alert('Not in class', 'Student is no longer in this class.'); return; }
+      if (result !== 'removed') { Alert.alert('Could not remove', 'Please try again.'); return; }
       queryClient.invalidateQueries({ queryKey: ['class-members', classId] });
-      Alert.alert('Student removed', 'Student has been removed from the class.');
     },
     onError: () => Alert.alert('Could not remove student', 'Please try again.'),
   });
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const onSaveClass = () => {
-    if (!className.trim()) {
-      Alert.alert('Class name required', 'Please provide a class name.');
-      return;
-    }
-    updateClassMutation.mutate();
-  };
-
-  const onAddStudent = () => {
-    if (!selectedStudent) {
-      Alert.alert('Select a student', 'Search by name or surname and select a student.');
-      return;
-    }
-    addStudentMutation.mutate();
-  };
-
-  const onRemoveStudent = (member: ClassMember) => {
-    if (member.role !== 'student') return;
-    const studentName = member.profile
-      ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
-      : 'this student';
-    Alert.alert('Remove student', `Remove ${studentName} from this class?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeStudentMutation.mutate(member.user_id) },
-    ]);
-  };
+  const removeCourseMutation = useMutation({
+    mutationFn: (courseId: string) => removeCourseFromClass(classId, courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-courses', classId] });
+    },
+    onError: () => Alert.alert('Could not remove course', 'Please try again.'),
+  });
 
   const onRemoveCourse = (course: Course) => {
+    if (linkedCourses.length <= 1) {
+      Alert.alert('Cannot remove', 'A class must have at least one course.');
+      return;
+    }
     Alert.alert('Remove course', `Remove "${course.title}" from this class?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', style: 'destructive', onPress: () => removeCourseMutation.mutate(course.id) },
     ]);
   };
 
-  // ── Loading / empty states ────────────────────────────────────────────────
+  const onRemoveStudent = (member: ClassMember) => {
+    if (member.role !== 'student') return;
+    const name = member.profile
+      ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
+      : 'this student';
+    Alert.alert('Remove student', `Remove ${name} from this class?`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Remove', style: 'destructive', onPress: () => removeStudentMutation.mutate(member.user_id) },
+    ]);
+  };
+
   if (classLoading) {
     return (
-      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-        <SafeAreaView className="flex-1 items-center justify-center">
-          <Text className="text-earth-600">Loading class…</Text>
-        </SafeAreaView>
-      </LinearGradient>
+      <SafeAreaView style={{ flex: 1, backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color={EMERALD} />
+      </SafeAreaView>
     );
   }
 
   if (!classData) {
     return (
-      <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-        <SafeAreaView className="flex-1 items-center justify-center px-6">
-          <Text className="text-earth-800 text-lg font-semibold mb-2">Class not found</Text>
-          <Button label="Back to classes" onPress={() => router.back()} />
-        </SafeAreaView>
-      </LinearGradient>
+      <SafeAreaView style={{ flex: 1, backgroundColor: CREAM, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
+        <Text style={{ color: EMERALD, fontSize: 18, fontWeight: '300', marginBottom: 16 }}>Class not found</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ backgroundColor: EMERALD, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 }}>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Go back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     );
   }
 
-  const coordinatorCount = classMembers.filter((m) => m.role === 'coordinator').length;
-  const studentCount = classMembers.filter((m) => m.role === 'student').length;
+  const coordinatorCount = classMembers.filter(m => m.role === 'coordinator').length;
+  const studentCount     = classMembers.filter(m => m.role === 'student').length;
+  const totalMins        = lessons.reduce((s, l) => s + (l.duration_mins ?? 0), 0);
 
-  // Courses not yet linked (for the picker modal)
-  const unlinkedCourses = allCourses.filter(
-    (c) => !linkedCourses.some((lc) => lc.id === c.id)
-  );
-
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} className="flex-1">
-      <SafeAreaView className="flex-1" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
 
-        {/* Header */}
-        <View className="px-5 py-4 flex-row items-center">
+        {/* ── Header ── */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="w-10 h-10 rounded-full bg-earth-900/5 items-center justify-center"
+            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.06)', alignItems: 'center', justifyContent: 'center' }}
           >
-            <ChevronLeft size={22} color="#1c1917" strokeWidth={1.5} />
+            <ChevronLeft size={20} color={EMERALD} strokeWidth={1.5} />
           </TouchableOpacity>
-          <View className="ml-3 flex-1">
-            <Text className="text-black text-xl font-semibold">{classData.name}</Text>
-            <Text className="text-earth-800 text-sm">Class management</Text>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ color: EMERALD, fontSize: 20, fontWeight: '300', letterSpacing: -0.3 }} numberOfLines={1}>
+              {classData.name}
+            </Text>
+            <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300' }}>Class management</Text>
           </View>
+          {/* Join code pill */}
           <TouchableOpacity
-            onPress={() => Alert.alert('Join code', classData.join_code)}
-            className="px-0 py-1 border-b border-accent-600/40 flex-row items-center"
+            onPress={() => Alert.alert('Join Code', `Share this code with students:\n\n${classData.join_code}`)}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: `${GOLD}18`, borderRadius: 99,
+              paddingHorizontal: 12, paddingVertical: 7,
+              borderWidth: 1, borderColor: `${GOLD}40`,
+            }}
+            activeOpacity={0.75}
           >
-            <Text className="text-accent-800 font-bold mr-2">{classData.join_code}</Text>
-            <Copy size={14} color="#b45309" />
+            <Text style={{ color: GOLD, fontWeight: '700', fontSize: 13, letterSpacing: 1 }}>
+              {classData.join_code}
+            </Text>
+            <Copy size={13} color={GOLD} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}>
-
-          {/* ── Class details ── */}
-          <View className="mb-4 pb-4 border-b border-earth-400/40">
-            <Text className="text-earth-900 font-semibold mb-3">Class details</Text>
-            <TextInput
-              value={className}
-              onChangeText={setClassName}
-              placeholder="Class name"
-              placeholderTextColor="#a8a29e"
-              className={`${fieldPlain} mb-3`}
-            />
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-earth-700">Active class</Text>
-              <Switch value={isActive} onValueChange={setIsActive} />
-            </View>
-            <Button
-              label={updateClassMutation.isPending ? 'Saving...' : 'Save class'}
-              onPress={onSaveClass}
-              disabled={updateClassMutation.isPending}
-              fullWidth
-            />
+        {/* ── Hero card ── */}
+        <View style={{
+          backgroundColor: EMERALD, marginHorizontal: 16, marginBottom: 20,
+          borderRadius: 20, padding: 24, borderWidth: 1, borderColor: `${GOLD}40`, overflow: 'hidden',
+        }}>
+          <View style={{ position: 'absolute', right: -8, top: 8, opacity: 0.05 }} pointerEvents="none">
+            <Text style={{ fontSize: 90, fontWeight: '900', color: '#fff', letterSpacing: -4 }}>CL</Text>
           </View>
 
-          {/* ── Courses ── */}
-          <View className="mb-4 pb-4 border-b border-earth-400/40">
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <BookOpen size={18} color={EMERALD} />
-                <Text className="text-earth-900 font-semibold ml-2">Courses</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => setShowCourseModal(true)}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: EMERALD, borderRadius: 99,
-                  paddingHorizontal: 12, paddingVertical: 6,
-                }}
-              >
-                <Plus size={13} color="#fff" />
-                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600' }}>Add course</Text>
-              </TouchableOpacity>
-            </View>
-
-            {linkedCourses.length === 0 ? (
-              <Text className="text-earth-500 text-sm">No courses linked yet. Tap "Add course" to link one.</Text>
-            ) : (
-              linkedCourses.map((course, ci) => (
-                <View
-                  key={course.id}
-                  style={{
-                    backgroundColor: '#fff', borderRadius: 12,
-                    padding: 12, marginBottom: 8,
-                    borderWidth: 1, borderColor: '#E8DFD0',
-                    flexDirection: 'row', alignItems: 'center',
-                  }}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: EMERALD, fontWeight: '500', fontSize: 14 }} numberOfLines={1}>
-                      {course.title}
-                    </Text>
-                    {course.description ? (
-                      <Text style={{ color: '#8B7355', fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                        {course.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 8 }}>
-                    <TouchableOpacity
-                      onPress={() => router.push(`/coordinator/course/${course.id}`)}
-                      style={{
-                        width: 30, height: 30, borderRadius: 15,
-                        backgroundColor: `${GOLD}15`, alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 1, borderColor: `${GOLD}30`,
-                      }}
-                    >
-                      <ChevronRight size={14} color={GOLD} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => onRemoveCourse(course)}
-                      style={{
-                        width: 30, height: 30, borderRadius: 15,
-                        backgroundColor: '#fee2e2', alignItems: 'center', justifyContent: 'center',
-                        borderWidth: 1, borderColor: '#fca5a5',
-                      }}
-                    >
-                      <Trash2 size={13} color="#dc2626" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            )}
-
-            {/* Lessons summary */}
-            {allLessons.length > 0 && (
-              <Text className="text-earth-500 text-xs mt-2">
-                {allLessons.length} lesson{allLessons.length !== 1 ? 's' : ''} across all linked courses
-              </Text>
-            )}
-          </View>
-
-          {/* ── Students and roster ── */}
-          <View className="mb-4 pb-4 border-b border-earth-400/40">
-            <View className="flex-row items-center mb-2">
-              <Users size={18} color="#166534" />
-              <Text className="text-earth-900 font-semibold ml-2">Students and roster</Text>
-            </View>
-            <Text className="text-earth-600 text-sm mb-3">
-              {studentCount} students · {coordinatorCount} coordinators
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+            <Sparkles size={12} color={GOLD} />
+            <Text style={{ color: GOLD, fontSize: 9, fontWeight: '700', letterSpacing: 2 }}>
+              {classData.is_active ? 'ACTIVE CLASS' : 'INACTIVE CLASS'}
             </Text>
-            <TextInput
-              value={studentSearchText}
-              onChangeText={(value) => {
-                setStudentSearchText(value);
-                setSelectedStudent(null);
-              }}
-              placeholder="Search by name or surname"
-              placeholderTextColor="#a8a29e"
-              className={`${fieldPlain} mb-3`}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {selectedStudent ? (
-              <View className="mb-3 py-2 border-b border-primary-500/30">
-                <Text className="text-primary-800 text-sm font-medium">
-                  Selected: {selectedStudent.first_name} {selectedStudent.last_name}
-                </Text>
-              </View>
-            ) : null}
-            {studentSearchText.trim().length >= 2 ? (
-              <View className="mb-3 overflow-hidden border-b border-earth-400/30">
-                {studentSearchResults.map((student, si) => (
-                  <TouchableOpacity
-                    key={student.id}
-                    onPress={() => {
-                      setSelectedStudent(student);
-                      setStudentSearchText(`${student.first_name} ${student.last_name}`);
-                    }}
-                    className={`px-0 py-3 ${si < studentSearchResults.length - 1 ? 'border-b border-earth-400/30' : ''}`}
-                  >
-                    <Text className="text-earth-900 font-medium">
-                      {student.first_name} {student.last_name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-                {searchingStudents ? (
-                  <Text className="text-earth-500 text-sm px-4 py-3">Searching…</Text>
-                ) : null}
-                {!searchingStudents && studentSearchResults.length === 0 ? (
-                  <Text className="text-earth-500 text-sm px-4 py-3">No students found.</Text>
-                ) : null}
-              </View>
-            ) : null}
-            <Button
-              label={addStudentMutation.isPending ? 'Adding...' : 'Add student'}
-              onPress={onAddStudent}
-              disabled={addStudentMutation.isPending}
-              fullWidth
-            />
-            <View className="mt-4">
-              {classMembers.map((member, mi) => (
-                <View
-                  key={member.id}
-                  className={`py-2 ${mi < classMembers.length - 1 ? 'border-b border-earth-100/80' : ''}`}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="flex-1">
-                      <Text className="text-earth-900 font-medium">
-                        {member.profile
-                          ? `${member.profile.first_name} ${member.profile.last_name}`
-                          : member.user_id}
-                      </Text>
-                      <Text className="text-earth-500 text-xs">
-                        {member.role} · joined {new Date(member.joined_at).toLocaleDateString()}
-                      </Text>
-                    </View>
-                    {member.role === 'student' ? (
-                      <Button
-                        label={removeStudentMutation.isPending ? 'Removing...' : 'Remove'}
-                        variant="danger"
-                        size="sm"
-                        onPress={() => onRemoveStudent(member)}
-                        disabled={removeStudentMutation.isPending}
-                      />
-                    ) : null}
-                  </View>
-                </View>
-              ))}
-            </View>
           </View>
 
-          {/* ── Lessons across all courses ── */}
-          {allLessons.length > 0 && (
-            <View className="pt-1">
-              <View className="flex-row items-center mb-3">
-                <BookOpen size={18} color="#166534" />
-                <Text className="text-earth-900 font-semibold ml-2">All lessons</Text>
-              </View>
-              {linkedCourses.map((course) => {
-                const courseLessons = allLessons.filter((l) => l.course_id === course.id);
-                if (courseLessons.length === 0) return null;
-                return (
-                  <View key={course.id} className="mb-4">
-                    <Text style={{ color: EMERALD, fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-                      {course.title}
-                    </Text>
-                    {courseLessons.map((lesson, li) => (
-                      <View
-                        key={lesson.id}
-                        className={`py-2 ${li < courseLessons.length - 1 ? 'border-b border-earth-100/80' : ''}`}
-                      >
-                        <Text className="text-earth-900">{lesson.order_index}. {lesson.title}</Text>
-                        <Text className="text-earth-500 text-xs">{lesson.duration_mins || 0} mins</Text>
-                      </View>
-                    ))}
-                  </View>
-                );
-              })}
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '400', marginBottom: 18, letterSpacing: -0.3 }}>
+            {classData.name}
+          </Text>
+
+          {/* Stats pills */}
+          <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
+              <Users size={12} color={GOLD} />
+              <Text style={{ color: GOLD, fontSize: 11, fontWeight: '600' }}>{studentCount} student{studentCount !== 1 ? 's' : ''}</Text>
             </View>
-          )}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
+              <BookOpen size={12} color="rgba(255,255,255,0.6)" />
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '300' }}>{lessons.length} lessons</Text>
+            </View>
+            {totalMins > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 99, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' }}>
+                <Clock size={12} color="rgba(255,255,255,0.6)" />
+                <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '300' }}>{totalMins} min total</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
-        </ScrollView>
-      </SafeAreaView>
-
-      {/* ── Course picker modal ── */}
-      <Modal
-        visible={showCourseModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowCourseModal(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#FAF7F2' }}>
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            paddingHorizontal: 20, paddingVertical: 16,
-            borderBottomWidth: 1, borderBottomColor: '#E8DFD0',
-          }}>
-            <Text style={{ color: EMERALD, fontSize: 18, fontWeight: '600' }}>Add a course</Text>
-            <TouchableOpacity onPress={() => setShowCourseModal(false)}>
-              <Text style={{ color: '#8B7355', fontSize: 15 }}>Cancel</Text>
+        {/* ── Class settings ── */}
+        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+          <Text style={{ color: EMERALD, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Class Settings
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300', marginBottom: 14 }}>
+            Rename the class or toggle its active status.
+          </Text>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E8DFD0', gap: 14 }}>
+            <View>
+              <Text style={{ color: '#8B7355', fontSize: 10, fontWeight: '700', letterSpacing: 1.5, marginBottom: 8 }}>CLASS NAME</Text>
+              <TextInput
+                value={className}
+                onChangeText={setClassName}
+                placeholder="Class name"
+                placeholderTextColor="#C4B89A"
+                style={{ backgroundColor: CREAM, borderWidth: 1, borderColor: '#E8DFD0', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, color: EMERALD }}
+              />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ color: EMERALD, fontSize: 14, fontWeight: '400' }}>Active class</Text>
+                <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300' }}>Students can join and learn</Text>
+              </View>
+              <Switch
+                value={isActive}
+                onValueChange={setIsActive}
+                trackColor={{ false: '#E8DFD0', true: `${EMERALD}80` }}
+                thumbColor={isActive ? EMERALD : '#C4B89A'}
+              />
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                if (!className.trim()) { Alert.alert('Name required', 'Please enter a class name.'); return; }
+                updateClassMutation.mutate();
+              }}
+              disabled={updateClassMutation.isPending}
+              style={{ backgroundColor: updateClassMutation.isPending ? `${EMERALD}60` : EMERALD, borderRadius: 12, paddingVertical: 13, alignItems: 'center' }}
+              activeOpacity={0.87}
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
+                {updateClassMutation.isPending ? 'Saving…' : 'Save changes'}
+              </Text>
             </TouchableOpacity>
           </View>
+        </View>
 
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            {unlinkedCourses.length === 0 ? (
-              <Text style={{ color: '#8B7355', textAlign: 'center', marginTop: 32 }}>
-                All available courses are already linked to this class.
-              </Text>
+        {/* ── Roster ── */}
+        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+          <Text style={{ color: EMERALD, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Students & Roster
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300', marginBottom: 14 }}>
+            {studentCount} student{studentCount !== 1 ? 's' : ''} · {coordinatorCount} coordinator{coordinatorCount !== 1 ? 's' : ''} · Students join using the class code
+          </Text>
+
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#E8DFD0', overflow: 'hidden' }}>
+            {classMembers.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Users size={28} color="#E8DFD0" />
+                <Text style={{ color: '#8B7355', fontSize: 13, marginTop: 10, textAlign: 'center' }}>
+                  No members yet. Share the join code{'\n'}
+                  <Text style={{ color: GOLD, fontWeight: '700' }}>{classData.join_code}</Text>
+                  {' '}with your students.
+                </Text>
+              </View>
             ) : (
-              unlinkedCourses.map((course) => (
+              classMembers.map((member, i) => {
+                const name = member.profile
+                  ? `${member.profile.first_name} ${member.profile.last_name}`.trim()
+                  : member.user_id;
+                return (
+                  <View key={member.id} style={{
+                    flexDirection: 'row', alignItems: 'center', padding: 14,
+                    borderBottomWidth: i < classMembers.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F0EBE3',
+                  }}>
+                    {/* Avatar */}
+                    <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: member.role === 'coordinator' ? `${EMERALD}15` : `${GOLD}15`, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Text style={{ color: member.role === 'coordinator' ? EMERALD : GOLD, fontSize: 14, fontWeight: '600' }}>
+                        {name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: EMERALD, fontSize: 14, fontWeight: '400' }}>{name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: member.role === 'coordinator' ? EMERALD : GOLD }} />
+                        <Text style={{ color: '#8B7355', fontSize: 11 }}>
+                          {member.role} · joined {new Date(member.joined_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Remove student only */}
+                    {member.role === 'student' && (
+                      <TouchableOpacity
+                        onPress={() => onRemoveStudent(member)}
+                        disabled={removeStudentMutation.isPending}
+                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca' }}
+                        activeOpacity={0.8}
+                      >
+                        <UserMinus size={15} color={RED} strokeWidth={2} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
+
+        {/* ── Linked Courses ── */}
+        <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+          <Text style={{ color: EMERALD, fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Linked Courses
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300', marginBottom: 14 }}>
+            {linkedCourses.length} course{linkedCourses.length !== 1 ? 's' : ''} · all accessible with one join code
+          </Text>
+
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#E8DFD0', overflow: 'hidden' }}>
+            {linkedCourses.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <BookOpen size={28} color="#E8DFD0" />
+                <Text style={{ color: '#8B7355', fontSize: 13, marginTop: 10, textAlign: 'center' }}>
+                  No courses linked yet.
+                </Text>
+              </View>
+            ) : (
+              linkedCourses.map((course, ci) => (
                 <TouchableOpacity
                   key={course.id}
-                  onPress={() => addCourseMutation.mutate(course.id)}
-                  disabled={addCourseMutation.isPending}
+                  onPress={() => router.push(`/coordinator/course/${course.id}`)}
+                  activeOpacity={0.85}
                   style={{
-                    backgroundColor: '#fff', borderRadius: 14,
-                    padding: 16, marginBottom: 10,
-                    borderWidth: 1, borderColor: '#E8DFD0',
-                    flexDirection: 'row', alignItems: 'center',
+                    flexDirection: 'row', alignItems: 'center', padding: 16,
+                    borderBottomWidth: ci < linkedCourses.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F0EBE3',
                   }}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: EMERALD, fontWeight: '500', fontSize: 15 }}>{course.title}</Text>
-                    {course.description ? (
-                      <Text style={{ color: '#8B7355', fontSize: 12, marginTop: 3 }} numberOfLines={2}>
-                        {course.description}
-                      </Text>
-                    ) : null}
+                  {/* Number badge */}
+                  <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: `${EMERALD}10`, alignItems: 'center', justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: `${EMERALD}20` }}>
+                    <Text style={{ color: EMERALD, fontSize: 13, fontWeight: '600' }}>{ci + 1}</Text>
                   </View>
-                  <View style={{
-                    width: 32, height: 32, borderRadius: 16,
-                    backgroundColor: `${EMERALD}10`, alignItems: 'center', justifyContent: 'center',
-                    marginLeft: 12, borderWidth: 1, borderColor: `${EMERALD}20`,
-                  }}>
-                    <Plus size={16} color={EMERALD} />
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={{ color: EMERALD, fontSize: 14, fontWeight: '400' }} numberOfLines={1}>
+                      {course.title}
+                    </Text>
+                    <Text style={{ color: '#8B7355', fontSize: 11, marginTop: 2 }} numberOfLines={1}>
+                      {course.description ?? 'Tap to preview lessons'}
+                    </Text>
+                  </View>
+                  {/* Remove course button (only if more than 1) */}
+                  {linkedCourses.length > 1 && (
+                    <TouchableOpacity
+                      onPress={() => onRemoveCourse(course)}
+                      style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#fef2f2', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#fecaca', marginRight: 6 }}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={{ color: '#dc2626', fontSize: 14, fontWeight: '700' }}>−</Text>
+                    </TouchableOpacity>
+                  )}
+                  <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: `${GOLD}15`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${GOLD}30` }}>
+                    <ChevronRight size={14} color={GOLD} strokeWidth={2} />
                   </View>
                 </TouchableOpacity>
               ))
             )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          </View>
+        </View>
 
-    </LinearGradient>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

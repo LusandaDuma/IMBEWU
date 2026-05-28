@@ -3,7 +3,7 @@
  * Keeps all badge/certificate download functionality intact.
  */
 
-import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
+import { CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
 import { useRefetchOnFocus } from '@/hooks/useRefetchOnFocus';
 import {
   downloadBadgeTemplate, downloadBadgeTemplates, downloadCertificateTemplate,
@@ -12,7 +12,7 @@ import {
 import { getCompletedCourseCertificates, getStudentAchievementsData, syncAndGetEarnedCourseBadges } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
-import { Award, BookOpen, Clock, Flame, Lock, Sparkles, Target, Trophy } from 'lucide-react-native';
+import { Award, BookOpen, Clock, Download, Flame, Lock, Share2, Sparkles, Target, Trophy } from 'lucide-react-native';
 import { useRef, useState, type RefObject } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,6 +22,50 @@ const DARK = '#022418';
 const GOLD = '#C9A84C';
 const CREAM = '#FAF7F2';
 
+// ── Reusable luxury button ────────────────────────────────────────────────────
+function LuxButton({
+  label, onPress, disabled, variant = 'primary', icon,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  icon?: React.ReactNode;
+}) {
+  const bg =
+    variant === 'primary' ? EMERALD :
+    variant === 'secondary' ? 'white' :
+    'transparent';
+  const textColor =
+    variant === 'primary' ? GOLD :
+    variant === 'secondary' ? DARK :
+    EMERALD;
+  const border =
+    variant === 'primary' ? `${GOLD}60` :
+    variant === 'secondary' ? '#E8DFD0' :
+    EMERALD;
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      disabled={disabled}
+      activeOpacity={0.8}
+      style={{
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        backgroundColor: bg,
+        borderRadius: 14, paddingVertical: 14, paddingHorizontal: 20,
+        borderWidth: 1, borderColor: border,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      {icon && <View style={{ marginRight: 8 }}>{icon}</View>}
+      <Text style={{ color: textColor, fontSize: 14, fontWeight: '600', letterSpacing: 0.3 }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 export default function AchievementsScreen() {
   const { user, profile } = useAuthStore();
   const badgeRefs = useRef<Record<string, View | null>>({});
@@ -30,7 +74,6 @@ export default function AchievementsScreen() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [isSharingCertificate, setIsSharingCertificate] = useState(false);
-  const [isDownloadingCertificate, setIsDownloadingCertificate] = useState(false);
   const [isDownloadingAllCertificates, setIsDownloadingAllCertificates] = useState(false);
   const [downloadingCertificateId, setDownloadingCertificateId] = useState<string | null>(null);
 
@@ -89,7 +132,10 @@ export default function AchievementsScreen() {
   const onDownloadAllBadges = async () => {
     try {
       setIsDownloadingAll(true);
-      const downloads = earnedBadges.map((b) => { const n = badgeRefs.current[b.id]; return n ? { ref: { current: n } as RefObject<View | null>, courseTitle: b.course_title } : null; }).filter(Boolean) as { ref: RefObject<View | null>; courseTitle?: string }[];
+      const downloads = earnedBadges.map((b) => {
+        const n = badgeRefs.current[b.id];
+        return n ? { ref: { current: n } as RefObject<View | null>, courseTitle: b.course_title } : null;
+      }).filter(Boolean) as { ref: RefObject<View | null>; courseTitle?: string }[];
       if (!downloads.length) throw new Error('Badges loading. Try again.');
       await downloadBadgeTemplates(downloads, learnerName);
       Alert.alert('Badges saved', `Downloaded ${downloads.length} badge(s).`);
@@ -105,20 +151,13 @@ export default function AchievementsScreen() {
     } catch (e) { Alert.alert('Share failed', e instanceof Error ? e.message : 'Could not share.'); }
     finally { setIsSharingCertificate(false); }
   };
-  const onDownloadCertificate = async () => {
-    try {
-      setIsDownloadingCertificate(true);
-      const c = certificates[0]; const ref = c ? certificateRefs.current[c.course_id] : null;
-      if (!c || !ref) throw new Error('Certificates loading. Try again.');
-      const uri = await downloadCertificateTemplate({ current: ref }, learnerName, c.course_title);
-      Alert.alert('Certificate saved', `Saved to:\n${uri}`);
-    } catch (e) { Alert.alert('Download failed', e instanceof Error ? e.message : 'Could not save.'); }
-    finally { setIsDownloadingCertificate(false); }
-  };
   const onDownloadAllCertificates = async () => {
     try {
       setIsDownloadingAllCertificates(true);
-      const downloads = certificates.map((c) => { const n = certificateRefs.current[c.course_id]; return n ? { ref: { current: n } as RefObject<View | null>, courseTitle: c.course_title } : null; }).filter(Boolean) as { ref: RefObject<View | null>; courseTitle?: string }[];
+      const downloads = certificates.map((c) => {
+        const n = certificateRefs.current[c.course_id];
+        return n ? { ref: { current: n } as RefObject<View | null>, courseTitle: c.course_title } : null;
+      }).filter(Boolean) as { ref: RefObject<View | null>; courseTitle?: string }[];
       if (!downloads.length) throw new Error('Certificates loading. Try again.');
       await downloadCertificateTemplates(downloads, learnerName);
       Alert.alert('Certificates saved', `Downloaded ${downloads.length} certificate(s).`);
@@ -136,9 +175,12 @@ export default function AchievementsScreen() {
     finally { setDownloadingCertificateId(null); }
   };
 
+  const anyBadgeBusy = isSharing || isDownloading || isDownloadingAll;
+  const anyCertBusy = isSharingCertificate || isDownloadingAllCertificates || downloadingCertificateId !== null;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* Header */}
         <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
@@ -263,46 +305,95 @@ export default function AchievementsScreen() {
           </View>
         </View>
 
-        {/* Badge Templates */}
+        {/* ── Completion Badges ─────────────────────────────────────────── */}
         {earnedBadges.length > 0 && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+          <View style={{ paddingHorizontal: 20, marginBottom: 24 }}>
             <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 12 }}>
               Completion Badges
             </Text>
+
             {earnedBadges.map((badge) => (
               <View key={`visible-${badge.id}`} ref={(n) => { badgeRefs.current[badge.id] = n; }} collapsable={false} style={{ marginBottom: 12 }}>
                 <CompletionBadgeTemplate learnerName={learnerName} courseTitle={badge.course_title} awardedAt={badge.awarded_at ?? new Date().toISOString()} />
               </View>
             ))}
-            <View style={{ gap: 10, marginTop: 8 }}>
-              <Button label={isSharing ? 'Sharing…' : 'Share badge'} onPress={onShareBadge} isLoading={isSharing} disabled={isSharing || isDownloading || isDownloadingAll} fullWidth />
-              <Button label={isDownloading ? 'Saving…' : 'Download badge'} onPress={onDownloadBadge} isLoading={isDownloading} disabled={isDownloading || isSharing || isDownloadingAll} variant="secondary" fullWidth />
-              <Button label={isDownloadingAll ? 'Saving all…' : 'Download all badges'} onPress={onDownloadAllBadges} isLoading={isDownloadingAll} disabled={isDownloadingAll || isSharing || isDownloading} variant="secondary" fullWidth />
+
+            {/* Badge actions — one share, one download, one download-all */}
+            <View style={{ gap: 10, marginTop: 4 }}>
+              <LuxButton
+                label={isSharing ? 'Sharing…' : 'Share badge'}
+                onPress={() => void onShareBadge()}
+                disabled={anyBadgeBusy}
+                variant="primary"
+                icon={<Share2 size={15} color={GOLD} />}
+              />
+              <LuxButton
+                label={isDownloading ? 'Saving…' : 'Download badge'}
+                onPress={() => void onDownloadBadge()}
+                disabled={anyBadgeBusy}
+                variant="secondary"
+                icon={<Download size={15} color={DARK} />}
+              />
+              {earnedBadges.length > 1 && (
+                <LuxButton
+                  label={isDownloadingAll ? 'Saving all…' : `Download all ${earnedBadges.length} badges`}
+                  onPress={() => void onDownloadAllBadges()}
+                  disabled={anyBadgeBusy}
+                  variant="ghost"
+                  icon={<Download size={15} color={EMERALD} />}
+                />
+              )}
             </View>
           </View>
         )}
 
-        {/* Certificates */}
+        {/* ── Course Certificates ───────────────────────────────────────── */}
         {certificates.length > 0 && (
           <View style={{ paddingHorizontal: 20, marginBottom: 40 }}>
             <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 12 }}>
               Course Certificates
             </Text>
+
             {certificates.map((cert) => (
-              <View key={`cert-${cert.course_id}`} style={{ marginBottom: 16 }}>
+              <View key={`cert-${cert.course_id}`} style={{
+                backgroundColor: 'white', borderRadius: 20, borderWidth: 1,
+                borderColor: '#E8DFD0', overflow: 'hidden', marginBottom: 16,
+              }}>
+                {/* Certificate preview */}
                 <View ref={(n) => { certificateRefs.current[cert.course_id] = n; }} collapsable={false}>
                   <CompletionCertificateTemplate learnerName={learnerName} courseTitle={cert.course_title} awardedAt={cert.completed_at} />
                 </View>
-                <View style={{ marginTop: 8 }}>
-                  <Button label={downloadingCertificateId === cert.course_id ? 'Saving…' : 'Download this certificate'} onPress={() => void onDownloadSingleCertificate(cert.course_id, cert.course_title)} isLoading={downloadingCertificateId === cert.course_id} disabled={downloadingCertificateId !== null} variant="secondary" fullWidth />
+
+                {/* Per-certificate actions */}
+                <View style={{ padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: '#F0EAE0' }}>
+                  <LuxButton
+                    label={downloadingCertificateId === cert.course_id ? 'Saving…' : 'Download certificate'}
+                    onPress={() => void onDownloadSingleCertificate(cert.course_id, cert.course_title)}
+                    disabled={anyCertBusy}
+                    variant="primary"
+                    icon={<Download size={15} color={GOLD} />}
+                  />
+                  <LuxButton
+                    label={isSharingCertificate ? 'Sharing…' : 'Share certificate'}
+                    onPress={() => void onShareCertificate()}
+                    disabled={anyCertBusy}
+                    variant="secondary"
+                    icon={<Share2 size={15} color={DARK} />}
+                  />
                 </View>
               </View>
             ))}
-            <View style={{ gap: 10 }}>
-              <Button label={isSharingCertificate ? 'Sharing…' : 'Share certificate'} onPress={onShareCertificate} isLoading={isSharingCertificate} disabled={isSharingCertificate || isDownloadingCertificate || isDownloadingAllCertificates} fullWidth />
-              <Button label={isDownloadingCertificate ? 'Saving…' : 'Download certificate'} onPress={onDownloadCertificate} isLoading={isDownloadingCertificate} disabled={isDownloadingCertificate || isSharingCertificate || isDownloadingAllCertificates} variant="secondary" fullWidth />
-              <Button label={isDownloadingAllCertificates ? 'Saving all…' : 'Download all certificates'} onPress={onDownloadAllCertificates} isLoading={isDownloadingAllCertificates} disabled={isDownloadingAllCertificates || isSharingCertificate || isDownloadingCertificate} variant="secondary" fullWidth />
-            </View>
+
+            {/* Download all — only shown when there are multiple */}
+            {certificates.length > 1 && (
+              <LuxButton
+                label={isDownloadingAllCertificates ? 'Saving all…' : `Download all ${certificates.length} certificates`}
+                onPress={() => void onDownloadAllCertificates()}
+                disabled={anyCertBusy}
+                variant="ghost"
+                icon={<Download size={15} color={EMERALD} />}
+              />
+            )}
           </View>
         )}
 

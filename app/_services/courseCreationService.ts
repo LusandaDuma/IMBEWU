@@ -10,10 +10,10 @@ import { createLessonQuiz } from '@/services/supabase';
 export type CourseLessonQuizInput = {
   title: string;
   passScore?: number;
-  questions: Array<{
+  questions: {
     text: string;
-    options: Array<{ text: string; isCorrect: boolean }>;
-  }>;
+    options: { text: string; isCorrect: boolean }[];
+  }[];
 };
 
 export type CourseLessonInput = {

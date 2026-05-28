@@ -21,10 +21,10 @@ const FETCH_TIMEOUT_MS = 90_000; // 90 seconds
 export type GeneratedLessonQuiz = {
   title: string;
   pass_score: number;
-  questions: Array<{
+  questions: {
     text: string;
-    options: Array<{ text: string; is_correct: boolean }>;
-  }>;
+    options: { text: string; is_correct: boolean }[];
+  }[];
 };
 
 export type GeneratedLesson = {

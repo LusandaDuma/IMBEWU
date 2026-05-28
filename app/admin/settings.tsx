@@ -30,12 +30,12 @@ export default function AdminSettingsScreen() {
       {
         text: 'Sign Out',
         style: 'destructive',
-        onPress: () => {
-          logout();
-          router.replace('/');
-          signOut().catch((error) => {
+        onPress: async () => {
+          await signOut().catch((error) => {
             console.error('[admin.settings] signOut failed:', error);
           });
+          logout();
+          router.replace('/');
         },
       },
     ]);

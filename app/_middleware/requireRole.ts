@@ -3,22 +3,9 @@
  */
 
 import type { UserRole } from '@/types';
-import { useAuthStore } from '@/store/auth';
 
-export function requireRole(allowedRoles: UserRole[]) {
-  const { role, isLoading } = useAuthStore();
-
-  if (isLoading) {
-    return { isReady: false, redirectTo: null as string | null };
-  }
-
-  if (!role) {
-    return { isReady: false, redirectTo: '/auth/login' };
-  }
-
-  if (!allowedRoles.includes(role)) {
-    throw new Error('Unauthorized');
-  }
-
-  return { isReady: true, redirectTo: null as string | null };
+export function requireRole(_allowedRoles: UserRole[]) {
+  // Middleware runs outside React rendering; do not call React hooks here.
+  return { isReady: false, redirectTo: '/auth/login' };
 }
+

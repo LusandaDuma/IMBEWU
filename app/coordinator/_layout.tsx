@@ -18,8 +18,9 @@ function hideCoordinatorTabButton(routeName: string): boolean {
 
 export default function CoordinatorLayout() {
   const insets = useSafeAreaInsets();
-  const { role, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated, isLoading } = useAuthStore();
 
+  if (isLoading) return null;
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
   }

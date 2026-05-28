@@ -7,7 +7,7 @@ import type { Lesson, Question, Quiz } from '@/types';
 import type { ServiceResult } from '@/services/courseService';
 
 type QuizWithQuestions = Pick<Quiz, 'id' | 'title' | 'pass_score' | 'max_attempts' | 'due_date' | 'created_at'> & {
-  questions: Array<Pick<Question, 'id' | 'text' | 'type' | 'order_index'>>;
+  questions: Pick<Question, 'id' | 'text' | 'type' | 'order_index'>[];
 };
 
 export type LessonWithQuiz = Pick<
@@ -141,7 +141,7 @@ export async function deleteLesson(lessonId: string): Promise<ServiceResult<null
   }
 }
 
-export async function reorderLessons(lessons: Array<{ id: string; order_index: number }>): Promise<ServiceResult<boolean>> {
+export async function reorderLessons(lessons: { id: string; order_index: number }[]): Promise<ServiceResult<boolean>> {
   try {
     if (lessons.length === 0) {
       return { data: true, error: null };

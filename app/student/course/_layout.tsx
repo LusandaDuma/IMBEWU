@@ -1,6 +1,5 @@
 /**
  * @fileoverview Student layout — luxury emerald & gold bottom tabs
- * Fixed: removed duplicate My Courses tabs
  */
 
 import { useAuthStore } from '@/store/auth';
@@ -36,36 +35,16 @@ export default function StudentLayout() {
         tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'My Courses',
-          tabBarIcon: ({ color }) => <BookOpen size={20} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="discover"
-        options={{
-          title: 'Discover',
-          tabBarIcon: ({ color }) => <Compass size={20} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="achievements"
-        options={{
-          title: 'Achievements',
-          tabBarIcon: ({ color }) => <Award size={20} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color }) => <User size={20} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'My Courses', tabBarIcon: ({ color }) => <BookOpen size={20} color={color} /> }} />
+      <Tabs.Screen name="discover" options={{ title: 'Discover', tabBarIcon: ({ color }) => <Compass size={20} color={color} /> }} />
+      <Tabs.Screen name="achievements" options={{ title: 'Achievements', tabBarIcon: ({ color }) => <Award size={20} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color }) => <User size={20} color={color} /> }} />
       <Tabs.Screen name="course/[id]" options={{ href: null }} />
-      <Tabs.Screen name="lesson/[id]" options={{ href: null }} />
+            <Tabs.Screen name="course" options={{ href: null }} />
+                  <Tabs.Screen name="lesson" options={{ href: null }} />
+                  <Tabs.Screen name="my course" options={{ href: null }} />
+                  <Tabs.Screen name="[id]" options={{ href: null }} />
+                  
     </Tabs>
   );
 }

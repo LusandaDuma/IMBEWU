@@ -1,7 +1,7 @@
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View , Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageCircle, X } from 'lucide-react-native';
-import { Modal } from 'react-native';
+
 
 type NolwaziActionType = 'explain' | 'summarize' | 'translate-zulu' | 'ask-anything';
 

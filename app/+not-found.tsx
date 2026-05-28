@@ -2,10 +2,10 @@
  * @fileoverview Not found screen
  */
 
-import { Link, Stack } from 'expo-router';
 import { APP_BACKGROUND_COLOR } from '@/constants/theme';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Link, Stack } from 'expo-router';
 import { Home } from 'lucide-react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 
 export default function NotFoundScreen() {
   return (
@@ -19,7 +19,8 @@ export default function NotFoundScreen() {
           Page Not Found
         </Text>
         <Text className="text-earth-500 text-center mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          The page you are looking for doesn&#39;t exist or has been moved.
+
         </Text>
         <Link href="/" asChild>
           <TouchableOpacity className="flex-row items-center bg-primary-600 px-6 py-3 rounded-xl">

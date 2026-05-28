@@ -15,7 +15,7 @@ type EnrolmentWithCourseRow = Pick<
   'id' | 'user_id' | 'course_id' | 'enrolment_type' | 'enrolled_at'
 > & {
   courses:
-    | Array<Pick<Course, 'id' | 'title' | 'description' | 'offline_url' | 'is_published' | 'created_at'>>
+    | Pick<Course, 'id' | 'title' | 'description' | 'offline_url' | 'is_published' | 'created_at'>[]
     | Pick<Course, 'id' | 'title' | 'description' | 'offline_url' | 'is_published' | 'created_at'>
     | null;
 };

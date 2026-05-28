@@ -70,7 +70,6 @@ export default function IndependentLayout() {
         }}
       />
       <Tabs.Screen name="course/[id]" options={{ href: null }} />
-      <Tabs.Screen name="lesson/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

@@ -6,7 +6,7 @@ import { createUserAsAdmin } from '@/services/authService';
 import type { UserRole } from '@/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, UserPlus } from 'lucide-react-native';
+import { CheckCircle, ChevronLeft, UserPlus } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ export default function AdminUsersNewScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('student');
+  const [successName, setSuccessName] = useState<string | null>(null);
 
   const resetForm = () => {
     setFirstName(''); setLastName(''); setEmail(''); setPassword(''); setRole('student');
@@ -47,11 +48,9 @@ export default function AdminUsersNewScreen() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dashboard-analytics'] });
+      const name = `${firstName.trim()} ${lastName.trim()}`;
       resetForm();
-      Alert.alert('Registered', 'The new user account was added successfully.', [
-        { text: 'Add another', style: 'cancel' },
-        { text: 'Back to users list', onPress: goToUsersList },
-      ]);
+      setSuccessName(name);
     },
     onError: (error) => {
       Alert.alert('Could not create user', error instanceof Error ? error.message : 'Please try again.');
@@ -89,6 +88,60 @@ export default function AdminUsersNewScreen() {
     fontWeight: '700' as const,
     marginBottom: 8,
   };
+
+  // ── Success screen ──────────────────────────────────────────────────────────
+  if (successName) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
+
+          {/* Animated check circle */}
+          <View style={{
+            width: 96, height: 96, borderRadius: 48,
+            backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center',
+            borderWidth: 2, borderColor: '#bbf7d0', marginBottom: 24,
+          }}>
+            <CheckCircle size={52} color="#16a34a" strokeWidth={1.5} />
+          </View>
+
+          {/* Message */}
+          <Text style={{ color: EMERALD, fontSize: 26, fontWeight: '300', textAlign: 'center', marginBottom: 10, letterSpacing: -0.3 }}>
+            User added successfully!
+          </Text>
+          <Text style={{ color: '#8B7355', fontSize: 15, textAlign: 'center', lineHeight: 22, marginBottom: 8 }}>
+            <Text style={{ color: EMERALD, fontWeight: '600' }}>{successName}</Text>
+            {' '}has been registered and can now sign in to the platform.
+          </Text>
+
+          {/* Role badge */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: `${GOLD}15`, borderRadius: 99, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: `${GOLD}35`, marginTop: 8, marginBottom: 36 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: GOLD }} />
+            <Text style={{ color: GOLD, fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+              Account created
+            </Text>
+          </View>
+
+          {/* Actions */}
+          <View style={{ width: '100%', gap: 12 }}>
+            <TouchableOpacity
+              onPress={() => setSuccessName(null)}
+              style={{ backgroundColor: EMERALD, borderRadius: 14, paddingVertical: 15, alignItems: 'center', borderWidth: 1, borderColor: `${GOLD}40` }}
+              activeOpacity={0.87}
+            >
+              <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15 }}>Add Another User</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={goToUsersList}
+              style={{ borderRadius: 14, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E8DFD0', backgroundColor: 'white' }}
+              activeOpacity={0.87}
+            >
+              <Text style={{ color: '#8B7355', fontWeight: '600', fontSize: 14 }}>Back to Users List</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>

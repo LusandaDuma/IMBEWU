@@ -1,5 +1,5 @@
 /**
- * @fileoverview Independent learner progress screen
+ * @fileoverview Independent learner achievements — luxury emerald & gold theme.
  */
 
 import { Button, CompletionBadgeTemplate, CompletionCertificateTemplate } from '@/components/shared';
@@ -19,10 +19,15 @@ import {
 } from '@/services/supabase';
 import { useAuthStore } from '@/store/auth';
 import { useQuery } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Award, BookOpen, Clock, Flame, Target } from 'lucide-react-native';
+import { Award, BookOpen, Clock, Flame, Lock, Sparkles, Target, Trophy } from 'lucide-react-native';
 import { useRef, useState, type RefObject } from 'react';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+const EMERALD = '#032f20';
+const DARK = '#022418';
+const GOLD = '#C9A84C';
+const CREAM = '#FAF7F2';
 
 export default function ProgressScreen() {
   const { user, profile } = useAuthStore();
@@ -57,14 +62,15 @@ export default function ProgressScreen() {
   useRefetchOnFocus(refetchCertificates, !!user);
 
   const stats = [
-    { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock, color: '#0891b2' },
-    { label: 'Courses', value: `${data?.stats.courses ?? 0}`, icon: BookOpen, color: '#16a34a' },
-    { label: 'Day Streak', value: `${data?.stats.dayStreak ?? 0}`, icon: Flame, color: '#ea580c' },
+    { label: 'Hours Learned', value: `${data?.stats.hoursLearned ?? 0}`, icon: Clock },
+    { label: 'Courses', value: `${data?.stats.courses ?? 0}`, icon: BookOpen },
+    { label: 'Day Streak', value: `${data?.stats.dayStreak ?? 0}`, icon: Flame },
   ];
 
   const weeklyActivity = data?.weeklyActivity ?? [];
   const maxWeeklyValue = Math.max(1, ...weeklyActivity.map((item) => item.value));
   const achievements = data?.achievements ?? [];
+  const unlockedCount = achievements.filter((a) => a.unlocked).length;
   const hasCourseCompletionBadge = earnedBadges.length > 0;
   const hasCertificates = certificates.length > 0;
   const learnerName = `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`.trim() || 'Imbewu learner';
@@ -78,9 +84,7 @@ export default function ProgressScreen() {
       await shareBadgeTemplate({ current: firstBadgeRef }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share badge right now.');
-    } finally {
-      setIsSharing(false);
-    }
+    } finally { setIsSharing(false); }
   };
 
   const onDownloadBadge = async () => {
@@ -93,9 +97,7 @@ export default function ProgressScreen() {
       Alert.alert('Badge saved', `Saved to:\n${uri}`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save badge right now.');
-    } finally {
-      setIsDownloading(false);
-    }
+    } finally { setIsDownloading(false); }
   };
 
   const onDownloadAllBadges = async () => {
@@ -112,248 +114,294 @@ export default function ProgressScreen() {
       Alert.alert('Badges saved', `Downloaded ${badgeDownloads.length} badge${badgeDownloads.length === 1 ? '' : 's'}.`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all badges right now.');
-    } finally {
-      setIsDownloadingAll(false);
-    }
+    } finally { setIsDownloadingAll(false); }
   };
 
   const onShareCertificate = async () => {
     try {
       setIsSharingCertificate(true);
-      const firstCertificate = certificates[0];
-      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
-      if (!firstCertificate || !firstCertificateRef) throw new Error('Certificates are still loading. Please try again in a moment.');
-      await shareCertificateTemplate({ current: firstCertificateRef }, learnerName);
+      const firstCert = certificates[0];
+      const firstCertRef = firstCert ? certificateRefs.current[firstCert.course_id] : null;
+      if (!firstCert || !firstCertRef) throw new Error('Certificates are still loading. Please try again in a moment.');
+      await shareCertificateTemplate({ current: firstCertRef }, learnerName);
     } catch (error) {
       Alert.alert('Share failed', error instanceof Error ? error.message : 'Could not share certificate right now.');
-    } finally {
-      setIsSharingCertificate(false);
-    }
+    } finally { setIsSharingCertificate(false); }
   };
 
   const onDownloadCertificate = async () => {
     try {
       setIsDownloadingCertificate(true);
-      const firstCertificate = certificates[0];
-      const firstCertificateRef = firstCertificate ? certificateRefs.current[firstCertificate.course_id] : null;
-      if (!firstCertificate || !firstCertificateRef) throw new Error('Certificates are still loading. Please try again in a moment.');
-      const uri = await downloadCertificateTemplate(
-        { current: firstCertificateRef },
-        learnerName,
-        firstCertificate.course_title
-      );
+      const firstCert = certificates[0];
+      const firstCertRef = firstCert ? certificateRefs.current[firstCert.course_id] : null;
+      if (!firstCert || !firstCertRef) throw new Error('Certificates are still loading. Please try again in a moment.');
+      const uri = await downloadCertificateTemplate({ current: firstCertRef }, learnerName, firstCert.course_title);
       Alert.alert('Certificate saved', `Saved to:\n${uri}`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save certificate right now.');
-    } finally {
-      setIsDownloadingCertificate(false);
-    }
+    } finally { setIsDownloadingCertificate(false); }
   };
 
   const onDownloadAllCertificates = async () => {
     try {
       setIsDownloadingAllCertificates(true);
-      const certificateDownloads: Array<{ ref: RefObject<View | null>; courseTitle?: string }> = [];
+      const certificateDownloads: Array<{ ref: RefObject<View | null>; courseTitle: string }> = [];
       for (const certificate of certificates) {
         const node = certificateRefs.current[certificate.course_id];
         if (!node) continue;
-        certificateDownloads.push({
-          ref: { current: node } as RefObject<View | null>,
-          courseTitle: certificate.course_title,
-        });
+        certificateDownloads.push({ ref: { current: node } as RefObject<View | null>, courseTitle: certificate.course_title });
       }
-      if (certificateDownloads.length === 0) {
-        throw new Error('Certificates are still loading. Please try again in a moment.');
-      }
+      if (certificateDownloads.length === 0) throw new Error('Certificates are still loading. Please try again in a moment.');
       await downloadCertificateTemplates(certificateDownloads, learnerName);
-      Alert.alert(
-        'Certificates saved',
-        `Downloaded ${certificateDownloads.length} certificate${certificateDownloads.length === 1 ? '' : 's'}.`
-      );
+      Alert.alert('Certificates saved', `Downloaded ${certificateDownloads.length} certificate${certificateDownloads.length === 1 ? '' : 's'}.`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save all certificates right now.');
-    } finally {
-      setIsDownloadingAllCertificates(false);
-    }
+    } finally { setIsDownloadingAllCertificates(false); }
   };
 
   const onDownloadSingleCertificate = async (courseId: string, courseTitle: string) => {
     try {
       setDownloadingCertificateId(courseId);
       const certificateRef = certificateRefs.current[courseId];
-      if (!certificateRef) {
-        throw new Error('Certificate is still loading. Please try again in a moment.');
-      }
+      if (!certificateRef) throw new Error('Certificate is still loading. Please try again in a moment.');
       const uri = await downloadCertificateTemplate({ current: certificateRef }, learnerName, courseTitle);
       Alert.alert('Certificate saved', `Saved to:\n${uri}`);
     } catch (error) {
       Alert.alert('Download failed', error instanceof Error ? error.message : 'Could not save certificate right now.');
-    } finally {
-      setDownloadingCertificateId(null);
-    }
+    } finally { setDownloadingCertificateId(null); }
   };
 
   return (
-    <LinearGradient colors={['#D6D6D6', '#D6D6D6']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} className="flex-1">
-      <View className="pt-14 px-5 pb-4">
-        <Text className="text-2xl font-bold text-earth-900">Your progress</Text>
-        <Text className="text-earth-600 mt-1">Track your achievements</Text>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
 
-      <ScrollView className="flex-1 px-5">
-        <View className="flex-row justify-between mb-6 border-b border-earth-400/35 pb-5">
+        {/* Header */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
+          <Text style={{ color: '#8B7355', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', fontWeight: '600', marginBottom: 4 }}>
+            Progress
+          </Text>
+          <Text style={{ color: DARK, fontSize: 28, fontWeight: '300', fontFamily: 'serif' }}>
+            Achievements
+          </Text>
+        </View>
+
+        {/* Stats strip */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 20 }}>
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <View key={stat.label} className="flex-1 mx-1">
-                <View className="w-10 h-10 rounded-xl items-center justify-center mb-3" style={{ backgroundColor: `${stat.color}20` }}>
-                  <Icon size={20} color={stat.color} />
+              <View key={stat.label} style={{
+                flex: 1, backgroundColor: 'white',
+                borderRadius: 16, padding: 14, alignItems: 'center',
+                borderWidth: 1, borderColor: '#E8DFD0',
+              }}>
+                <View style={{
+                  width: 36, height: 36, borderRadius: 18,
+                  backgroundColor: `${GOLD}15`,
+                  alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+                }}>
+                  <Icon size={18} color={GOLD} />
                 </View>
-                <Text className="text-2xl font-bold text-earth-800">{stat.value}</Text>
-                <Text className="text-earth-500 text-xs">{stat.label}</Text>
+                <Text style={{ color: DARK, fontSize: 22, fontWeight: '300', fontFamily: 'serif' }}>{stat.value}</Text>
+                <Text style={{ color: '#8B7355', fontSize: 10, letterSpacing: 0.5, textAlign: 'center', marginTop: 2 }}>{stat.label}</Text>
               </View>
             );
           })}
         </View>
 
-        <View className="mb-6 pb-5 border-b border-earth-400/35">
-          <Text className="text-lg font-bold text-earth-800 mb-4">Weekly Activity</Text>
-          <View className="flex-row items-end justify-between h-24">
+        {/* Weekly Activity */}
+        <View style={{
+          backgroundColor: EMERALD, marginHorizontal: 20, borderRadius: 20,
+          padding: 20, marginBottom: 16,
+          borderWidth: 1, borderColor: `${GOLD}20`,
+        }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <Sparkles size={14} color={GOLD} />
+            <Text style={{ color: '#f5f0e8', fontSize: 13, fontWeight: '300', letterSpacing: 0.5 }}>
+              Weekly Activity
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 64 }}>
             {weeklyActivity.map((item, index) => (
-              <View key={`${item.day}-${index}`} className="items-center">
-                <View className="w-8 bg-cyan-200 rounded-t-lg" style={{ height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 8 }} />
-                <Text className="text-earth-500 text-xs mt-2">{item.day}</Text>
+              <View key={`${item.day}-${index}`} style={{ alignItems: 'center', flex: 1 }}>
+                <View style={{
+                  width: 28,
+                  height: item.value > 0 ? 20 + (item.value / maxWeeklyValue) * 40 : 6,
+                  backgroundColor: item.value > 0 ? GOLD : `${GOLD}25`,
+                  borderRadius: 6,
+                  opacity: item.value > 0 ? 1 : 0.5,
+                }} />
+                <Text style={{ color: `${GOLD}80`, fontSize: 10, marginTop: 6, letterSpacing: 0.5 }}>{item.day}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        <Text className="text-lg font-bold text-earth-800 mb-3">Achievements</Text>
-        {achievements.map((achievement) => {
-          const Icon = achievement.id === 'dedicated-learner' ? Flame : achievement.id === 'course-master' ? Award : Target;
-          return (
-            <View key={achievement.id} className={`flex-row items-center py-3 mb-0 border-b border-earth-400/30 ${!achievement.unlocked ? 'opacity-50' : ''}`}>
-              <View className="w-12 h-12 rounded-xl bg-cyan-100 items-center justify-center">
-                <Icon size={24} color="#0891b2" />
+        {/* Achievements */}
+        <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
+          <View style={{
+            backgroundColor: 'white', borderRadius: 20,
+            padding: 20, borderWidth: 1, borderColor: '#E8DFD0',
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Trophy size={16} color={GOLD} />
+                <Text style={{ color: DARK, fontSize: 16, fontWeight: '600', fontFamily: 'serif' }}>Achievements</Text>
               </View>
-              <View className="flex-1 ml-4">
-                <Text className="font-semibold text-earth-800">{achievement.name}</Text>
-                <Text className="text-earth-500 text-sm">{achievement.description}</Text>
-              </View>
-              {achievement.unlocked && (
-                <View className="bg-green-100 px-2 py-1 rounded-full">
-                  <Text className="text-green-700 text-xs font-medium">Unlocked</Text>
+              {achievements.length > 0 && (
+                <View style={{
+                  backgroundColor: `${EMERALD}10`, borderRadius: 10,
+                  paddingHorizontal: 10, paddingVertical: 4,
+                }}>
+                  <Text style={{ color: EMERALD, fontSize: 11, fontWeight: '600' }}>
+                    {unlockedCount}/{achievements.length}
+                  </Text>
                 </View>
               )}
             </View>
-          );
-        })}
 
-        {hasCourseCompletionBadge ? (
-          <View className="mt-6 mb-10">
-            <Text className="text-lg font-bold text-earth-800 mb-3">Completion Badge Templates</Text>
-            <View className="mb-3">
+            {achievements.length === 0 ? (
+              <Text style={{ color: '#8B7355', fontSize: 13, fontWeight: '300', textAlign: 'center', paddingVertical: 12 }}>
+                Complete lessons to unlock achievements.
+              </Text>
+            ) : achievements.map((achievement) => {
+              const Icon = achievement.id === 'dedicated-learner' ? Flame : achievement.id === 'course-master' ? Award : Target;
+              return (
+                <View key={achievement.id} style={{
+                  flexDirection: 'row', alignItems: 'center',
+                  paddingVertical: 14,
+                  borderBottomWidth: 1, borderBottomColor: '#F0EAE0',
+                  opacity: achievement.unlocked ? 1 : 0.45,
+                }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: achievement.unlocked ? `${GOLD}15` : '#F0EAE0',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {achievement.unlocked
+                      ? <Icon size={20} color={GOLD} />
+                      : <Lock size={16} color="#C4B89A" />
+                    }
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 14 }}>
+                    <Text style={{ color: DARK, fontSize: 14, fontWeight: '500', marginBottom: 2 }}>{achievement.name}</Text>
+                    <Text style={{ color: '#8B7355', fontSize: 12, fontWeight: '300' }}>{achievement.description}</Text>
+                  </View>
+                  {achievement.unlocked && (
+                    <View style={{
+                      backgroundColor: `${EMERALD}12`, borderRadius: 10,
+                      paddingHorizontal: 9, paddingVertical: 4,
+                    }}>
+                      <Text style={{ color: EMERALD, fontSize: 10, fontWeight: '600', letterSpacing: 0.5 }}>Unlocked</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Completion Badges */}
+        {hasCourseCompletionBadge && (
+          <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
+            <View style={{
+              backgroundColor: 'white', borderRadius: 20,
+              padding: 20, borderWidth: 1, borderColor: '#E8DFD0',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Award size={16} color={GOLD} />
+                <Text style={{ color: DARK, fontSize: 16, fontWeight: '600', fontFamily: 'serif' }}>Completion Badges</Text>
+              </View>
+
               {earnedBadges.map((badge) => (
-                <View key={badge.id} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
-                  <Text className="text-earth-800 font-medium">{badge.badge_name}</Text>
-                  <Text className="text-earth-500 text-xs">{badge.course_title}</Text>
+                <View key={badge.id} style={{
+                  flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                  paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0EAE0',
+                }}>
+                  <Text style={{ color: DARK, fontSize: 13, fontWeight: '500' }}>{badge.badge_name}</Text>
+                  <Text style={{ color: '#8B7355', fontSize: 12 }}>{badge.course_title}</Text>
                 </View>
               ))}
-            </View>
-            {earnedBadges.map((badge) => (
-              <View
-                key={`visible-${badge.id}`}
-                ref={(node) => {
-                  badgeRefs.current[badge.id] = node;
-                }}
-                collapsable={false}
-                className="mb-3"
-              >
-                <CompletionBadgeTemplate learnerName={learnerName} courseTitle={badge.course_title} awardedAt={badge.awarded_at ?? new Date().toISOString()} />
-              </View>
-            ))}
-            <View className="mt-3 gap-2">
-              <Button label={isSharing ? 'Sharing…' : 'Share badge'} onPress={onShareBadge} isLoading={isSharing} disabled={isSharing || isDownloading || isDownloadingAll} fullWidth />
-              <Button label={isDownloading ? 'Saving…' : 'Download badge'} onPress={onDownloadBadge} isLoading={isDownloading} disabled={isDownloading || isSharing || isDownloadingAll} variant="secondary" fullWidth />
-              <Button
-                label={isDownloadingAll ? 'Saving all…' : 'Download all badges'}
-                onPress={onDownloadAllBadges}
-                isLoading={isDownloadingAll}
-                disabled={isDownloadingAll || isSharing || isDownloading}
-                variant="secondary"
-                fullWidth
-              />
-            </View>
-          </View>
-        ) : null}
 
-        {hasCertificates ? (
-          <View className="mt-2 mb-10">
-            <Text className="text-lg font-bold text-earth-800 mb-3">Course Certificates</Text>
-            <View className="mb-3">
-              {certificates.map((certificate) => (
-                <View key={`certificate-row-${certificate.course_id}`} className="flex-row items-center justify-between border-b border-earth-400/30 py-2">
-                  <Text className="text-earth-800 font-medium">Certificate</Text>
-                  <Text className="text-earth-500 text-xs">{certificate.course_title}</Text>
+              {earnedBadges.map((badge) => (
+                <View
+                  key={`visible-${badge.id}`}
+                  ref={(node) => { badgeRefs.current[badge.id] = node; }}
+                  collapsable={false}
+                  style={{ marginTop: 12 }}
+                >
+                  <CompletionBadgeTemplate
+                    learnerName={learnerName}
+                    courseTitle={badge.course_title}
+                    awardedAt={badge.awarded_at ?? new Date().toISOString()}
+                  />
                 </View>
               ))}
-            </View>
-            {certificates.map((certificate) => (
-              <View key={`certificate-visible-${certificate.course_id}`} className="mb-3">
-                <View
-                  ref={(node) => {
-                    certificateRefs.current[certificate.course_id] = node;
-                  }}
-                  collapsable={false}
-                >
-                  <CompletionCertificateTemplate
-                    learnerName={learnerName}
-                    courseTitle={certificate.course_title}
-                    awardedAt={certificate.completed_at}
-                  />
-                </View>
-                <View className="mt-2">
-                  <Button
-                    label={downloadingCertificateId === certificate.course_id ? 'Saving…' : 'Download this certificate'}
-                    onPress={() => {
-                      void onDownloadSingleCertificate(certificate.course_id, certificate.course_title);
-                    }}
-                    isLoading={downloadingCertificateId === certificate.course_id}
-                    disabled={downloadingCertificateId !== null}
-                    variant="secondary"
-                    fullWidth
-                  />
-                </View>
+
+              <View style={{ marginTop: 16, gap: 8 }}>
+                <Button label={isSharing ? 'Sharing…' : 'Share badge'} onPress={onShareBadge} isLoading={isSharing} disabled={isSharing || isDownloading || isDownloadingAll} fullWidth />
+                <Button label={isDownloading ? 'Saving…' : 'Download badge'} onPress={onDownloadBadge} isLoading={isDownloading} disabled={isDownloading || isSharing || isDownloadingAll} variant="secondary" fullWidth />
+                <Button label={isDownloadingAll ? 'Saving all…' : 'Download all badges'} onPress={onDownloadAllBadges} isLoading={isDownloadingAll} disabled={isDownloadingAll || isSharing || isDownloading} variant="secondary" fullWidth />
               </View>
-            ))}
-            <View className="mt-3 gap-2">
-              <Button
-                label={isSharingCertificate ? 'Sharing…' : 'Share certificate'}
-                onPress={onShareCertificate}
-                isLoading={isSharingCertificate}
-                disabled={isSharingCertificate || isDownloadingCertificate || isDownloadingAllCertificates}
-                fullWidth
-              />
-              <Button
-                label={isDownloadingCertificate ? 'Saving…' : 'Download certificate'}
-                onPress={onDownloadCertificate}
-                isLoading={isDownloadingCertificate}
-                disabled={isDownloadingCertificate || isSharingCertificate || isDownloadingAllCertificates}
-                variant="secondary"
-                fullWidth
-              />
-              <Button
-                label={isDownloadingAllCertificates ? 'Saving all…' : 'Download all certificates'}
-                onPress={onDownloadAllCertificates}
-                isLoading={isDownloadingAllCertificates}
-                disabled={isDownloadingAllCertificates || isSharingCertificate || isDownloadingCertificate}
-                variant="secondary"
-                fullWidth
-              />
             </View>
           </View>
-        ) : null}
+        )}
+
+        {/* Certificates */}
+        {hasCertificates && (
+          <View style={{ marginHorizontal: 20, marginBottom: 16 }}>
+            <View style={{
+              backgroundColor: 'white', borderRadius: 20,
+              padding: 20, borderWidth: 1, borderColor: '#E8DFD0',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                <Sparkles size={16} color={GOLD} />
+                <Text style={{ color: DARK, fontSize: 16, fontWeight: '600', fontFamily: 'serif' }}>Course Certificates</Text>
+              </View>
+
+              {certificates.map((certificate) => (
+                <View key={`certificate-visible-${certificate.course_id}`} style={{ marginBottom: 16 }}>
+                  <View style={{
+                    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                    paddingVertical: 10, marginBottom: 8,
+                    borderBottomWidth: 1, borderBottomColor: '#F0EAE0',
+                  }}>
+                    <Text style={{ color: DARK, fontSize: 13, fontWeight: '500' }}>Certificate</Text>
+                    <Text style={{ color: '#8B7355', fontSize: 12 }}>{certificate.course_title}</Text>
+                  </View>
+                  <View
+                    ref={(node) => { certificateRefs.current[certificate.course_id] = node; }}
+                    collapsable={false}
+                  >
+                    <CompletionCertificateTemplate
+                      learnerName={learnerName}
+                      courseTitle={certificate.course_title}
+                      awardedAt={certificate.completed_at}
+                    />
+                  </View>
+                  <View style={{ marginTop: 10 }}>
+                    <Button
+                      label={downloadingCertificateId === certificate.course_id ? 'Saving…' : 'Download this certificate'}
+                      onPress={() => { void onDownloadSingleCertificate(certificate.course_id, certificate.course_title); }}
+                      isLoading={downloadingCertificateId === certificate.course_id}
+                      disabled={downloadingCertificateId !== null}
+                      variant="secondary"
+                      fullWidth
+                    />
+                  </View>
+                </View>
+              ))}
+
+              <View style={{ gap: 8, marginTop: 4 }}>
+                <Button label={isSharingCertificate ? 'Sharing…' : 'Share certificate'} onPress={onShareCertificate} isLoading={isSharingCertificate} disabled={isSharingCertificate || isDownloadingCertificate || isDownloadingAllCertificates} fullWidth />
+                <Button label={isDownloadingCertificate ? 'Saving…' : 'Download certificate'} onPress={onDownloadCertificate} isLoading={isDownloadingCertificate} disabled={isDownloadingCertificate || isSharingCertificate || isDownloadingAllCertificates} variant="secondary" fullWidth />
+                <Button label={isDownloadingAllCertificates ? 'Saving all…' : 'Download all certificates'} onPress={onDownloadAllCertificates} isLoading={isDownloadingAllCertificates} disabled={isDownloadingAllCertificates || isSharingCertificate || isDownloadingCertificate} variant="secondary" fullWidth />
+              </View>
+            </View>
+          </View>
+        )}
+
       </ScrollView>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }

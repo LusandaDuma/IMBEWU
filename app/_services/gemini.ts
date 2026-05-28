@@ -51,7 +51,7 @@ export async function generateGeminiReply({
   try {
     const messages: OpenAiMessage[] = [
       { role: 'system', content: systemInstruction },
-      ...history.map((h) => ({
+      ...history.map((h): OpenAiMessage => ({
         role: h.role === 'model' ? 'assistant' : 'user',
         content: h.parts.map((p) => p.text).join(''),
       })),

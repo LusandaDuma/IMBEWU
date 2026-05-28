@@ -12,7 +12,7 @@ export interface ServiceResult<T> {
 
 export type PublishedCourse = Pick<Course, 'id' | 'title' | 'description' | 'created_at'>;
 export type CourseWithLessons = Pick<Course, 'id' | 'title' | 'description' | 'offline_url'> & {
-  lessons: Array<Pick<Lesson, 'id' | 'title' | 'order_index' | 'duration_mins'>>;
+  lessons: Pick<Lesson, 'id' | 'title' | 'order_index' | 'duration_mins'>[];
 };
 
 export interface CreateCourseInput {

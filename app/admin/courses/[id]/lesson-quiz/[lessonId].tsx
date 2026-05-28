@@ -23,12 +23,12 @@ export default function AdminLessonQuizEditorScreen() {
   const [quizTitle, setQuizTitle] = useState('');
   const [quizPassScore, setQuizPassScore] = useState('60');
   const [questions, setQuestions] = useState<
-    Array<{
+    {
       id?: string;
       text: string;
       options: [string, string, string, string];
       correctOption: 'A' | 'B' | 'C' | 'D';
-    }>
+    }[]
   >([{ text: '', options: ['', '', '', ''], correctOption: 'A' }]);
   const [isSavingQuiz, setIsSavingQuiz] = useState(false);
 

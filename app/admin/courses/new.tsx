@@ -12,7 +12,6 @@ import {
 import { generateCourseWithAI, suggestTrendingCourseTopics } from '@/services/lessonGenerationService';
 import { useAuthStore } from '@/store/auth';
 import { useQueryClient } from '@tanstack/react-query';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   CheckCircle,
@@ -49,6 +48,10 @@ const CROP_CATEGORIES = [
   'Fodder & Cover Crops',
   'Indigenous Crops',
 ];
+
+const EMERALD = '#032f20';
+const GOLD = '#C9A84C';
+const CREAM = '#FAF7F2';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -127,7 +130,8 @@ function CropPicker({ value, onSelect }: { value: string; onSelect: (v: string) 
 
 function StepRow({
   label, status,
-}: {
+}: {                
+
   label: string;
   status: 'pending' | 'active' | 'done' | 'error';
 }) {
@@ -361,27 +365,29 @@ export default function CreateCourseScreen() {
   };
 
   return (
-    <LinearGradient colors={['#d6d6d6', '#d6d6d6']} style={{ flex: 1 }}>
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: CREAM }} edges={['top']}>
+      <ScrollView style={{ flex: 1, backgroundColor: CREAM }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
 
         {/* Header */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ paddingTop: 8, paddingBottom: 18, flexDirection: 'row', alignItems: 'center' }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.07)', alignItems: 'center', justifyContent: 'center' }}
+            style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(3,47,32,0.1)', alignItems: 'center', justifyContent: 'center' }}
           >
-            <ChevronLeft size={20} color="#111" strokeWidth={1.5} />
+            <ChevronLeft size={20} color={EMERALD} strokeWidth={1.5} />
           </TouchableOpacity>
           <View style={{ marginLeft: 14 }}>
-            <Text style={{ fontSize: 24, fontWeight: '300', color: '#0a0a0a', letterSpacing: -0.3 }}>Create course</Text>
-            <Text style={{ color: '#78716c', fontSize: 13, fontWeight: '300' }}>AI Syllabus Generator</Text>
+            <Text style={{ fontSize: 24, fontWeight: '300', color: EMERALD, letterSpacing: -0.3, fontFamily: 'serif' }}>
+              Create course
+            </Text>
+            <Text style={{ color: EMERALD, fontSize: 13, fontWeight: '300', opacity: 0.75 }}>
+              Luxury course builder
+            </Text>
           </View>
         </View>
 
-        <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 48 }}>
-
-          {/* ── AI Card ── */}
-          <View style={{ backgroundColor: '#0f2418', borderRadius: 24, overflow: 'hidden' }}>
+        {/* ── AI Card ── */}
+        <View style={{ backgroundColor: EMERALD, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#E8DFD0', padding: 24 }}>
 
             {/* Watermark */}
             <View style={{ position: 'absolute', right: -8, top: 8, opacity: 0.04 }} pointerEvents="none">
@@ -455,22 +461,22 @@ export default function CreateCourseScreen() {
                 activeOpacity={0.87}
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: '#c8a84b', borderRadius: 14, paddingVertical: 15, gap: 8,
+                  backgroundColor: GOLD, borderRadius: 14, paddingVertical: 15, gap: 8,
                 }}
               >
-                <Sparkles size={16} color="#0f2418" strokeWidth={2} />
-                <Text style={{ color: '#0f2418', fontWeight: '700', fontSize: 15 }}>Generate with AI</Text>
+                <Sparkles size={16} color={EMERALD} strokeWidth={2} />
+                <Text style={{ color: EMERALD, fontWeight: '700', fontSize: 15 }}>Generate with AI</Text>
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Hint */}
-          <Text style={{ color: '#78716c', fontSize: 12, fontWeight: '300', lineHeight: 18, textAlign: 'center', marginTop: 16 }}>
+          <Text style={{ color: EMERALD, fontSize: 12, fontWeight: '300', lineHeight: 18, textAlign: 'center', marginTop: 16 }}>
             AI generates a full course with 8 detailed lessons.{'\n'}Typically takes 20–40 seconds. You can edit everything after.
           </Text>
 
           {/* ── Manual creation (same save path, empty shell) ── */}
-          <View style={{ marginTop: 28, backgroundColor: '#fff', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' }}>
+          <View style={{ marginTop: 28, backgroundColor: '#fff', borderRadius: 20, padding: 22, borderWidth: 1, borderColor: '#E8DFD0' }}>
             <Text style={{ color: '#78716c', fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 12 }}>
               MANUAL CREATION
             </Text>
@@ -517,18 +523,17 @@ export default function CreateCourseScreen() {
                 borderRadius: 14,
                 paddingVertical: 14,
                 alignItems: 'center',
-                backgroundColor: isManualSaving ? '#d6d3d1' : '#166534',
+                backgroundColor: isManualSaving ? 'rgba(3,47,32,0.35)' : EMERALD,
               }}
             >
               {isManualSaving ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={GOLD} />
               ) : (
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 15 }}>Create course manually</Text>
+                <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15 }}>Create course manually</Text>
               )}
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </SafeAreaView>
 
       {/* ══════════════════════════════════════════
           GENERATION MODAL — luxury dark design
@@ -606,7 +611,7 @@ export default function CreateCourseScreen() {
             {/* Progress bar */}
             {saveStep !== 'idle' && (
               <View style={{ height: 3, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden', marginBottom: 10 }}>
-                <Animated.View style={{ height: '100%', backgroundColor: '#c8a84b', borderRadius: 2, width: progressWidth }} />
+                <Animated.View style={{ height: '100%', backgroundColor: GOLD, borderRadius: 2, width: progressWidth }} />
               </View>
             )}
 
@@ -642,10 +647,10 @@ export default function CreateCourseScreen() {
                 <TouchableOpacity
                   onPress={() => void onGenerate()}
                   activeOpacity={0.87}
-                  style={{ backgroundColor: '#c8a84b', borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{ backgroundColor: EMERALD, borderRadius: 14, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 >
-                  <Sparkles size={16} color="#0f2418" strokeWidth={2} />
-                  <Text style={{ color: '#0f2418', fontWeight: '700', fontSize: 15 }}>Generate & save course</Text>
+                  <Sparkles size={16} color={GOLD} strokeWidth={2} />
+                  <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15 }}>Generate & save course</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setModalVisible(false)} style={{ paddingVertical: 12, alignItems: 'center' }}>
                   <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 14, fontWeight: '300' }}>Cancel</Text>
@@ -659,9 +664,9 @@ export default function CreateCourseScreen() {
                 <TouchableOpacity
                   onPress={() => void onGenerate()}
                   activeOpacity={0.87}
-                  style={{ backgroundColor: '#c8a84b', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+                  style={{ backgroundColor: EMERALD, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
                 >
-                  <Text style={{ color: '#0f2418', fontWeight: '700', fontSize: 15 }}>Try again</Text>
+                  <Text style={{ color: GOLD, fontWeight: '700', fontSize: 15 }}>Try again</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { setModalVisible(false); setSaveStep('idle'); }} style={{ paddingVertical: 10, alignItems: 'center' }}>
                   <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>Cancel</Text>
@@ -677,6 +682,6 @@ export default function CreateCourseScreen() {
           </View>
         </View>
       </Modal>
-    </LinearGradient>
+    </SafeAreaView>
   );
 }

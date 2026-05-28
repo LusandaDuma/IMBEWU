@@ -13,8 +13,9 @@ const CREAM = '#FAF7F2';
 
 export default function AdminLayout() {
   const insets = useSafeAreaInsets();
-  const { role, isAuthenticated } = useAuthStore();
+  const { role, isAuthenticated, isLoading } = useAuthStore();
 
+  if (isLoading) return null;
   if (!isAuthenticated) return <Redirect href="/auth/login" />;
   if (role !== 'admin') return <Redirect href="/" />;
 
@@ -64,12 +65,14 @@ export default function AdminLayout() {
           tabBarIcon: ({ color }) => <Settings size={20} color={color} />,
         }}
       />
+      {/* Hide auto-discovered routes from tab bar */}
+      <Tabs.Screen name="activity" options={{ href: null }} />
+       <Tabs.Screen name="courses/[id]/lesson-quiz/[lessonId]" options={{ href: null }} />
       <Tabs.Screen name="users-new" options={{ href: null }} />
+       <Tabs.Screen name="courses/[id]/lesson/lessonId" options={{ href: null }} />
       <Tabs.Screen name="courses/new" options={{ href: null }} />
       <Tabs.Screen name="courses/[id]/index" options={{ href: null }} />
-      <Tabs.Screen name="courses/[id]/lesson/[lessonId]" options={{ href: null }} />
-      <Tabs.Screen name="courses/[id]/lesson-quiz/[lessonId]" options={{ href: null }} />
-      <Tabs.Screen name="activity" options={{ href: null }} />
+      <Tabs.Screen name="courses/[id]/edit" options={{ href: null }} />
     </Tabs>
   );
 }

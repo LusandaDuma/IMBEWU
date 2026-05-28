@@ -1,8 +1,9 @@
 /**
  * @fileoverview Authentication service wrapper for Supabase auth operations.
  */
-
 import { createClient, type Session } from '@supabase/supabase-js';
+import { generateOtp } from "../_utils/generateOtp";
+import { sendVerificationEmail } from "./emailService";
 
 import type { UserRole } from '@/types';
 import { AUTH_ERROR_MESSAGES } from '@/utils/constants';
@@ -83,22 +84,66 @@ export async function signUp(
       });
       return { data: null, error: mapAuthError(error.message, error.code) };
     }
+// GENERATE OTP
+    const otp = generateOtp();
+     // OTP EXPIRY = 10 MINUTES
+    const expiresAt = new Date(
+      Date.now() + 10 * 60 * 1000
+    ).toISOString();
+     // SAVE OTP TO DATABASE
+    const { error: otpError } = await supabase
+      .from('email_verifications')
+      .insert([
+        {
+          email,
+          otp,
+          expires_at: expiresAt,
+        },
+      ]);
+      // HANDLE OTP SAVE ERROR
+    if (otpError) {
+      console.error('OTP save error:', otpError);
 
+      return {
+        data: null,
+        error: 'Failed to save OTP',
+      };
+    }
+    // SEND VERIFICATION EMAIL
+    const emailResult = await sendVerificationEmail(
+      email,
+      otp
+    );
+    // HANDLE EMAIL ERRORS
+    if (!emailResult.success) {
+      return {
+        data: null,
+        error: 'Failed to send verification email',
+      };
+    }
+    // SUCCESS
     return {
       data: {
         session: data.session,
-        requiresEmailConfirmation: false, // email confirmation disabled
+        requiresEmailConfirmation: true,
       },
       error: null,
     };
+
   } catch (error) {
+
     console.error('[authService.signUp] Unexpected exception:', error);
+
     return {
-      data: null,
-      error: mapAuthError(error instanceof Error ? error.message : undefined),
+       data: null,
+      error: mapAuthError(
+        error instanceof Error
+          ? error.message
+          : undefined
+      ),
     };
   }
-}
+ }
 
 /**
  * Create a user account without replacing the current session.

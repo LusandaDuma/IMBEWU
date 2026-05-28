@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { Platform, Share, View } from 'react-native';
+import { Alert, Platform, Share, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
 function getFileStamp(): string {
@@ -8,11 +9,10 @@ function getFileStamp(): string {
   return now.toISOString().replace(/[:.]/g, '-');
 }
 
-async function captureBadge(ref: React.RefObject<View | null>): Promise<string> {
+async function captureView(ref: React.RefObject<View | null>): Promise<string> {
   if (!ref.current) {
-    throw new Error('Badge template is not ready yet. Please try again.');
+    throw new Error('Template is not ready yet. Please try again.');
   }
-
   return captureRef(ref, {
     format: 'png',
     quality: 1,
@@ -24,22 +24,58 @@ function createBadgeFileName(learnerName: string, courseTitle?: string): string 
   const safeName = learnerName.trim().replace(/\s+/g, '-').toLowerCase() || 'learner';
   const safeCourse = courseTitle?.trim().replace(/\s+/g, '-').toLowerCase();
   const courseSegment = safeCourse ? `-${safeCourse}` : '';
-  return `imbewu-course-badge-${safeName}${courseSegment}-${getFileStamp()}.png`;
+  return `imbewu-badge-${safeName}${courseSegment}-${getFileStamp()}.png`;
 }
 
 function createCertificateFileName(learnerName: string, courseTitle?: string): string {
   const safeName = learnerName.trim().replace(/\s+/g, '-').toLowerCase() || 'learner';
   const safeCourse = courseTitle?.trim().replace(/\s+/g, '-').toLowerCase();
   const courseSegment = safeCourse ? `-${safeCourse}` : '';
-  return `imbewu-course-certificate-${safeName}${courseSegment}-${getFileStamp()}.png`;
+  return `imbewu-certificate-${safeName}${courseSegment}-${getFileStamp()}.png`;
 }
+
+/**
+ * Saves a captured image URI to the device's photo library.
+ * Falls back to expo-sharing if media library permission is denied.
+ * Returns 'saved', 'shared', or 'denied'.
+ */
+async function saveToLibrary(
+  tempUri: string,
+  fileName: string,
+  shareDialogTitle: string
+): Promise<'saved' | 'shared' | 'denied'> {
+  const { status, canAskAgain } = await MediaLibrary.requestPermissionsAsync();
+
+  if (status === 'granted') {
+    // Write to a named file first so the album entry has a clean name
+    const dest = `${FileSystem.cacheDirectory}${fileName}`;
+    await FileSystem.copyAsync({ from: tempUri, to: dest });
+    await MediaLibrary.saveToLibraryAsync(dest);
+    return 'saved';
+  }
+
+  // Permission denied — fall back to the share sheet so the user can
+  // still save manually via the OS share menu
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(tempUri, {
+      mimeType: 'image/png',
+      dialogTitle: shareDialogTitle,
+      UTI: 'public.png',
+    });
+    return 'shared';
+  }
+
+  return 'denied';
+}
+
+// ── Badges ────────────────────────────────────────────────────────────────────
 
 export async function downloadBadgeTemplate(
   ref: React.RefObject<View | null>,
   learnerName: string,
   courseTitle?: string
 ): Promise<string> {
-  const tempUri = await captureBadge(ref);
+  const tempUri = await captureView(ref);
   const fileName = createBadgeFileName(learnerName, courseTitle);
 
   if (Platform.OS === 'web') {
@@ -52,27 +88,27 @@ export async function downloadBadgeTemplate(
     return fileName;
   }
 
-  const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
-  if (!baseDir) {
-    return tempUri;
-  }
-  const exportDir = `${baseDir}badges`;
-  await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
-  const targetUri = `${exportDir}/${fileName}`;
-  await FileSystem.copyAsync({ from: tempUri, to: targetUri });
-  return targetUri;
+  const result = await saveToLibrary(tempUri, fileName, `Save ${learnerName}'s Imbewu badge`);
+  if (result === 'saved') return 'Saved to your Photos.';
+  if (result === 'shared') return 'Opened share sheet — save from there.';
+  throw new Error('Photo library permission denied. Please enable it in Settings.');
 }
 
 export async function downloadBadgeTemplates(
-  badges: Array<{ ref: React.RefObject<View | null>; courseTitle?: string }>,
+  badges: { ref: React.RefObject<View | null>; courseTitle?: string }[],
   learnerName: string
 ): Promise<string[]> {
-  const downloads = await Promise.all(badges.map((badge) => downloadBadgeTemplate(badge.ref, learnerName, badge.courseTitle)));
-  return downloads;
+  return Promise.all(
+    badges.map((badge) => downloadBadgeTemplate(badge.ref, learnerName, badge.courseTitle))
+  );
 }
 
-export async function shareBadgeTemplate(ref: React.RefObject<View | null>, learnerName: string): Promise<void> {
-  const tempUri = await captureBadge(ref);
+export async function shareBadgeTemplate(
+  ref: React.RefObject<View | null>,
+  learnerName: string
+): Promise<void> {
+  const tempUri = await captureView(ref);
+
   if (Platform.OS !== 'web' && (await Sharing.isAvailableAsync())) {
     await Sharing.shareAsync(tempUri, {
       mimeType: 'image/png',
@@ -83,17 +119,19 @@ export async function shareBadgeTemplate(ref: React.RefObject<View | null>, lear
   }
 
   await Share.share({
-    message: 'I completed my Imbewu course badge.',
+    message: "I completed my Imbewu course badge.",
     url: tempUri,
   });
 }
+
+// ── Certificates ──────────────────────────────────────────────────────────────
 
 export async function downloadCertificateTemplate(
   ref: React.RefObject<View | null>,
   learnerName: string,
   courseTitle?: string
 ): Promise<string> {
-  const tempUri = await captureBadge(ref);
+  const tempUri = await captureView(ref);
   const fileName = createCertificateFileName(learnerName, courseTitle);
 
   if (Platform.OS === 'web') {
@@ -106,28 +144,29 @@ export async function downloadCertificateTemplate(
     return fileName;
   }
 
-  const baseDir = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
-  if (!baseDir) {
-    return tempUri;
-  }
-  const exportDir = `${baseDir}certificates`;
-  await FileSystem.makeDirectoryAsync(exportDir, { intermediates: true });
-  const targetUri = `${exportDir}/${fileName}`;
-  await FileSystem.copyAsync({ from: tempUri, to: targetUri });
-  return targetUri;
+  const result = await saveToLibrary(tempUri, fileName, `Save ${learnerName}'s Imbewu certificate`);
+  if (result === 'saved') return 'Saved to your Photos.';
+  if (result === 'shared') return 'Opened share sheet — save from there.';
+  throw new Error('Photo library permission denied. Please enable it in Settings.');
 }
 
 export async function downloadCertificateTemplates(
-  certificates: Array<{ ref: React.RefObject<View | null>; courseTitle?: string }>,
+  certificates: { ref: React.RefObject<View | null>; courseTitle?: string }[],
   learnerName: string
 ): Promise<string[]> {
   return Promise.all(
-    certificates.map((certificate) => downloadCertificateTemplate(certificate.ref, learnerName, certificate.courseTitle))
+    certificates.map((cert) =>
+      downloadCertificateTemplate(cert.ref, learnerName, cert.courseTitle)
+    )
   );
 }
 
-export async function shareCertificateTemplate(ref: React.RefObject<View | null>, learnerName: string): Promise<void> {
-  const tempUri = await captureBadge(ref);
+export async function shareCertificateTemplate(
+  ref: React.RefObject<View | null>,
+  learnerName: string
+): Promise<void> {
+  const tempUri = await captureView(ref);
+
   if (Platform.OS !== 'web' && (await Sharing.isAvailableAsync())) {
     await Sharing.shareAsync(tempUri, {
       mimeType: 'image/png',
@@ -138,7 +177,7 @@ export async function shareCertificateTemplate(ref: React.RefObject<View | null>
   }
 
   await Share.share({
-    message: 'I completed my Imbewu course certificate.',
+    message: "I completed my Imbewu course certificate.",
     url: tempUri,
   });
 }
